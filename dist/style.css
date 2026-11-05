@@ -175,3 +175,7 @@ legend { font-weight: 750; }
 #tema-filtro small { margin-inline-start: .4rem; color: var(--muted); font-weight: 400; }
 #ajuste { background: #eef3ed; border-radius: .45rem; padding: .9rem; margin-top: .7rem; }
 #ajuste p, #materiais, #impacto { margin-block: .65rem; }
+
+.tempo-unidade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(6.3rem, auto); gap: .35rem; }
+.atalhos { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .5rem; }
+.atalhos button { color: var(--green); background: white; border-color: var(--line); min-height: 40px; padding: .3rem .55rem; font-size: .9rem; }

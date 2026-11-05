@@ -26,13 +26,15 @@ const acoes = [
   [16,15,0,'Em casa','Encontre o portal de transparência do município','Procure o portal a partir do site oficial da prefeitura.','Abra uma seção de despesas e veja quais informações são publicadas.'],
   [17,15,0,'Em casa','Encontre uma iniciativa que conecte diferentes setores','Abra a página do ODS 17 na ONU Brasil e escolha uma meta.','Busque um exemplo ligado à meta e anote quais setores trabalham juntos e o que cada um oferece.'],
   [12,15,20,'Na rua','Experimente comprar a granel','Escolha um produto que você já precisava comprar e compare o preço por quilo.','Se houver opção dentro do orçamento, leve apenas a quantidade que pretende usar.'],
-  [4,30,0,'Em casa','Monte um cartão de revisão','Escolha um conceito que costuma esquecer.','Escreva uma pergunta de um lado e uma explicação com exemplo do outro.']
+  [4,30,0,'Em casa','Monte um cartão de revisão','Escolha um conceito que costuma esquecer.','Escreva uma pergunta de um lado e uma explicação com exemplo do outro.'],
+  [12,60,0,'Em casa','Monte um plano para aproveitar os alimentos da semana','Em até 30 minutos, confira a despensa e a geladeira e liste os alimentos que precisam ser usados primeiro.','Use o restante do tempo para planejar refeições com esses ingredientes e fazer uma lista só do que falta.']
 ].map(([ods, tempo, custo, local, titulo, ...passos]) => ({ ods, tempo, custo, local, titulo, passos }));
 
-function filtrarAcoes(lista, { tempo, custo, local, ods }) {
+function filtrarAcoes(lista, { tempo, unidade, custo, local, ods }) {
+  const limite = tempo === '' || tempo == null ? Infinity : Number(tempo) * (unidade === 'h' ? 60 : 1);
   const selecionados = Array.isArray(ods) ? ods : (ods ? [Number(ods)] : []);
   return lista.filter(acao =>
-    (!tempo || acao.tempo <= Number(tempo)) &&
+    (acao.tempo <= limite) &&
     (custo === '' || custo == null || acao.custo <= Number(custo)) &&
     (!local || acao.local === local) &&
     (!selecionados.length || selecionados.includes(acao.ods))

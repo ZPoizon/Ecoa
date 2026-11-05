@@ -216,8 +216,19 @@ document.querySelector('.nav a[href="#area-ods"]').addEventListener('click', () 
   document.querySelector('#tema-filtro').open = true;
 });
 aplicarAjuste.addEventListener('click', () => {
+  form.elements.unidade.value = "min";
   form.elements.tempo.value = aplicarAjuste.dataset.tempo;
   buscar();
+});
+
+form.querySelectorAll('button[data-tempo]').forEach(botao => {
+  botao.addEventListener('click', () => {
+    form.elements.tempo.value = botao.dataset.tempo;
+    form.elements.unidade.value = botao.dataset.unidade || 'min';
+  });
+});
+document.querySelector('#so-gratis').addEventListener('click', () => {
+  form.elements.custo.value = '0';
 });
 
 function mostrar() {
@@ -225,10 +236,10 @@ function mostrar() {
   titulo.textContent = acao.titulo;
   const materiais = acao.titulo === 'Experimente comprar a granel'
     ? 'Lista de compras e um local que venda a granel'
-    : materiaisPorOds[acao.ods - 1];
+    : acao.tempo === 60 ? 'Acesso à despensa e à geladeira, papel ou bloco de notas' : materiaisPorOds[acao.ods - 1];
   document.querySelector('#materiais').textContent = 'O que você precisa — ' + materiais;
   document.querySelector('#impacto').textContent = 'Por que isso ajuda — ' + impactoPorOds[acao.ods - 1];
-  const etiquetas = [`ODS ${acao.ods}`, `${acao.tempo} min`, acao.custo ? `Até R$ ${acao.custo}` : 'Sem gastar', acao.local];
+  const etiquetas = [`ODS ${acao.ods}`, acao.tempo === 60 ? "1 hora" : `${acao.tempo} min`, acao.custo ? `Até R$ ${acao.custo}` : 'Sem gastar', acao.local];
   document.querySelector('#etiquetas').replaceChildren(...etiquetas.map(texto => {
     const tag = document.createElement('span');
     tag.textContent = texto;

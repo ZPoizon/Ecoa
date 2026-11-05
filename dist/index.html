@@ -2,10 +2,11 @@
 <body><header><div class="wrap nav"><a href="./" class="brand">O Que Dá Pra Fazer?</a><a href="#area-ods">Explorar os 17 ODS</a></div></header>
 <main id="inicio"><section class="hero"><div class="wrap intro"><div><p class="eyebrow">GUIA PRÁTICO DA AGENDA 2030</p><h1>O que dá pra fazer <em>hoje?</em></h1><p class="lead">Quer fazer a diferença em casa ou na rua? Encontre uma ação que cabe no seu dia e veja como começar, passo a passo.</p><p class="hero-note">Um guia independente para colocar os Objetivos de Desenvolvimento Sustentável em prática.</p><a class="hero-link" href="#busca">Encontrar meu primeiro passo <span aria-hidden="true">↓</span></a></div></div></section>
 <div class="wrap"><section class="finder" aria-labelledby="busca"><p class="eyebrow">BUSCADOR DE AÇÕES</p><h2 id="busca">O que cabe no seu dia?</h2><form id="filtros"><div class="fields">
-<label>Tempo disponível (minutos)<input type="number" name="tempo" min="0" step="1" placeholder="Ex.: 15"></label>
-<label>Orçamento máximo (R$)<input type="number" name="custo" min="0" step="0.01" placeholder="Ex.: 15,00"></label>
-<label>Onde fazer<select name="local"><option value="">Qualquer lugar</option><option>Em casa</option><option>Na rua</option></select></label></div>
-<p class="hint">Deixe os campos em branco para buscar sem limite. Para encontrar ações gratuitas, digite <strong>0</strong> no orçamento.</p>
+<div><label for="tempo">Tempo por ação</label><div class="tempo-unidade"><input id="tempo" type="number" name="tempo" min="0" step="any" placeholder="Ex.: 15"><select name="unidade" aria-label="Unidade de tempo"><option value="min">Minutos</option><option value="h">Horas</option></select></div>
+<div class="atalhos" aria-label="Atalhos de tempo"><button type="button" data-tempo="5">5 min</button><button type="button" data-tempo="15">15 min</button><button type="button" data-tempo="1" data-unidade="h">1 hora</button></div></div>
+<div><label>Orçamento por ação (R$)<input type="number" name="custo" min="0" step="0.01" placeholder="Ex.: 15,00"></label><div class="atalhos"><button type="button" id="so-gratis">Só ações gratuitas</button></div></div>
+<label>Onde você prefere agir?<select name="local"><option value="">Tanto faz</option><option>Em casa</option><option>Na rua</option></select></label></div>
+<p class="hint">Informe quanto tempo e dinheiro você pode dedicar a uma única ação. Deixe em branco para buscar sem limite.</p>
 <div class="buttons"><button type="submit">Encontrar uma ação</button><button type="reset" class="secondary">Limpar filtros</button></div>
 <details id="tema-filtro"><summary>Escolher um tema <small>Opcional</small></summary><fieldset id="area-ods"><legend>Qual área você quer apoiar?</legend>
 <p class="hint">Selecione os ícones dos objetivos que mais interessam a você. Sem seleção, buscamos nos 17 ODS.</p>
