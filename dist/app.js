@@ -106,6 +106,17 @@ function abrirDescricao(item, nome, descricao, historia, numero) {
   exemploTitulo.textContent = 'Na prática';
   const exemploTexto = document.createElement('p');
   exemploTexto.textContent = exemplo;
+  const acao = acoes.find(item => item.ods === numero);
+  const comecar = document.createElement('strong');
+  comecar.textContent = 'Seu primeiro passo';
+  const tarefa = document.createElement('p');
+  tarefa.textContent = `${acao.titulo} · ${acao.tempo} min · ${acao.local}`;
+  const instrucoes = document.createElement('ol');
+  for (const passo of acao.passos) {
+    const linha = document.createElement('li');
+    linha.textContent = passo;
+    instrucoes.append(linha);
+  }
   const fontes = document.createElement('div');
   fontes.className = 'ods-fontes';
   for (const [rotulo, url] of [
@@ -117,7 +128,7 @@ function abrirDescricao(item, nome, descricao, historia, numero) {
     link.textContent = rotulo;
     fontes.append(link);
   }
-  descricaoOds.replaceChildren(titulo, texto, metasTitulo, metas, exemploTitulo, exemploTexto, subtitulo, contexto, fontes);
+  descricaoOds.replaceChildren(titulo, texto, comecar, tarefa, instrucoes, metasTitulo, metas, exemploTitulo, exemploTexto, subtitulo, contexto, fontes);
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
     descricaoOds.getAnimations().forEach(animacao => animacao.cancel());
     descricaoOds.animate([{ opacity: .5 }, { opacity: 1 }], { duration: 160 });
@@ -147,27 +158,18 @@ objetivos.forEach((nome, i) => {
   marca.setAttribute('aria-hidden', 'true');
   marca.textContent = '✓';
   rotulo.append(caixa, icone, marca);
-  const info = document.createElement('button');
-  info.type = 'button';
-  info.className = 'ods-info';
-  info.textContent = 'i';
-  info.setAttribute('aria-label', 'Sobre ' + titulo);
-  const abrir = alvo => abrirDescricao(alvo, titulo, descricoes[i], historiasOds[i], numero);
+  const abrir = () => abrirDescricao(rotulo, titulo, descricoes[i], historiasOds[i], numero);
   rotulo.addEventListener('pointerenter', evento => {
-    if (evento.pointerType === 'mouse') abrir(rotulo);
+    if (evento.pointerType === 'mouse') abrir();
   });
   caixa.addEventListener('focus', () => {
-    if (caixa.matches(':focus-visible')) abrir(caixa);
+    if (caixa.matches(':focus-visible')) abrir();
   });
-  caixa.addEventListener('change', atualizarSelecao);
-  info.addEventListener('click', () => {
-    if (itemAberto === info) fecharDescricao();
-    else {
-      abrir(info);
-      if (matchMedia('(max-width: 760px)').matches) painelOds.focus();
-    }
+  caixa.addEventListener('change', () => {
+    atualizarSelecao();
+    abrir();
   });
-  item.append(rotulo, info);
+  item.append(rotulo);
   opcoes.append(item);
 });
 

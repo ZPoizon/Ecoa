@@ -1,17 +1,17 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Encontre uma ação prática ligada aos Objetivos de Desenvolvimento Sustentável."><title>O Que Dá Pra Fazer?</title><link rel="stylesheet" href="style.css"><script defer src="acoes.js"></script><script defer src="app.js"></script><script defer src="onu.js"></script></head>
 <body><header><div class="wrap nav"><a href="./" class="brand">O Que Dá Pra Fazer?</a><a href="#area-ods">Explorar os 17 ODS</a></div></header>
-<main id="inicio"><section class="hero"><div class="wrap intro"><div><p class="eyebrow">GUIA PRÁTICO DA AGENDA 2030</p><h1>O que dá pra fazer hoje?</h1><p class="lead">Encontre uma ação que cabe no seu dia. Você escolhe o tempo, quanto quer gastar e onde prefere começar.</p></div></div></section>
+<main id="inicio"><section class="hero"><div class="wrap intro"><div><p class="eyebrow">GUIA PRÁTICO DA AGENDA 2030</p><h1>O que dá pra fazer <em>hoje?</em></h1><p class="lead">Quer fazer a diferença em casa ou na rua? Encontre uma ação que cabe no seu dia e veja como começar, passo a passo.</p><p class="hero-note">Um guia independente para colocar os Objetivos de Desenvolvimento Sustentável em prática.</p><a class="hero-link" href="#busca">Encontrar meu primeiro passo <span aria-hidden="true">↓</span></a></div></div></section>
 <div class="wrap"><section class="finder" aria-labelledby="busca"><p class="eyebrow">BUSCADOR DE AÇÕES</p><h2 id="busca">O que cabe no seu dia?</h2><form id="filtros"><div class="fields">
 <label>Tempo disponível (minutos)<input type="number" name="tempo" min="0" step="1" placeholder="Ex.: 15"></label>
 <label>Orçamento máximo (R$)<input type="number" name="custo" min="0" step="0.01" placeholder="Ex.: 15,00"></label>
 <label>Onde fazer<select name="local"><option value="">Qualquer lugar</option><option>Em casa</option><option>Na rua</option></select></label></div>
-<p class="hint">Deixe em branco para buscar sem limite. Digite 0 no orçamento para ver apenas ações gratuitas.</p>
+<p class="hint">Deixe os campos em branco para buscar sem limite. Para encontrar ações gratuitas, digite <strong>0</strong> no orçamento.</p>
 <fieldset id="area-ods"><legend>Qual área você quer apoiar?</legend>
 <p class="hint">Selecione os ícones dos objetivos que mais interessam a você. Sem seleção, buscamos nos 17 ODS.</p>
 <div class="ods-layout">
-<div><div id="opcoes-ods"></div><p id="total-ods" class="hint" role="status">Todos os 17 objetivos</p></div>
+<div><div id="opcoes-ods"></div><p id="total-ods" class="hint" role="status">Todos os 17 objetivos</p><a class="ir-painel" href="#painel-ods">Ler sobre o objetivo</a></div>
 <aside id="painel-ods" aria-label="Sobre o objetivo" tabindex="-1">
-<div id="descricao-ods" aria-live="polite"><strong>Sobre o objetivo</strong><p>Passe o mouse sobre um ícone ou toque no botão de informação para ler a descrição, as metas, a história e acessar as fontes oficiais.</p></div>
+<div id="descricao-ods" aria-live="polite"><strong>Sobre o objetivo</strong><p>Passe o mouse sobre um ícone ou toque nele para ver o que o ODS significa e como dar o primeiro passo.</p></div>
 </aside></div></fieldset>
 <div class="buttons"><button type="submit">Encontrar uma ação</button><button type="reset" class="secondary">Limpar filtros</button></div></form>
 <p id="status" role="status"></p><article id="resultado" hidden aria-labelledby="titulo"><div id="etiquetas" class="tags"></div><h3 id="titulo" tabindex="-1"></h3><ol id="passos"></ol><a id="fonte">Conhecer este ODS ↗</a><div class="buttons"><button id="outra" class="secondary" type="button">Ver outra ação</button></div></article>

@@ -110,11 +110,6 @@ legend { font-weight: 750; }
   border: 1px solid #15382c; border-radius: 50%; pointer-events: none;
 }
 .ods-escolha input:checked ~ .ods-marca { display: grid; }
-.ods-info {
-  position: absolute; right: .2rem; bottom: .2rem; min-height: 24px; min-width: 24px;
-  border: 1px solid white; border-radius: 50%; padding: 0; line-height: 1;
-  background: #182d25; color: white;
-}
 #total-ods { margin-top: .85rem; }
 .ods-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(15rem, 24%); align-items: start; gap: 1.4rem; }
 #opcoes-ods { grid-template-columns: repeat(5, minmax(0, 1fr)); }
@@ -143,4 +138,34 @@ legend { font-weight: 750; }
 @media (max-width: 760px) {
   .ods-layout { grid-template-columns: minmax(0, 1fr); }
   #painel-ods { max-height: none; overflow: visible; }
+}
+
+.hero { background: #15382c; color: #f7f7f2; }
+.hero h1 { color: inherit; font-size: clamp(2.85rem, 8.5vw, 6.2rem); max-width: 17ch; letter-spacing: -.055em; }
+.hero h1 em { color: #cfdfa7; }
+.hero .eyebrow, .hero .lead, .hero-note { color: #e1ebdb; }
+.hero .lead { font-size: clamp(1.15rem, 2.5vw, 1.4rem); }
+.hero-note { font-size: 1rem; margin: .9rem 0 1.25rem; }
+.hero-link { display: inline-flex; align-items: center; gap: .7rem; color: #15382c; background: #e9f1d7; padding: .65rem 1rem; border-radius: .4rem; font-weight: 750; text-decoration: none; }
+.hero-link:hover { background: white; }
+.eyebrow { font-size: .94rem; letter-spacing: .07em; }
+.finder h2 { font-size: clamp(1.9rem, 5vw, 2.75rem); }
+#busca { scroll-margin-top: 1.25rem; }
+.fields label, .hint, #descricao-ods p, #descricao-ods ul, #descricao-ods ol, .ods-fontes { font-size: 1.05rem; }
+.fields input, .fields select { min-height: 50px; }
+#area-ods legend { font-size: clamp(1.4rem, 3.5vw, 1.8rem); }
+#descricao-ods ol { margin: .35rem 0 1rem; }
+.ir-painel { display: none; }
+@media (max-width: 760px) { .ir-painel { display: inline-block; margin-bottom: .55rem; } }
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+  .hero .intro { animation: entrada-guia 330ms ease-out both; }
+  .ods-escolha { transition: transform 150ms ease, box-shadow 150ms ease; }
+  @media (hover: hover) {
+    .ods-escolha:hover { transform: translateY(-2px); box-shadow: 0 4px 10px #182d2533; }
+  }
+}
+@keyframes entrada-guia {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
