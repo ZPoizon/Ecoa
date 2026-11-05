@@ -30,11 +30,12 @@ const acoes = [
 ].map(([ods, tempo, custo, local, titulo, ...passos]) => ({ ods, tempo, custo, local, titulo, passos }));
 
 function filtrarAcoes(lista, { tempo, custo, local, ods }) {
+  const selecionados = Array.isArray(ods) ? ods : (ods ? [Number(ods)] : []);
   return lista.filter(acao =>
     (!tempo || acao.tempo <= Number(tempo)) &&
     (custo === '' || custo == null || acao.custo <= Number(custo)) &&
     (!local || acao.local === local) &&
-    (!ods || acao.ods === Number(ods))
+    (!selecionados.length || selecionados.includes(acao.ods))
   );
 }
 

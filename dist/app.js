@@ -9,7 +9,13 @@ let indice = 0;
 
 objetivos.forEach((nome, i) => {
   const numero = i + 1;
-  form.elements.ods.add(new Option(`${numero} · ${nome}`, numero));
+  const rotulo = document.createElement('label');
+  const caixa = document.createElement('input');
+  caixa.type = 'checkbox';
+  caixa.name = 'ods';
+  caixa.value = numero;
+  rotulo.append(caixa, `${numero} · ${nome}`);
+  document.querySelector('#opcoes-ods').append(rotulo);
   const botao = document.createElement('button');
   botao.type = 'button';
   botao.className = 'goal';
@@ -23,7 +29,7 @@ objetivos.forEach((nome, i) => {
   botao.append(icone);
   botao.addEventListener('click', () => {
     form.reset();
-    form.elements.ods.value = numero;
+    form.querySelector(`[name="ods"][value="${numero}"]`).checked = true;
     buscar();
   });
   catalogo.append(botao);
@@ -57,10 +63,13 @@ function mostrar() {
   outra.hidden = encontradas.length < 2;
   status.textContent = `Ação ${indice + 1} de ${encontradas.length}.`;
   titulo.focus();
+  document.dispatchEvent(new CustomEvent("tema-ods", { detail: [acao.ods] }));
 }
 
 function buscar() {
-  encontradas = filtrarAcoes(acoes, Object.fromEntries(new FormData(form)));
+  const dados = new FormData(form);
+  const selecionados = dados.getAll('ods').map(Number);
+  encontradas = filtrarAcoes(acoes, { ...Object.fromEntries(dados), ods: selecionados });
   indice = 0;
   if (encontradas.length) {
     mostrar();
@@ -68,6 +77,7 @@ function buscar() {
   }
   resultado.hidden = true;
   status.textContent = 'Nenhuma ação combina com esses filtros. Tente mudar o local ou ampliar o tempo.';
+  document.dispatchEvent(new CustomEvent("tema-ods", { detail: selecionados }));
   status.tabIndex = -1;
   status.focus();
 }
@@ -79,6 +89,7 @@ form.addEventListener('submit', evento => {
 form.addEventListener('reset', () => {
   resultado.hidden = true;
   status.textContent = '';
+  document.dispatchEvent(new CustomEvent("tema-ods", { detail: null }));
 });
 outra.addEventListener('click', () => {
   indice = (indice + 1) % encontradas.length;

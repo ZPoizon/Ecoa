@@ -62,3 +62,30 @@ footer p { margin: .45rem 0; max-width: 72ch; }
   button { transition: none; }
   .goal:hover { transform: none; }
 }
+
+.fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.fields input {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: .3rem;
+  padding: .45rem;
+  border: 1px solid #83958a;
+  border-radius: .4rem;
+  color: var(--text);
+  font: inherit;
+}
+input:focus-visible { outline: 3px solid #a64b16; outline-offset: 3px; }
+.hint { color: var(--muted); font-size: .9rem; margin: .45rem 0 .85rem; }
+fieldset { margin: 1.1rem 0 0; min-width: 0; border: 1px solid var(--line); border-radius: .5rem; }
+legend { font-weight: 750; }
+#opcoes-ods, #onu-listas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .45rem .85rem; }
+#opcoes-ods label { display: flex; align-items: center; gap: .45rem; min-height: 44px; cursor: pointer; }
+#opcoes-ods input { flex: none; width: 1.1rem; height: 1.1rem; accent-color: var(--green); }
+#onu { margin-top: 1.5rem; padding-top: .65rem; border-top: 1px solid var(--line); }
+#onu-listas section { padding: .9rem; background: var(--paper); border-radius: .5rem; overflow-wrap: anywhere; }
+#onu-listas h4 { margin: 0; }
+#onu-listas ul { padding-left: 1.15rem; }
+@media (max-width: 620px) {
+  .fields, #opcoes-ods, #onu-listas { grid-template-columns: 1fr; }
+}
