@@ -57,13 +57,33 @@ const historiasOds = [
   'A parceria global já aparecia nos Objetivos do Milênio. A Agenda 2030 retomou o tema e incluiu financiamento, tecnologia, comércio e cooperação.'
 ];
 
+const detalhesOds = [
+  ['1.3 · Ampliar a proteção social.', '1.4 · Ampliar o acesso a serviços básicos e recursos econômicos.', 'Uma família em situação de vulnerabilidade consegue acessar benefícios e serviços públicos pelo atendimento socioassistencial.'],
+  ['2.1 · Garantir acesso a alimentos seguros e nutritivos.', '2.4 · Adotar práticas agrícolas sustentáveis e resistentes a eventos extremos.', 'Uma cooperativa fornece alimentos variados para a merenda e cultiva o solo com práticas que evitam a erosão.'],
+  ['3.4 · Prevenir doenças crônicas e promover a saúde mental.', '3.8 · Ampliar o acesso a serviços essenciais de saúde.', 'Uma unidade básica oferece acompanhamento preventivo perto de onde as pessoas moram.'],
+  ['4.1 · Garantir ensino primário e secundário de qualidade.', '4.5 · Reduzir desigualdades de acesso à educação.', 'Uma escola fornece materiais acessíveis e apoio para alunos com deficiência acompanharem as aulas.'],
+  ['5.2 · Eliminar a violência contra mulheres e meninas.', '5.4 · Reconhecer o cuidado e o trabalho doméstico não remunerado.', 'Uma rede pública oferece atendimento a vítimas de violência e amplia o acesso a serviços de cuidado.'],
+  ['6.1 · Garantir acesso à água potável e segura.', '6.3 · Melhorar a qualidade da água e reduzir a poluição.', 'O tratamento de esgoto reduz a chegada de poluentes ao rio usado no abastecimento da cidade.'],
+  ['7.1 · Ampliar o acesso a serviços modernos de energia.', '7.2 · Aumentar a participação de fontes renováveis.', 'Uma escola gera parte da eletricidade com painéis solares e acompanha o próprio consumo.'],
+  ['8.5 · Promover emprego produtivo, trabalho digno e remuneração igual para trabalho de igual valor.', '8.8 · Proteger direitos trabalhistas e tornar os locais de trabalho mais seguros.', 'Uma empresa corrige diferenças salariais injustificadas e treina a equipe para prevenir acidentes.'],
+  ['9.1 · Desenvolver infraestrutura confiável e resiliente.', '9.4 · Modernizar indústrias com tecnologias e processos mais limpos.', 'Uma fábrica reaproveita água no processo produtivo e reduz a demanda por água nova.'],
+  ['10.2 · Promover a inclusão social, econômica e política.', '10.3 · Combater práticas discriminatórias e garantir igualdade de oportunidades.', 'Um serviço público oferece canais acessíveis para pessoas que enfrentam barreiras de comunicação.'],
+  ['11.2 · Ampliar o acesso a transporte seguro, acessível e sustentável.', '11.7 · Garantir acesso a espaços públicos seguros e inclusivos.', 'Uma prefeitura melhora as travessias e instala rampas nos caminhos que levam a pontos de ônibus.'],
+  ['12.3 · Reduzir o desperdício de alimentos e as perdas na cadeia de produção.', '12.5 · Reduzir resíduos por prevenção, reciclagem e reúso.', 'Um mercado ajusta as compras com base nas vendas para descartar menos alimentos.'],
+  ['13.1 · Aumentar a capacidade de lidar com riscos climáticos.', '13.3 · Melhorar a educação e a preparação para lidar com as mudanças climáticas.', 'Uma cidade mapeia áreas de inundação e cria rotas de saída para os moradores.'],
+  ['14.1 · Reduzir a poluição marinha, inclusive a que vem de terra.', '14.4 · Combater a pesca excessiva e ilegal.', 'Uma comunidade reduz o lixo que chega ao mar e acompanha as regras de pesca da região.'],
+  ['15.2 · Promover a gestão sustentável das florestas.', '15.5 · Reduzir a degradação de habitats e a perda de biodiversidade.', 'A recuperação da vegetação nativa conecta fragmentos de mata e facilita o deslocamento da fauna.'],
+  ['16.3 · Promover acesso à justiça.', '16.6 · Desenvolver instituições eficazes, transparentes e responsáveis.', 'Um município publica despesas em linguagem clara e oferece um canal para pedidos de informação.'],
+  ['17.16 · Fortalecer a cooperação entre setores para alcançar os ODS.', '17.18 · Melhorar a disponibilidade de dados confiáveis e detalhados.', 'Universidades, governos e organizações compartilham dados e métodos para acompanhar metas locais.']
+];
+
 function fecharDescricao() {
   if (!itemAberto) return;
   descricaoOds.replaceChildren(...introducaoOds.map(no => no.cloneNode(true)));
   itemAberto = undefined;
 }
 
-function abrirDescricao(item, nome, descricao, historia) {
+function abrirDescricao(item, nome, descricao, historia, numero) {
   itemAberto = item;
   const titulo = document.createElement('strong');
   titulo.textContent = nome;
@@ -73,7 +93,31 @@ function abrirDescricao(item, nome, descricao, historia) {
   subtitulo.textContent = 'História';
   const contexto = document.createElement('p');
   contexto.textContent = historia;
-  descricaoOds.replaceChildren(titulo, texto, subtitulo, contexto);
+  const [primeiraMeta, segundaMeta, exemplo] = detalhesOds[numero - 1];
+  const metasTitulo = document.createElement('strong');
+  metasTitulo.textContent = 'Duas metas do objetivo';
+  const metas = document.createElement('ul');
+  for (const meta of [primeiraMeta, segundaMeta]) {
+    const linha = document.createElement('li');
+    linha.textContent = meta;
+    metas.append(linha);
+  }
+  const exemploTitulo = document.createElement('strong');
+  exemploTitulo.textContent = 'Na prática';
+  const exemploTexto = document.createElement('p');
+  exemploTexto.textContent = exemplo;
+  const fontes = document.createElement('div');
+  fontes.className = 'ods-fontes';
+  for (const [rotulo, url] of [
+    ['Ver todas as metas na ONU Brasil', `https://brasil.un.org/pt-br/sdgs/${numero}`],
+    ['Ver indicadores globais na ONU (em inglês)', `https://sdgs.un.org/goals/goal${numero}`]
+  ]) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.textContent = rotulo;
+    fontes.append(link);
+  }
+  descricaoOds.replaceChildren(titulo, texto, metasTitulo, metas, exemploTitulo, exemploTexto, subtitulo, contexto, fontes);
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
     descricaoOds.getAnimations().forEach(animacao => animacao.cancel());
     descricaoOds.animate([{ opacity: .5 }, { opacity: 1 }], { duration: 160 });
@@ -108,12 +152,9 @@ objetivos.forEach((nome, i) => {
   info.className = 'ods-info';
   info.textContent = 'i';
   info.setAttribute('aria-label', 'Sobre ' + titulo);
-  const abrir = alvo => abrirDescricao(alvo, titulo, descricoes[i], historiasOds[i]);
+  const abrir = alvo => abrirDescricao(alvo, titulo, descricoes[i], historiasOds[i], numero);
   rotulo.addEventListener('pointerenter', evento => {
     if (evento.pointerType === 'mouse') abrir(rotulo);
-  });
-  rotulo.addEventListener('pointerleave', () => {
-    if (itemAberto === rotulo) fecharDescricao();
   });
   caixa.addEventListener('focus', () => {
     if (caixa.matches(':focus-visible')) abrir(caixa);
@@ -126,15 +167,12 @@ objetivos.forEach((nome, i) => {
       if (matchMedia('(max-width: 760px)').matches) painelOds.focus();
     }
   });
-  item.addEventListener('focusout', evento => {
-    if (itemAberto === caixa && !item.contains(evento.relatedTarget)) fecharDescricao();
-  });
   item.append(rotulo, info);
   opcoes.append(item);
 });
 
 document.addEventListener('keydown', evento => {
-  if (evento.key === 'Escape') fecharDescricao();
+  if (evento.key === 'Escape' && !painelOds.contains(document.activeElement)) fecharDescricao();
 });
 document.addEventListener('pointerdown', evento => {
   if (itemAberto && !evento.target.closest('.ods-item, #painel-ods')) fecharDescricao();

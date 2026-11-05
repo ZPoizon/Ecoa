@@ -135,3 +135,12 @@ legend { font-weight: 750; }
 @media (max-width: 480px) {
   #opcoes-ods { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+.ods-layout { grid-template-columns: minmax(0, 1fr) minmax(17rem, 30%); }
+#painel-ods { max-height: calc(100vh - 2rem); overflow: auto; }
+#descricao-ods ul { margin: .4rem 0 1rem; padding-inline-start: 1.15rem; font-size: .9rem; }
+.ods-fontes { display: grid; gap: .55rem; margin-top: 1rem; padding-top: .8rem; border-top: 1px solid var(--line); font-size: .9rem; }
+@media (max-width: 760px) {
+  .ods-layout { grid-template-columns: minmax(0, 1fr); }
+  #painel-ods { max-height: none; overflow: visible; }
+}
