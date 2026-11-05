@@ -13,9 +13,14 @@ objetivos.forEach((nome, i) => {
   const botao = document.createElement('button');
   botao.type = 'button';
   botao.className = 'goal';
-  const selo = document.createElement('span');
-  selo.textContent = numero;
-  botao.append(selo, nome);
+  botao.setAttribute('aria-label', `ODS ${numero} — ${nome}`);
+  const icone = document.createElement('img');
+  icone.src = `ods/${numero}.webp`;
+  icone.alt = '';
+  icone.width = 160;
+  icone.height = 160;
+  icone.loading = 'lazy';
+  botao.append(icone);
   botao.addEventListener('click', () => {
     form.reset();
     form.elements.ods.value = numero;
@@ -42,6 +47,13 @@ function mostrar() {
   fonte.href = `https://brasil.un.org/pt-br/sdgs/${acao.ods}`;
   fonte.textContent = `Conhecer o ODS ${acao.ods} ↗`;
   resultado.hidden = false;
+  resultado.getAnimations().forEach(animacao => animacao.cancel());
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    resultado.animate(
+      [{ opacity: 0, transform: 'translateY(5px)' }, { opacity: 1, transform: 'translateY(0)' }],
+      { duration: 180, easing: 'ease-out' }
+    );
+  }
   outra.hidden = encontradas.length < 2;
   status.textContent = `Ação ${indice + 1} de ${encontradas.length}.`;
   titulo.focus();
