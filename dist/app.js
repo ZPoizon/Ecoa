@@ -6,6 +6,8 @@ const titulo = document.querySelector('#titulo');
 const opcoes = document.querySelector('#opcoes-ods');
 const totalOds = document.querySelector('#total-ods');
 const descricaoOds = document.querySelector('#descricao-ods');
+const painelOds = document.querySelector('#painel-ods');
+const introducaoOds = [...descricaoOds.childNodes].map(no => no.cloneNode(true));
 let itemAberto;
 let encontradas = [];
 let indice = 0;
@@ -35,27 +37,47 @@ function atualizarSelecao() {
   totalOds.textContent = total ? `${total} de 17 objetivos selecionados` : 'Todos os 17 objetivos';
 }
 
+const historiasOds = [
+  'A redução da pobreza extrema era uma meta dos Objetivos de Desenvolvimento do Milênio. Em 2015, a Agenda 2030 ampliou o foco para a pobreza em todas as suas formas.',
+  'O combate à fome já fazia parte dos Objetivos do Milênio. Em 2015, a Agenda 2030 reuniu fome, nutrição e agricultura sustentável em um objetivo próprio.',
+  'A Agenda 2030 reuniu temas de saúde que antes apareciam em objetivos separados, como mortalidade infantil, saúde materna e combate a doenças.',
+  'Os Objetivos do Milênio priorizavam a conclusão do ensino primário. A Agenda 2030 ampliou essa perspectiva para a inclusão e a aprendizagem ao longo da vida.',
+  'A igualdade de gênero já integrava os Objetivos do Milênio. A Agenda 2030 passou a destacar também o combate à violência, a participação e o trabalho de cuidado.',
+  'O acesso à água e ao saneamento já aparecia nos Objetivos do Milênio. Em 2015, ganhou um objetivo próprio que inclui qualidade da água e proteção de ecossistemas.',
+  'A energia ganhou um objetivo próprio na Agenda 2030, com metas sobre acesso, fontes renováveis e eficiência energética.',
+  'Em 2015, a Agenda 2030 reuniu emprego produtivo, direitos no trabalho e crescimento econômico sustentável no mesmo objetivo.',
+  'A Agenda 2030 criou um objetivo próprio para infraestrutura, industrialização sustentável e inovação, com atenção ao acesso à tecnologia.',
+  'Em 2015, a redução das desigualdades ganhou um objetivo próprio, incluindo diferenças dentro dos países e entre eles.',
+  'A Agenda 2030 estabeleceu um objetivo específico para cidades e comunidades, com metas para moradia, transporte e espaços públicos.',
+  'A produção e o consumo sustentáveis ganharam um objetivo próprio em 2015, com metas ligadas ao uso de recursos, aos resíduos e ao desperdício.',
+  'O objetivo climático integra a Agenda 2030, adotada em 2015, ano em que também foi adotado o Acordo de Paris.',
+  'Em 2015, a Agenda 2030 estabeleceu um objetivo específico para oceanos e mares, incluindo poluição marinha e pesca sustentável.',
+  'A proteção de florestas e da biodiversidade ganhou um objetivo próprio na Agenda 2030, junto ao combate à desertificação e à degradação do solo.',
+  'A Agenda 2030 incluiu um objetivo específico para paz, justiça e instituições, com metas sobre violência, acesso à justiça e transparência.',
+  'A parceria global já aparecia nos Objetivos do Milênio. A Agenda 2030 retomou o tema e incluiu financiamento, tecnologia, comércio e cooperação.'
+];
+
 function fecharDescricao() {
-  itemAberto?.removeAttribute('aria-describedby');
-  descricaoOds.hidden = true;
+  if (!itemAberto) return;
+  descricaoOds.replaceChildren(...introducaoOds.map(no => no.cloneNode(true)));
   itemAberto = undefined;
 }
 
-function abrirDescricao(item, nome, descricao) {
-  fecharDescricao();
+function abrirDescricao(item, nome, descricao, historia) {
   itemAberto = item;
   const titulo = document.createElement('strong');
   titulo.textContent = nome;
   const texto = document.createElement('p');
   texto.textContent = descricao;
-  descricaoOds.replaceChildren(titulo, texto);
-  descricaoOds.hidden = false;
-  item.setAttribute('aria-describedby', descricaoOds.id);
-  const alvo = item.getBoundingClientRect();
-  const largura = descricaoOds.offsetWidth;
-  const altura = descricaoOds.offsetHeight;
-  descricaoOds.style.left = Math.max(12, Math.min(alvo.left + (alvo.width - largura) / 2, document.documentElement.clientWidth - largura - 12)) + 'px';
-  descricaoOds.style.top = (alvo.top >= altura + 16 ? alvo.top - altura - 8 : Math.min(alvo.bottom + 8, innerHeight - altura - 8)) + 'px';
+  const subtitulo = document.createElement('strong');
+  subtitulo.textContent = 'História';
+  const contexto = document.createElement('p');
+  contexto.textContent = historia;
+  descricaoOds.replaceChildren(titulo, texto, subtitulo, contexto);
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    descricaoOds.getAnimations().forEach(animacao => animacao.cancel());
+    descricaoOds.animate([{ opacity: .5 }, { opacity: 1 }], { duration: 160 });
+  }
 }
 
 objetivos.forEach((nome, i) => {
@@ -86,7 +108,7 @@ objetivos.forEach((nome, i) => {
   info.className = 'ods-info';
   info.textContent = 'i';
   info.setAttribute('aria-label', 'Sobre ' + titulo);
-  const abrir = alvo => abrirDescricao(alvo, titulo, descricoes[i]);
+  const abrir = alvo => abrirDescricao(alvo, titulo, descricoes[i], historiasOds[i]);
   rotulo.addEventListener('pointerenter', evento => {
     if (evento.pointerType === 'mouse') abrir(rotulo);
   });
@@ -99,10 +121,13 @@ objetivos.forEach((nome, i) => {
   caixa.addEventListener('change', atualizarSelecao);
   info.addEventListener('click', () => {
     if (itemAberto === info) fecharDescricao();
-    else abrir(info);
+    else {
+      abrir(info);
+      if (matchMedia('(max-width: 760px)').matches) painelOds.focus();
+    }
   });
   item.addEventListener('focusout', evento => {
-    if (!item.contains(evento.relatedTarget) && item.contains(itemAberto)) fecharDescricao();
+    if (itemAberto === caixa && !item.contains(evento.relatedTarget)) fecharDescricao();
   });
   item.append(rotulo, info);
   opcoes.append(item);
@@ -112,10 +137,9 @@ document.addEventListener('keydown', evento => {
   if (evento.key === 'Escape') fecharDescricao();
 });
 document.addEventListener('pointerdown', evento => {
-  if (itemAberto && !evento.target.closest('.ods-item')) fecharDescricao();
+  if (itemAberto && !evento.target.closest('.ods-item, #painel-ods')) fecharDescricao();
 });
-window.addEventListener('scroll', fecharDescricao, { passive: true });
-window.addEventListener('resize', fecharDescricao);
+
 
 function mostrar() {
   const acao = encontradas[indice];
