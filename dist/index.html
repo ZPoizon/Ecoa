@@ -6,15 +6,15 @@
 <label>Orçamento máximo (R$)<input type="number" name="custo" min="0" step="0.01" placeholder="Ex.: 15,00"></label>
 <label>Onde fazer<select name="local"><option value="">Qualquer lugar</option><option>Em casa</option><option>Na rua</option></select></label></div>
 <p class="hint">Deixe os campos em branco para buscar sem limite. Para encontrar ações gratuitas, digite <strong>0</strong> no orçamento.</p>
-<fieldset id="area-ods"><legend>Qual área você quer apoiar?</legend>
+<div class="buttons"><button type="submit">Encontrar uma ação</button><button type="reset" class="secondary">Limpar filtros</button></div>
+<details id="tema-filtro"><summary>Escolher um tema <small>Opcional</small></summary><fieldset id="area-ods"><legend>Qual área você quer apoiar?</legend>
 <p class="hint">Selecione os ícones dos objetivos que mais interessam a você. Sem seleção, buscamos nos 17 ODS.</p>
 <div class="ods-layout">
 <div><div id="opcoes-ods"></div><p id="total-ods" class="hint" role="status">Todos os 17 objetivos</p><a class="ir-painel" href="#painel-ods">Ler sobre o objetivo</a></div>
 <aside id="painel-ods" aria-label="Sobre o objetivo" tabindex="-1">
 <div id="descricao-ods" aria-live="polite"><strong>Sobre o objetivo</strong><p>Passe o mouse sobre um ícone ou toque nele para ver o que o ODS significa e como dar o primeiro passo.</p></div>
-</aside></div></fieldset>
-<div class="buttons"><button type="submit">Encontrar uma ação</button><button type="reset" class="secondary">Limpar filtros</button></div></form>
-<p id="status" role="status"></p><article id="resultado" hidden aria-labelledby="titulo"><div id="etiquetas" class="tags"></div><h3 id="titulo" tabindex="-1"></h3><ol id="passos"></ol><a id="fonte">Conhecer este ODS ↗</a><div class="buttons"><button id="outra" class="secondary" type="button">Ver outra ação</button></div></article>
+</aside></div></fieldset></details></form>
+<p id="status" role="status"></p><div id="ajuste" hidden><p id="ajuste-texto"></p><button id="aplicar-ajuste" type="button" class="secondary">Usar esse tempo</button></div><article id="resultado" hidden aria-labelledby="titulo"><p class="eyebrow">Sua ação de hoje</p><div id="etiquetas" class="tags"></div><h3 id="titulo" tabindex="-1"></h3><p id="materiais"></p><ol id="passos"></ol><p id="impacto"></p><a id="fonte">Conhecer este ODS ↗</a><div class="buttons"><button id="outra" class="secondary" type="button">Ver outra ação</button></div></article>
 <section id="onu" hidden aria-labelledby="onu-titulo"><h3 id="onu-titulo">Direto da ONU Brasil</h3><p id="onu-tema"></p><p class="hint">Iniciativas e histórias são referências para explorar. Consulte os prazos, custos e condições nas fontes oficiais.</p><p id="onu-status" role="status"></p><div id="onu-listas"></div></section></section>
 <noscript><p>Ative o JavaScript para usar o buscador. <a href="https://brasil.un.org/pt-br/sdgs">Consulte os objetivos na ONU Brasil.</a></p></noscript></div></main>
 <footer><div class="wrap"><strong>O Que Dá Pra Fazer?</strong><p>Projeto acadêmico de Desenvolvimento Web. As ações são sugestões educativas.</p><a href="https://www.un.org/sustainabledevelopment/">Conheça os ODS nas Nações Unidas ↗</a><p>O conteúdo desta publicação não foi aprovado pelas Nações Unidas e não reflete a posição da organização, de seus representantes ou de seus Estados-membros.</p></div></footer></body></html>

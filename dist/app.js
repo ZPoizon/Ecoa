@@ -181,9 +181,53 @@ document.addEventListener('pointerdown', evento => {
 });
 
 
+const materiaisPorOds = [
+  'Uma peça limpa e uma sacola', 'Papel ou bloco de notas', 'Agenda ou celular',
+  'Papel ou bloco de notas', 'Papel ou bloco de notas', 'Papel ou bloco de notas',
+  'Uma janela com acesso à luz natural', 'Papel ou editor de texto', 'Manual do aparelho',
+  'Um texto seu que possa editar', 'Um trajeto habitual e um bloco de notas', 'Sua lista de compras',
+  'Agenda e endereços dos compromissos', 'Um recipiente com tampa', 'Bloco de notas e guia de espécies',
+  'Internet para consultar a prefeitura', 'Internet para pesquisar iniciativas'
+];
+const impactoPorOds = [
+  'Preparar uma peça para doação facilita seu reaproveitamento por quem precisa.',
+  'Planejar o uso dos ingredientes ajuda a evitar desperdício de alimentos.',
+  'Reservar uma pausa ajuda a criar espaço para o bem-estar na rotina.',
+  'Um guia claro pode ajudar outra pessoa a aprender por conta própria.',
+  'Identificar tarefas invisíveis ajuda a repartir o trabalho doméstico.',
+  'Detectar um vazamento é o primeiro passo para reduzir a perda de água.',
+  'Usar a claridade disponível reduz o tempo com luzes acesas.',
+  'Registrar suas habilidades facilita apresentar o que você sabe fazer.',
+  'Manter um aparelho em uso reduz a necessidade de substituição precoce.',
+  'Textos claros reduzem barreiras para quem precisa entender a informação.',
+  'Reconhecer barreiras ajuda a escolher trajetos mais acessíveis.',
+  'Planejar as compras ajuda a evitar excessos de produtos e embalagens.',
+  'Combinar compromissos pode reduzir a quantidade de deslocamentos.',
+  'Separar o óleo usado ajuda a evitar que ele chegue ao esgoto.',
+  'Reconhecer a vegetação local ajuda a entender a biodiversidade do bairro.',
+  'Consultar gastos públicos é um primeiro passo para acompanhar decisões do município.',
+  'Identificar quem participa de uma iniciativa ajuda a entender como a cooperação funciona.'
+];
+const ajuste = document.querySelector('#ajuste');
+const ajusteTexto = document.querySelector('#ajuste-texto');
+const aplicarAjuste = document.querySelector('#aplicar-ajuste');
+
+document.querySelector('.nav a[href="#area-ods"]').addEventListener('click', () => {
+  document.querySelector('#tema-filtro').open = true;
+});
+aplicarAjuste.addEventListener('click', () => {
+  form.elements.tempo.value = aplicarAjuste.dataset.tempo;
+  buscar();
+});
+
 function mostrar() {
   const acao = encontradas[indice];
   titulo.textContent = acao.titulo;
+  const materiais = acao.titulo === 'Experimente comprar a granel'
+    ? 'Lista de compras e um local que venda a granel'
+    : materiaisPorOds[acao.ods - 1];
+  document.querySelector('#materiais').textContent = 'O que você precisa — ' + materiais;
+  document.querySelector('#impacto').textContent = 'Por que isso ajuda — ' + impactoPorOds[acao.ods - 1];
   const etiquetas = [`ODS ${acao.ods}`, `${acao.tempo} min`, acao.custo ? `Até R$ ${acao.custo}` : 'Sem gastar', acao.local];
   document.querySelector('#etiquetas').replaceChildren(...etiquetas.map(texto => {
     const tag = document.createElement('span');
@@ -215,14 +259,26 @@ function mostrar() {
 function buscar() {
   const dados = new FormData(form);
   const selecionados = dados.getAll('ods').map(Number);
-  encontradas = filtrarAcoes(acoes, { ...Object.fromEntries(dados), ods: selecionados });
+  const filtros = { ...Object.fromEntries(dados), ods: selecionados };
+  ajuste.hidden = true;
+  encontradas = filtrarAcoes(acoes, filtros);
   indice = 0;
   if (encontradas.length) {
     mostrar();
     return;
   }
   resultado.hidden = true;
-  status.textContent = 'Nenhuma ação combina com esses filtros. Tente mudar o local ou ampliar o tempo.';
+  status.textContent = 'Nenhuma ação combina com esses filtros.';
+  const alternativas = filtrarAcoes(acoes, { ...filtros, tempo: '' });
+  if (alternativas.length && filtros.tempo !== '') {
+    const tempo = Math.min(...alternativas.map(acao => acao.tempo));
+    const total = alternativas.filter(acao => acao.tempo <= tempo).length;
+    ajusteTexto.textContent = `Com ${tempo} minutos, encontramos ${total === 1 ? '1 ação' : total + ' ações'} com os outros filtros que você escolheu.`;
+    aplicarAjuste.dataset.tempo = tempo;
+    ajuste.hidden = false;
+  } else {
+    status.textContent += ' Experimente ampliar o orçamento, trocar o local ou selecionar outros temas.';
+  }
   document.dispatchEvent(new CustomEvent("tema-ods", { detail: selecionados }));
   status.tabIndex = -1;
   status.focus();
@@ -233,6 +289,7 @@ form.addEventListener('submit', evento => {
   buscar();
 });
 form.addEventListener('reset', () => {
+  ajuste.hidden = true;
   queueMicrotask(atualizarSelecao);
   fecharDescricao();
   resultado.hidden = true;

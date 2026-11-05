@@ -11,7 +11,7 @@ const acoes = [
   [1,15,0,'Em casa','Separe uma peça em bom estado para doação','Escolha uma peça limpa, inteira e que você já não usa.','Guarde em uma sacola identificada para entregar quando encontrar um ponto que aceite esse tipo de item.'],
   [2,15,0,'Em casa','Planeje uma refeição antes de comprar','Veja quais ingredientes que você já tem podem compor a próxima refeição.','Coloque os itens que precisam ser usados primeiro no começo da lista.'],
   [3,5,0,'Em casa','Reserve uma pausa na agenda','Escolha um horário realista entre duas tarefas.','Programe um lembrete para se afastar da tela e fazer uma atividade confortável para você.'],
-  [4,15,0,'Em casa','Revise um assunto que você está aprendendo','Escolha um tópico e tente explicá-lo em três frases.','Confira seu material de estudo e anote uma dúvida para pesquisar depois.'],
+  [4,15,0,'Em casa','Transforme uma explicação difícil em um guia curto','Escolha um assunto que você já entende e escreva três passos em linguagem simples.','Inclua um exemplo e salve o guia para compartilhar quando alguém tiver a mesma dúvida.'],
   [5,15,0,'Em casa','Mapeie a divisão das tarefas domésticas','Liste as tarefas da semana, inclusive planejamento e compras.','Anote quem faz cada uma e identifique uma tarefa que você pode assumir para equilibrar a divisão.'],
   [6,5,0,'Em casa','Identifique desperdício na pia','Veja se a torneira pinga depois de fechada.','Se pingar, anote o local e inclua o conserto na lista de manutenção.'],
   [7,5,0,'Em casa','Aproveite a luz natural','Veja se pode abrir a cortina e usar a claridade para a atividade atual.','Apague a luz do cômodo se houver claridade suficiente.'],
