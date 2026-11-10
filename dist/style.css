@@ -179,3 +179,40 @@ legend { font-weight: 750; }
 .tempo-unidade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(6.3rem, auto); gap: .35rem; }
 .atalhos { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .5rem; }
 .atalhos button { color: var(--green); background: white; border-color: var(--line); min-height: 40px; padding: .3rem .55rem; font-size: .9rem; }
+
+.busca-barra {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr) minmax(0, .85fr) auto;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: .35rem;
+  background: #f8faf7;
+}
+.busca-campo { min-width: 0; padding: .55rem .7rem; }
+.busca-campo + .busca-campo { border-inline-start: 1px solid var(--line); }
+.busca-campo label { display: block; font-weight: 750; color: var(--green); }
+.busca-campo input, .busca-campo select {
+  width: 100%; min-width: 0; min-height: 40px; margin: .2rem 0 0;
+  font: inherit; color: inherit; border: 0; border-radius: .3rem; background: transparent;
+}
+.busca-campo input { padding: .25rem; }
+.busca-campo select { padding: .25rem; }
+.busca-campo input:focus-visible, .busca-campo select:focus-visible { outline-offset: 0; }
+.busca-moeda { display: flex; align-items: center; gap: .3rem; }
+.busca-moeda span { color: var(--muted); white-space: nowrap; }
+.busca-submit { display: flex; align-items: center; justify-content: center; gap: .45rem; padding: .7rem .9rem; border-radius: .7rem; }
+.busca-submit svg { flex: none; }
+.busca-apoio { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .35rem 1rem; margin-top: .75rem; }
+.busca-apoio .atalhos { align-items: center; margin-top: 0; }
+.busca-apoio .atalhos span { color: var(--muted); font-size: .9rem; margin-inline-end: .2rem; }
+.busca-apoio .atalhos button { border-radius: 2rem; }
+.busca-limpar { background: transparent; color: var(--green); border: 0; text-decoration: underline; text-underline-offset: .2em; }
+@media (max-width: 900px) {
+  .busca-barra { grid-template-columns: 1.4fr 1fr 1fr; }
+  .busca-submit { grid-column: 1 / -1; }
+}
+@media (max-width: 620px) {
+  .busca-barra { grid-template-columns: minmax(0, 1fr); }
+  .busca-campo + .busca-campo { border-inline-start: 0; border-block-start: 1px solid var(--line); }
+}
