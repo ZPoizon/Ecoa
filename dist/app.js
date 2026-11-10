@@ -157,7 +157,11 @@ objetivos.forEach((nome, i) => {
   marca.className = 'ods-marca';
   marca.setAttribute('aria-hidden', 'true');
   marca.textContent = '✓';
-  rotulo.append(caixa, icone, marca);
+  const nomeVisivel = document.createElement('span');
+  nomeVisivel.className = 'ods-nome';
+  nomeVisivel.textContent = titulo;
+  nomeVisivel.setAttribute('aria-hidden', 'true');
+  rotulo.append(caixa, icone, marca, nomeVisivel);
   const abrir = () => abrirDescricao(rotulo, titulo, descricoes[i], historiasOds[i], numero);
   rotulo.addEventListener('pointerenter', evento => {
     if (evento.pointerType === 'mouse') abrir();

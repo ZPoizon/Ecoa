@@ -68,7 +68,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
+  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -225,3 +225,88 @@ async function validarCompartilhamento() {
   console.log('OK Compartilhar: interface, cópia manual, limpeza e abertura de ação pelo link (DOM simulado)');
 }
 validarCompartilhamento().catch(erro => { console.error(erro); process.exitCode = 1; });
+
+function validarAcessibilidade() {
+  const a = require('./dist/acessibilidade');
+  const padrao = {tema:'sistema',fonte:100};
+  assert.deepEqual(a.normalizarPreferencias({tema:'invalido',fonte:999}),padrao);
+  assert.deepEqual(a.lerPreferencias({getItem:()=>'{'}),padrao);
+  assert.deepEqual(a.lerPreferencias(undefined),padrao);
+  let salvo;
+  assert.equal(a.salvarPreferencias({setItem:(k,v)=>{salvo=v;}},{tema:'escuro',fonte:125}),true);
+  assert.deepEqual(a.lerPreferencias({getItem:()=>salvo}),{tema:'escuro',fonte:125});
+  assert.equal(a.salvarPreferencias(undefined,padrao),false);
+  assert.equal(a.temaEfetivo('sistema',true),'escuro');
+  assert.equal(a.temaEfetivo('sistema',false),'claro');
+  assert.equal(a.temaEfetivo('claro',true),'claro');
+  assert.equal(a.temaEfetivo('escuro',false),'escuro');
+  assert.equal(a.alterarFonte(100,-1),100);
+  assert.equal(a.alterarFonte(150,1),150);
+  assert.equal(a.alterarFonte(100,1),112.5);
+  assert.equal(a.alterarFonte(125,-1),112.5);
+  const raiz = {dataset:{},style:{}};
+  a.aplicarPreferencias(raiz,{tema:'sistema',fonte:125},true);
+  assert.equal(raiz.dataset.tema,'escuro');
+  assert.equal(raiz.style.fontSize,'125%');
+  console.log('OK Acessibilidade: preferências, persistência, falhas, tema do sistema e limites de fonte');
+  const elementos = new Map();
+  const el = id => {
+    if (!elementos.has(id)) elementos.set(id, {value:'',textContent:'',disabled:false,selectedIndex:0,
+      options:[{text:'Seguir o sistema'}],eventos:{},addEventListener(nome,cb){this.eventos[nome]=cb;}});
+    return elementos.get(id);
+  };
+  let pronto, mudou;
+  const sistema = {matches:true,addEventListener:(nome,cb)=>{mudou=cb;}};
+  a.iniciarAcessibilidade({matchMedia:()=>sistema,localStorage:{getItem:()=>null,setItem(){}}},
+    {documentElement:raiz,querySelector:el,addEventListener:(nome,cb)=>{pronto=cb;}});
+  pronto();
+  assert.equal(raiz.dataset.tema,'escuro');
+  el('#aumentar-fonte').eventos.click();
+  assert.equal(raiz.style.fontSize,'112.5%');
+  el('#reduzir-fonte').eventos.click();
+  assert.equal(raiz.style.fontSize,'100%');
+  assert.equal(el('#reduzir-fonte').disabled,true);
+  el('#preferencia-tema').value='claro';
+  el('#preferencia-tema').eventos.change();
+  mudou();
+  assert.equal(raiz.dataset.tema,'claro');
+  el('#restaurar-leitura').eventos.click();
+  assert.equal(raiz.dataset.tema,'escuro');
+  sistema.matches=false;
+  mudou();
+  assert.equal(raiz.dataset.tema,'claro');
+  console.log('OK Acessibilidade: controles, restauração e mudança de preferência do sistema (DOM simulado)');
+
+  const {readFileSync} = require('node:fs');
+  const css = readFileSync('dist/acessibilidade.css','utf8');
+  const base = readFileSync('dist/style.css','utf8');
+  const variaveis = bloco => Object.fromEntries([...bloco.matchAll(/--([\w-]+):\s*(#[a-f\d]{6})/gi)].map(m=>[m[1],m[2]]));
+  const claro = {...variaveis(base.split('}')[0]),...variaveis(css.match(/:root\s*\{([^}]+)/)[1])};
+  const escuro = {...claro,...variaveis(css.match(/:root\[data-tema="escuro"\]\s*\{([^}]+)/)[1])};
+  const luminancia = hex => {
+    const c = hex.slice(1).match(/../g).map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);
+    return c[0]*.2126+c[1]*.7152+c[2]*.0722;
+  };
+  const contraste = (frente,fundo) => {
+    const x=luminancia(frente), y=luminancia(fundo);
+    return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);
+  };
+  let minimo=Infinity;
+  for (const paleta of [claro,escuro]) {
+    for (const texto of ['text','muted','green']) for (const fundo of ['paper','surface','soft','field','tag']) {
+      const valor=contraste(paleta[texto],paleta[fundo]);
+      assert.ok(valor>=4.5,`${texto}/${fundo}: ${valor}`);
+      minimo=Math.min(minimo,valor);
+    }
+    assert.ok(contraste(paleta['button-text'],paleta.button)>=4.5);
+    for (const fundo of ['surface','soft','field']) {
+      assert.ok(contraste(paleta.control,paleta[fundo])>=3);
+      assert.ok(contraste(paleta.focus,paleta[fundo])>=3);
+    }
+  }
+  for (const cor of ['#fff0b9','#d7edf8','#f9dfd3','#ece0fa','#dbedd3']) assert.ok(contraste('#20352a',cor)>=4.5);
+  for (const cor of ['#f7f7f2','#cfdfa7','#e1ebdb']) assert.ok(contraste(cor,'#15382c')>=4.5);
+  assert.ok(contraste('#ffffff','#173b2d')>=4.5);
+  console.log(`OK Contraste: paletas de texto >= 4,5:1 (mínimo ${minimo.toFixed(2)}:1), controles e foco >= 3:1`);
+}
+validarAcessibilidade();

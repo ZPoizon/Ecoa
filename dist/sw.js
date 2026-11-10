@@ -1,13 +1,13 @@
 // Incremente a versão ao atualizar arquivos armazenados para uso offline.
 const prefixo = 'oqdpf:' + self.registration.scope + ':';
-const versao = prefixo + 'v3';
+const versao = prefixo + 'v4';
 const arquivos = [
-  'index.html', 'style.css', 'manifest.json', 'pwa.js', 'acoes.js', 'app.js',
+  'acessibilidade.js', 'acessibilidade.css', 'index.html', 'style.css', 'manifest.json', 'pwa.js', 'acoes.js', 'app.js',
   'compartilhar.js', 'compartilhar-ui.js', 'onu.js', 'plano.js', 'plano-json.js', 'plano-pdf.js', 'guias.js', 'vendor/pdf-lib.min.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
   ...Array.from({ length: 17 }, (_, i) => 'ods/' + (i + 1) + '.webp')
 ].map(caminho => new URL(caminho, self.registration.scope).href);
-const paginaInicial = arquivos[0];
+const paginaInicial = new URL('index.html', self.registration.scope).href;
 
 self.addEventListener('install', evento => {
   evento.waitUntil((async () => {
