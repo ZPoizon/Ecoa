@@ -68,7 +68,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'ods/17.webp']) {
+  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -157,3 +157,71 @@ async function validarBackupPlano() {
   console.log('OK JSON: leitura, extensão, limite e erro de acesso ao arquivo');
 }
 validarBackupPlano().catch(erro => { console.error(erro); process.exitCode = 1; });
+
+async function validarCompartilhamento() {
+  const api = require('./dist/compartilhar');
+  for (const acao of acoes) {
+    const dados = api.dadosCompartilhamento(acao, 'https://exemplo.test/sub/index.html?privado=123#guias');
+    const url = new URL(dados.url);
+    assert.equal(url.search, '');
+    assert.equal(url.pathname, '/sub/index.html');
+    assert.equal(api.acaoDoLink(url.hash, acoes), acao);
+    assert.ok(dados.text.includes(acao.passos[0]));
+    assert.ok(dados.text.includes('Ação sugerida pelo projeto'));
+    assert.equal(new URL(api.linkWhatsApp(dados)).searchParams.get('text'), api.textoCompartilhamento(dados));
+  }
+  for (const hash of ['', '#guias', '#acao=%ZZ', '#acao=999:inexistente', '#acao=%3Cscript%3E']) {
+    assert.equal(api.acaoDoLink(hash, acoes), undefined);
+  }
+  console.log('OK Compartilhar: links para todas as ações, subpasta, texto, WhatsApp e links inválidos');
+  const dados = api.dadosCompartilhamento(acoes[0], 'https://exemplo.test/');
+  let copiado;
+  const navegador = {clipboard:{writeText:async texto=>{copiado=texto;}}};
+  assert.equal(await api.copiarCompartilhamento(dados,navegador),'copiado');
+  assert.equal(copiado, api.textoCompartilhamento(dados));
+  assert.equal(await api.copiarCompartilhamento(dados,{}),'manual');
+  assert.equal(await api.copiarCompartilhamento(dados,{clipboard:{writeText:async()=>{throw Error();}}}),'manual');
+  assert.equal(await api.compartilharAcao(dados,navegador),'copiado');
+  assert.equal(await api.compartilharAcao(dados,{}),'manual');
+  assert.equal(await api.compartilharAcao(dados,{...navegador,share:async()=>{throw Error();}}),'copiado');
+  copiado = undefined;
+  assert.equal(await api.compartilharAcao(dados,{...navegador,share:async()=>{throw {name:'AbortError'};}}),'cancelado');
+  assert.equal(copiado,undefined);
+  assert.equal(await api.compartilharAcao(dados,{...navegador,share:async recebido=>assert.equal(recebido,dados)}),'compartilhado');
+  assert.equal(copiado,undefined);
+  console.log('OK Compartilhar: API nativa, cancelamento, cópia e alternativa manual');
+
+  const { readFileSync } = require('node:fs');
+  const { runInNewContext } = require('node:vm');
+  const elementos = new Map();
+  const el = id => {
+    if (!elementos.has(id)) elementos.set(id, {textContent:'',hidden:false,value:'',disabled:false,
+      addEventListener(){},removeAttribute(nome){delete this[nome];},focus(){this.focado=true;},select(){this.selecionado=true;}});
+    return elementos.get(id);
+  };
+  const contexto = { ...api, acoes, encontradas:[acoes[0]], indice:0,
+    location:{href:'https://exemplo.test/',hash:''},navigator:{},
+    resultado:{hidden:false},status:el('status'),form:{reset(){}},
+    mostrar(){contexto.resultado.hidden=false;},
+    document:{querySelector:el,addEventListener(){}},window:{addEventListener(){}} };
+  runInNewContext(readFileSync('dist/compartilhar-ui.js','utf8'),contexto);
+  assert.ok(el('#whatsapp-acao').href.startsWith('https://wa.me/'));
+  await contexto.executarCompartilhamento(true);
+  assert.equal(el('#copia-manual').hidden,false);
+  assert.ok(el('#texto-compartilhar').selecionado);
+  assert.equal(el('#copiar-acao').disabled,false);
+  contexto.resultado.hidden=true;
+  contexto.atualizarCompartilhamento();
+  assert.equal(el('#copia-manual').hidden,true);
+  assert.equal(el('#texto-compartilhar').value,'');
+  contexto.location.hash='#acao=%ZZ';
+  contexto.abrirAcaoCompartilhada();
+  assert.match(contexto.status.textContent,/não foi encontrada/);
+  contexto.location.hash=new URL(api.dadosCompartilhamento(acoes[5],contexto.location.href).url).hash;
+  contexto.abrirAcaoCompartilhada();
+  assert.equal(contexto.encontradas[0],acoes[5]);
+  assert.equal(contexto.indice,0);
+  assert.equal(contexto.resultado.hidden,false);
+  console.log('OK Compartilhar: interface, cópia manual, limpeza e abertura de ação pelo link (DOM simulado)');
+}
+validarCompartilhamento().catch(erro => { console.error(erro); process.exitCode = 1; });

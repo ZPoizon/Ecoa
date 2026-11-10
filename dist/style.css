@@ -278,3 +278,13 @@ legend { font-weight: 750; }
 .plano-backup .buttons { margin-bottom: .75rem; }
 .plano-backup button:disabled { opacity: .55; cursor: default; }
 #plano-json-status:empty { display: none; }
+
+.compartilhar { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.compartilhar summary { cursor: pointer; padding-block: .7rem; color: var(--green); }
+.compartilhar summary:focus-visible, .compartilhar textarea:focus-visible { outline: 3px solid #a64b16; outline-offset: 3px; }
+.compartilhar .buttons { align-items: center; margin-top: 0; }
+.compartilhar a { display: inline-flex; align-items: center; min-height: 44px; }
+.compartilhar textarea { display: block; width: 100%; padding: .75rem; font: inherit; color: var(--text); background: white; border: 1px solid #83958a; border-radius: .4rem; resize: vertical; }
+#compartilhar-status { margin-top: .5rem; }
+#compartilhar-status:empty { display: none; }
+.compartilhar button:disabled { opacity: .55; cursor: default; }
