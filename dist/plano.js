@@ -88,7 +88,7 @@ document.querySelectorAll('[data-rapida], [data-tema]').forEach(botao => {
     if (botao.dataset.tema) {
       const temas = botao.dataset.tema.split(',');
       for (const campo of form.querySelectorAll('[name="ods"]')) campo.checked = temas.includes(campo.value);
-      document.querySelector('#tema-filtro').open = true;
+
     }
     buscar();
   });

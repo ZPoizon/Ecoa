@@ -212,9 +212,6 @@ const ajuste = document.querySelector('#ajuste');
 const ajusteTexto = document.querySelector('#ajuste-texto');
 const aplicarAjuste = document.querySelector('#aplicar-ajuste');
 
-document.querySelector('.nav a[href="#area-ods"]').addEventListener('click', () => {
-  document.querySelector('#tema-filtro').open = true;
-});
 aplicarAjuste.addEventListener('click', () => {
   form.elements.unidade.value = "min";
   form.elements.tempo.value = aplicarAjuste.dataset.tempo;
