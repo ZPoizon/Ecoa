@@ -216,3 +216,22 @@ legend { font-weight: 750; }
   .busca-barra { grid-template-columns: minmax(0, 1fr); }
   .busca-campo + .busca-campo { border-inline-start: 0; border-block-start: 1px solid var(--line); }
 }
+
+.descoberta { margin: 2.75rem 0; }
+.descoberta-grade { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; }
+.descoberta-grade.interesses { grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); }
+.descoberta-grade button { background: var(--cor-card); color: #20352a; border: 1px solid #20352a33; border-radius: .85rem; }
+.descoberta-grade button:hover { background: var(--cor-card); color: #20352a; box-shadow: inset 0 0 0 2px #20352a55; }
+.descoberta-card { display: grid; gap: .4rem; align-content: center; text-align: left; min-height: 7rem; padding: 1rem; }
+.descoberta-card strong { font-size: 1.1rem; }
+.descoberta-card span { font-size: .9rem; font-weight: 500; }
+.amarelo { --cor-card: #fff0b9; }
+.azul { --cor-card: #d7edf8; }
+.terra { --cor-card: #f9dfd3; }
+.lilas { --cor-card: #ece0fa; }
+.verde { --cor-card: #dbedd3; }
+.plano { background: #eaf2e7; border: 1px solid var(--line); border-radius: .85rem; padding: clamp(1rem, 3vw, 1.8rem); }
+#plano-lista { list-style: none; padding: 0; margin: 0; }
+#plano-lista li { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; border-top: 1px solid var(--line); padding: .7rem 0; }
+#plano-lista input { margin-inline-end: .6rem; accent-color: var(--green); }
+@media (max-width: 620px) { .descoberta-grade:not(.interesses) { grid-template-columns: 1fr; } }
