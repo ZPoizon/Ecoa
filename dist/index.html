@@ -1,5 +1,5 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Encontre uma ação prática ligada aos Objetivos de Desenvolvimento Sustentável."><title>O Que Dá Pra Fazer?</title><link rel="stylesheet" href="style.css"><script defer src="acoes.js"></script><script defer src="app.js"></script><script defer src="onu.js"></script><script defer src="plano.js"></script></head>
-<body><header><div class="wrap nav"><a href="./" class="brand">O Que Dá Pra Fazer?</a><nav aria-label="Navegação principal"><a href="#busca">Buscar</a><a href="#explorar">Explorar</a><a href="#meu-plano">Meu plano</a></nav></div></header>
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Encontre uma ação prática ligada aos Objetivos de Desenvolvimento Sustentável."><title>O Que Dá Pra Fazer?</title><link rel="stylesheet" href="style.css"><script defer src="acoes.js"></script><script defer src="app.js"></script><script defer src="onu.js"></script><script defer src="plano.js"></script><script defer src="guias.js"></script></head>
+<body><header><div class="wrap nav"><a href="./" class="brand">O Que Dá Pra Fazer?</a><nav aria-label="Navegação principal"><a href="#busca">Buscar</a><a href="#explorar">Explorar</a><a href="#guias">Guias ODS</a><a href="#meu-plano">Meu plano</a></nav></div></header>
 <main id="inicio"><section class="hero"><div class="wrap intro"><div><p class="eyebrow">GUIA PRÁTICO DA AGENDA 2030</p><h1>O que dá pra fazer <em>hoje?</em></h1><p class="lead">Encontre uma ação sustentável que caiba no seu tempo e no seu orçamento.</p></div></div></section>
 <div class="wrap"><section class="finder" aria-labelledby="busca"><h2 id="busca">Encontre sua próxima ação</h2><form id="filtros" aria-describedby="ajuda-busca">
 <p class="hint" id="ajuda-busca">Use os filtros que quiser. Você também pode buscar sem preencher nada.</p>
@@ -25,6 +25,32 @@
 <button class="descoberta-card terra" type="button" data-rapida="gratis"><strong>Quero ajudar sem gastar</strong><span>Veja ações gratuitas →</span></button></div>
 <h3 class="explorar-temas">Ou escolha um assunto</h3><div class="descoberta-grade interesses">
 <button class="amarelo" type="button" data-tema="2,12">Alimentação</button><button class="azul" type="button" data-tema="6,14">Água</button><button class="lilas" type="button" data-tema="4">Educação</button><button class="terra" type="button" data-tema="11,15">Meu bairro</button><button class="verde" type="button" data-tema="7,12,13">Consumo</button></div></section>
+<section class="descoberta" id="guias" aria-labelledby="guias-titulo">
+<h2 id="guias-titulo">Guias dos 17 ODS</h2>
+<p class="hint">Entenda cada objetivo, veja como ele aparece na prática e escolha uma ação para começar.</p>
+<label for="seletor-guia">Qual objetivo você quer conhecer?</label>
+<select id="seletor-guia"></select>
+<article class="guia-artigo" id="conteudo-guia" aria-labelledby="guia-nome"></article>
+<button id="buscar-guia" type="button">Buscar ações deste ODS</button>
+<template id="modelo-guia">
+<div class="guia-capa">
+<img width="160" height="160" alt="">
+<div><p class="eyebrow" data-guia="numero"></p><h3 id="guia-nome" data-guia="nome"></h3><p data-guia="descricao"></p></div>
+</div>
+<div class="guia-blocos">
+<div><h4>De onde veio</h4><p data-guia="historia"></p></div>
+<div><h4>Duas metas em foco</h4><ul><li data-guia="meta1"></li><li data-guia="meta2"></li></ul></div>
+<div><h4>Como aparece na prática</h4><p data-guia="exemplo"></p></div>
+</div>
+<div class="guia-pratica">
+<h4>Experimente você</h4><p><strong data-guia="acao"></strong></p>
+<ol class="guia-passos">
+<li><strong>Comece por aqui</strong><p data-guia="passo1"></p></li>
+<li><strong>Coloque em prática</strong><p data-guia="passo2"></p></li>
+<li><strong>Veja o que mudou</strong><p data-guia="indicador"></p></li>
+</ol></div>
+<div class="ods-fontes"><a data-guia="metas">Consultar todas as metas na ONU Brasil</a><a data-guia="dados">Consultar indicadores globais na ONU (em inglês)</a></div>
+</template></section>
 <section class="descoberta plano" id="meu-plano" aria-labelledby="plano-titulo"><h2 id="plano-titulo" tabindex="-1">Meu plano</h2><p id="plano-resumo" role="status"></p><p id="plano-aviso" role="status"></p><ul id="plano-lista"></ul></section>
 <noscript><p>Ative o JavaScript para usar o buscador. <a href="https://brasil.un.org/pt-br/sdgs">Consulte os objetivos na ONU Brasil.</a></p></noscript></div></main>
 <footer><div class="wrap"><strong>O Que Dá Pra Fazer?</strong><p>Projeto acadêmico de Desenvolvimento Web. As ações são sugestões educativas.</p><a href="https://www.un.org/sustainabledevelopment/">Conheça os ODS nas Nações Unidas ↗</a><p>O conteúdo desta publicação não foi aprovado pelas Nações Unidas e não reflete a posição da organização, de seus representantes ou de seus Estados-membros.</p></div></footer></body></html>

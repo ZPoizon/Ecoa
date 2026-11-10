@@ -250,3 +250,20 @@ legend { font-weight: 750; }
   .nav nav { width: 100%; }
   .descoberta-card { min-height: 0; padding: .8rem 1rem; gap: .15rem; }
 }
+
+#guias { scroll-margin-top: 1rem; }
+#guias label { display: block; font-weight: 750; }
+#seletor-guia { display: block; width: min(100%, 32rem); min-height: 44px; padding: .45rem; }
+.guia-artigo { margin-block: 1rem; padding: clamp(.9rem, 3vw, 1.6rem); background: white; border: 1px solid var(--line); border-radius: .85rem; }
+.guia-capa { display: flex; align-items: center; gap: 1rem; }
+.guia-capa img { width: clamp(5rem, 16vw, 9rem); height: auto; border-radius: .4rem; flex: none; }
+.guia-capa p { margin: .35rem 0; }
+.guia-capa h3, .guia-blocos h4, .guia-pratica h4 { margin: 0; }
+.guia-blocos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 1rem; margin-top: 1.25rem; }
+.guia-blocos p, .guia-blocos ul { margin: .35rem 0; }
+.guia-pratica { margin-top: 1rem; padding: 1rem; border-radius: .6rem; background: #eaf2e7; }
+.guia-pratica > p { margin: .35rem 0 .75rem; }
+.guia-passos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: .65rem; margin: 0; padding: 0; list-style-position: inside; }
+.guia-passos li { background: white; padding: .65rem; border-radius: .4rem; }
+.guia-passos p { margin: .35rem 0 0; }
+@media (max-width: 420px) { .guia-capa { align-items: flex-start; } }
