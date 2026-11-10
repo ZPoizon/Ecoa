@@ -267,3 +267,7 @@ legend { font-weight: 750; }
 .guia-passos li { background: white; padding: .65rem; border-radius: .4rem; }
 .guia-passos p { margin: .35rem 0 0; }
 @media (max-width: 420px) { .guia-capa { align-items: flex-start; } }
+
+#baixar-plano { margin-bottom: .5rem; }
+#baixar-plano:disabled { opacity: .55; cursor: default; }
+#plano-exportacao:empty { display: none; }

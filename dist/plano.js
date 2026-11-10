@@ -2,6 +2,9 @@ const planoChave = 'oqdpf-plano-v1';
 const planoLista = document.querySelector('#plano-lista');
 const planoResumo = document.querySelector('#plano-resumo');
 const planoAviso = document.querySelector('#plano-aviso');
+const baixarPlano = document.querySelector('#baixar-plano');
+const avisoExportacao = document.querySelector('#plano-exportacao');
+let exportandoPlano = false;
 const salvarAcao = document.querySelector('#salvar-acao');
 const chaveAcao = acao => acao.ods + ':' + acao.titulo;
 let plano = new Map();
@@ -22,6 +25,7 @@ function atualizarBotaoSalvar() {
 
 function atualizarPlano() {
   planoLista.replaceChildren();
+  baixarPlano.disabled = exportandoPlano || plano.size === 0;
   const concluidas = [...plano.values()].filter(Boolean).length;
   planoResumo.textContent = plano.size
     ? `${concluidas} de ${plano.size} ações concluídas. Seu plano fica neste navegador.`
@@ -94,3 +98,30 @@ document.querySelectorAll('[data-rapida], [data-tema]').forEach(botao => {
   });
 });
 atualizarPlano();
+
+baixarPlano.addEventListener('click', async () => {
+  const itens = acoes.filter(acao => plano.has(chaveAcao(acao)))
+    .map(acao => ({ ...acao, concluida: plano.get(chaveAcao(acao)) }));
+  if (!itens.length) return;
+  exportandoPlano = true;
+  baixarPlano.disabled = true;
+  avisoExportacao.textContent = 'Preparando o PDF…';
+  try {
+    const biblioteca = await import('./vendor/pdf-lib.min.js');
+    const bytes = await gerarPdfPlano(biblioteca, itens, new Date().toLocaleDateString('pt-BR'));
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'meu-plano-ods.pdf';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    avisoExportacao.textContent = 'PDF pronto. Confira os downloads do navegador.';
+  } catch {
+    avisoExportacao.textContent = 'Não foi possível gerar o PDF. Tente novamente.';
+  } finally {
+    exportandoPlano = false;
+    baixarPlano.disabled = plano.size === 0;
+  }
+});
