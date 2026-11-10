@@ -271,3 +271,10 @@ legend { font-weight: 750; }
 #baixar-plano { margin-bottom: .5rem; }
 #baixar-plano:disabled { opacity: .55; cursor: default; }
 #plano-exportacao:empty { display: none; }
+
+.plano-backup { margin-block: .75rem 1rem; border-top: 1px solid var(--line); padding-top: .75rem; }
+.plano-backup summary { cursor: pointer; font-weight: 700; padding-block: .5rem; color: var(--green); }
+.plano-backup summary:focus-visible { outline: 3px solid #a64b16; outline-offset: 3px; }
+.plano-backup .buttons { margin-bottom: .75rem; }
+.plano-backup button:disabled { opacity: .55; cursor: default; }
+#plano-json-status:empty { display: none; }

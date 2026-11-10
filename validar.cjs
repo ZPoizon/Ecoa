@@ -68,7 +68,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'ods/17.webp']) {
+  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -110,3 +110,50 @@ validarPwa().catch(erro => {
   console.error(erro);
   process.exitCode = 1;
 });
+
+async function validarBackupPlano() {
+  const { validarPlanoJson, exportarPlanoJson, mesclarPlanoJson, importarPlanoJson, lerArquivoPlanoJson } = require('./dist/plano-json');
+  const chaves = acoes.map(a => a.ods + ':' + a.titulo);
+  const atual = new Map([[chaves[0], true], [chaves[1], false]]);
+  const texto = exportarPlanoJson(atual, acoes);
+  assert.deepEqual(validarPlanoJson(texto, acoes), atual);
+  assert.deepEqual(validarPlanoJson('\uFEFF' + texto, acoes), atual);
+  assert.equal(validarPlanoJson(exportarPlanoJson(new Map(), acoes), acoes).size, 0);
+  console.log('OK JSON: ida e volta, acentos, BOM e plano vazio');
+  const arquivo = itens => JSON.stringify({ projeto: 'oqdpf', versao: 1, acoes: itens });
+  for (const invalido of ['{', 'null', '[]', '{}', JSON.stringify({projeto:'oqdpf',versao:2,acoes:[]}),
+    arquivo(null), arquivo([null]), arquivo([{chave:chaves[0],concluida:'false'}]),
+    arquivo([{chave:'__proto__',concluida:true}]),
+    arquivo([{chave:chaves[0],concluida:false},{chave:chaves[0],concluida:true}]),
+    arquivo(Array(acoes.length + 1).fill({chave:chaves[0],concluida:true})), ' '.repeat(102401)]) {
+    assert.throws(() => validarPlanoJson(invalido, acoes), Error);
+  }
+  assert.throws(() => exportarPlanoJson(new Map([['inexistente',false]]), acoes), /catálogo/);
+  console.log('OK JSON: sintaxe, formato, versão, tamanho, catálogo, duplicatas e estados inválidos');
+  const recebido = new Map([[chaves[0], false], [chaves[1], true], [chaves[2], false]]);
+  const combinado = mesclarPlanoJson(atual, recebido);
+  assert.deepEqual([...combinado.values()], [true,true,false]);
+  assert.equal(atual.size,2);
+  assert.equal(atual.get(chaves[1]),false);
+  assert.deepEqual(mesclarPlanoJson(combinado, recebido), combinado);
+  assert.deepEqual(mesclarPlanoJson(atual, new Map()), atual);
+  console.log('OK JSON: união sem perda, sem mutação e importação repetida');
+  let salvo;
+  const storage = {setItem:(chave,valor) => { assert.equal(chave,'teste'); salvo=valor; }};
+  const resultado = importarPlanoJson(exportarPlanoJson(recebido, acoes), acoes, atual, storage, 'teste');
+  assert.equal(resultado.novas,1);
+  assert.equal(resultado.quantidade,3);
+  assert.deepEqual(JSON.parse(salvo),Object.fromEntries(combinado));
+  salvo=undefined;
+  assert.throws(() => importarPlanoJson('{', acoes, atual, storage, 'teste'));
+  assert.equal(salvo,undefined);
+  assert.throws(() => importarPlanoJson(texto, acoes, atual, {setItem:()=>{throw Error('quota');}}, 'teste'), /plano atual foi mantido/);
+  assert.deepEqual([...atual.values()], [true,false]);
+  console.log('OK JSON: persistência antes da atualização e preservação após erro');
+  assert.equal(await lerArquivoPlanoJson({name:'PLANO.JSON',size:10,text:async()=>texto}),texto);
+  await assert.rejects(lerArquivoPlanoJson({name:'plano.txt',size:10}), /extensão/);
+  await assert.rejects(lerArquivoPlanoJson({name:'plano.json',size:102401}), /100 KB/);
+  await assert.rejects(lerArquivoPlanoJson({name:'plano.json',size:10,text:async()=>{throw Error();}}), /ler o arquivo/);
+  console.log('OK JSON: leitura, extensão, limite e erro de acesso ao arquivo');
+}
+validarBackupPlano().catch(erro => { console.error(erro); process.exitCode = 1; });

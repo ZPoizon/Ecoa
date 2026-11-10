@@ -5,6 +5,10 @@ const planoAviso = document.querySelector('#plano-aviso');
 const baixarPlano = document.querySelector('#baixar-plano');
 const avisoExportacao = document.querySelector('#plano-exportacao');
 let exportandoPlano = false;
+const exportarJson = document.querySelector('#exportar-json');
+const importarJson = document.querySelector('#importar-json');
+const arquivoPlano = document.querySelector('#arquivo-plano');
+const statusJson = document.querySelector('#plano-json-status');
 const salvarAcao = document.querySelector('#salvar-acao');
 const chaveAcao = acao => acao.ods + ':' + acao.titulo;
 let plano = new Map();
@@ -25,6 +29,7 @@ function atualizarBotaoSalvar() {
 
 function atualizarPlano() {
   planoLista.replaceChildren();
+  exportarJson.disabled = plano.size === 0;
   baixarPlano.disabled = exportandoPlano || plano.size === 0;
   const concluidas = [...plano.values()].filter(Boolean).length;
   planoResumo.textContent = plano.size
@@ -123,5 +128,47 @@ baixarPlano.addEventListener('click', async () => {
   } finally {
     exportandoPlano = false;
     baixarPlano.disabled = plano.size === 0;
+  }
+});
+
+
+exportarJson.addEventListener('click', () => {
+  try {
+    const texto = exportarPlanoJson(plano, acoes);
+    const url = URL.createObjectURL(new Blob([texto], { type: 'application/json;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'meu-plano-ods.json';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    statusJson.textContent = 'Cópia JSON pronta. Confira os downloads do navegador.';
+  } catch {
+    statusJson.textContent = 'Não foi possível baixar a cópia. Tente novamente.';
+  }
+});
+
+importarJson.addEventListener('click', () => arquivoPlano.click());
+arquivoPlano.addEventListener('change', async () => {
+  const arquivo = arquivoPlano.files[0];
+  if (!arquivo) return;
+  importarJson.disabled = true;
+  statusJson.textContent = 'Lendo e validando o arquivo…';
+  try {
+    const texto = await lerArquivoPlanoJson(arquivo);
+    const resultado = importarPlanoJson(texto, acoes, plano, localStorage, planoChave);
+    plano = resultado.plano;
+    planoAviso.textContent = '';
+    atualizarPlano();
+    statusJson.textContent = resultado.quantidade
+      ? `Importação concluída: ${resultado.quantidade} ações no arquivo, ${resultado.novas} novas no plano. As ações concluídas foram preservadas.`
+      : 'O arquivo contém um plano vazio. Suas ações foram mantidas.';
+  } catch (erro) {
+    statusJson.textContent = erro instanceof Error ? erro.message : 'Não foi possível importar. Seu plano atual foi mantido.';
+  } finally {
+    arquivoPlano.value = '';
+    importarJson.disabled = false;
+    importarJson.focus();
   }
 });
