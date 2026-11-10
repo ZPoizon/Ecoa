@@ -88,7 +88,7 @@ salvarAcao.addEventListener('click', () => {
 });
 document.addEventListener('tema-ods', atualizarBotaoSalvar);
 
-document.querySelectorAll('[data-rapida], [data-tema]').forEach(botao => {
+document.querySelectorAll('#explorar button[data-rapida], #explorar button[data-tema]').forEach(botao => {
   botao.addEventListener('click', () => {
     form.reset();
     if (botao.dataset.rapida === 'tempo') form.elements.tempo.value = '5';

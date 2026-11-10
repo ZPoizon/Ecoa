@@ -352,3 +352,36 @@ function validarCartoesGuias() {
   console.log('OK Guias: 17 cartões, seleção única, foco no conteúdo e busca do ODS escolhido');
 }
 validarCartoesGuias();
+
+function validarIsolamentoTema() {
+  const {runInNewContext} = require('node:vm');
+  const {readFileSync} = require('node:fs');
+  const elemento = (dataset = {}) => ({dataset,eventos:{},textContent:'',
+    addEventListener(nome,cb){this.eventos[nome]=cb;},replaceChildren(){},append(){},setAttribute(){},focus(){}});
+  // O atributo data-tema também existe no HTML para controlar a aparência.
+  const raiz = elemento({tema:'claro'});
+  const atalho = elemento({tema:'6,14'});
+  const elementos = new Map();
+  const el = id => {if (!elementos.has(id)) elementos.set(id,elemento());return elementos.get(id);};
+  let buscas=0, resets=0;
+  const campos=[{value:'6',checked:false},{value:'14',checked:false},{value:'1',checked:true}];
+  const doc={querySelector:el,addEventListener(){},createElement:elemento,
+    querySelectorAll:seletor => {
+      // Reproduz a correspondência do seletor no HTML raiz versus botões da seção Explorar.
+      return seletor.includes('#explorar button') ? [atalho] : [raiz,atalho];
+    }};
+  runInNewContext(readFileSync('dist/plano.js','utf8'),{
+    document:doc,localStorage:{getItem:()=>null,setItem(){}},acoes,encontradas:[],indice:0,
+    form:{reset(){resets++;},elements:{},querySelectorAll:()=>campos},buscar(){buscas++;}
+  });
+  // Um clique no tema borbulha até o HTML e não deve disparar o buscador.
+  raiz.eventos.click?.();
+  assert.equal(buscas,0);
+  assert.equal(resets,0);
+  atalho.eventos.click();
+  assert.equal(buscas,1);
+  assert.equal(resets,1);
+  assert.deepEqual(campos.map(c=>c.checked),[true,true,false]);
+  console.log('OK Regressão: clique no tema não aciona busca; atalhos de ODS continuam funcionando');
+}
+validarIsolamentoTema();
