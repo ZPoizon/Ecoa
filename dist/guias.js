@@ -23,6 +23,26 @@ const conteudoGuia = document.querySelector('#conteudo-guia');
 
 objetivos.forEach((nome, indice) => {
   seletorGuia.add(new Option(`ODS ${indice + 1} — ${nome}`, indice + 1));
+  const botao = document.createElement('button');
+  botao.type = 'button';
+  botao.className = 'guia-escolha';
+  botao.dataset.ods = indice + 1;
+  botao.setAttribute('aria-label', `ODS ${indice + 1} — ${nome}`);
+  botao.setAttribute('aria-controls', 'conteudo-guia');
+  const icone = document.createElement('img');
+  icone.src = `ods/${indice + 1}.webp`;
+  icone.alt = '';
+  icone.width = icone.height = 160;
+  icone.loading = 'lazy';
+  const legenda = document.createElement('span');
+  legenda.textContent = nome;
+  botao.append(icone, legenda);
+  botao.addEventListener('click', () => {
+    seletorGuia.value = indice + 1;
+    preencherGuia();
+    document.querySelector('#guia-nome').focus();
+  });
+  document.querySelector('#cartoes-guias').append(botao);
 });
 
 function preencherGuia() {
@@ -42,6 +62,9 @@ function preencherGuia() {
   modelo.querySelector('[data-guia="metas"]').href = `https://brasil.un.org/pt-br/sdgs/${numero}`;
   modelo.querySelector('[data-guia="dados"]').href = `https://sdgs.un.org/goals/goal${numero}`;
   conteudoGuia.replaceChildren(modelo);
+  document.querySelectorAll('.guia-escolha').forEach(botao => {
+    botao.setAttribute('aria-pressed', String(Number(botao.dataset.ods) === numero));
+  });
 }
 
 seletorGuia.addEventListener('change', preencherGuia);

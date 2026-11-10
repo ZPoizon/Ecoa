@@ -240,6 +240,10 @@ function validarAcessibilidade() {
   assert.equal(a.temaEfetivo('sistema',false),'claro');
   assert.equal(a.temaEfetivo('claro',true),'claro');
   assert.equal(a.temaEfetivo('escuro',false),'escuro');
+  assert.equal(a.proximoTema('sistema',true),'claro');
+  assert.equal(a.proximoTema('sistema',false),'escuro');
+  assert.equal(a.proximoTema('claro',true),'escuro');
+  assert.equal(a.proximoTema('escuro',false),'claro');
   assert.equal(a.alterarFonte(100,-1),100);
   assert.equal(a.alterarFonte(150,1),150);
   assert.equal(a.alterarFonte(100,1),112.5);
@@ -252,7 +256,7 @@ function validarAcessibilidade() {
   const elementos = new Map();
   const el = id => {
     if (!elementos.has(id)) elementos.set(id, {value:'',textContent:'',disabled:false,selectedIndex:0,
-      options:[{text:'Seguir o sistema'}],eventos:{},addEventListener(nome,cb){this.eventos[nome]=cb;}});
+      options:[{text:'Seguir o sistema'}],eventos:{},setAttribute(nome,valor){this[nome]=valor;},addEventListener(nome,cb){this.eventos[nome]=cb;}});
     return elementos.get(id);
   };
   let pronto, mudou;
@@ -260,6 +264,12 @@ function validarAcessibilidade() {
   a.iniciarAcessibilidade({matchMedia:()=>sistema,localStorage:{getItem:()=>null,setItem(){}}},
     {documentElement:raiz,querySelector:el,addEventListener:(nome,cb)=>{pronto=cb;}});
   pronto();
+  assert.equal(raiz.dataset.tema,'escuro');
+  assert.equal(el('#alternar-tema')['aria-pressed'],'true');
+  el('#alternar-tema').eventos.click();
+  assert.equal(raiz.dataset.tema,'claro');
+  assert.equal(el('#alternar-tema')['aria-pressed'],'false');
+  el('#alternar-tema').eventos.click();
   assert.equal(raiz.dataset.tema,'escuro');
   el('#aumentar-fonte').eventos.click();
   assert.equal(raiz.style.fontSize,'112.5%');
@@ -310,3 +320,35 @@ function validarAcessibilidade() {
   console.log(`OK Contraste: paletas de texto >= 4,5:1 (mínimo ${minimo.toFixed(2)}:1), controles e foco >= 3:1`);
 }
 validarAcessibilidade();
+
+function validarCartoesGuias() {
+  const {runInNewContext} = require('node:vm');
+  const {readFileSync} = require('node:fs');
+  const elemento = () => ({dataset:{},children:[],eventos:{},value:'',
+    setAttribute(k,v){this[k]=v;},append(...itens){this.children.push(...itens);},
+    replaceChildren(...itens){this.children=itens;},addEventListener(k,v){this.eventos[k]=v;},
+    focus(){this.focado=true;},add(opcao){if (!this.value) this.value=opcao.value;}});
+  const elementos = new Map();
+  const el = id => { if (!elementos.has(id)) elementos.set(id,elemento()); return elementos.get(id); };
+  el('#modelo-guia').content={cloneNode:()=>({querySelector:el})};
+  const doc={querySelector:el,createElement:elemento,querySelectorAll:()=>el('#cartoes-guias').children};
+  let buscou=false;
+  const ctx={document:doc,objetivos,Option:function(text,value){this.value=value;},
+    detalhesOds:objetivos.map(()=>['meta1','meta2','exemplo']),descricoes:objetivos,historiasOds:objetivos,
+    form:{reset(){}},opcoes:{querySelector:el},atualizarSelecao(){},buscar(){buscou=true;}};
+  runInNewContext(readFileSync('dist/guias.js','utf8'),ctx);
+  const cartoes=el('#cartoes-guias').children;
+  assert.equal(cartoes.length,17);
+  assert.equal(cartoes[0]['aria-pressed'],'true');
+  cartoes[5].eventos.click();
+  assert.equal(el('#seletor-guia').value,6);
+  assert.equal(cartoes[5]['aria-pressed'],'true');
+  assert.equal(cartoes[0]['aria-pressed'],'false');
+  assert.equal(el('#guia-nome').focado,true);
+  assert.equal(el('img').src,'ods/6.webp');
+  el('#buscar-guia').eventos.click();
+  assert.equal(buscou,true);
+  assert.equal(el('input[value="6"]').checked,true);
+  console.log('OK Guias: 17 cartões, seleção única, foco no conteúdo e busca do ODS escolhido');
+}
+validarCartoesGuias();

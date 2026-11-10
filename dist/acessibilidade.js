@@ -16,6 +16,9 @@ function salvarPreferencias(armazenamento, preferencias) {
 function temaEfetivo(tema, sistemaEscuro) {
   return tema === 'sistema' ? (sistemaEscuro ? 'escuro' : 'claro') : tema;
 }
+function proximoTema(tema, sistemaEscuro) {
+  return temaEfetivo(tema, sistemaEscuro) === 'escuro' ? 'claro' : 'escuro';
+}
 function alterarFonte(fonte, direcao) {
   const tamanhos = [100, 112.5, 125, 150];
   const indice = tamanhos.indexOf(normalizarPreferencias({fonte}).fonte);
@@ -35,6 +38,9 @@ function iniciarAcessibilidade(janela, documento) {
   sistema.addEventListener('change', () => aplicarPreferencias(documento.documentElement, preferencias, sistema.matches));
   documento.addEventListener('DOMContentLoaded', () => {
     const tema = documento.querySelector('#preferencia-tema');
+    const alternar = documento.querySelector('#alternar-tema');
+    const temaStatus = documento.querySelector('#tema-status');
+    documento.documentElement.dataset.transicoes = 'prontas';
     const aumentar = documento.querySelector('#aumentar-fonte');
     const reduzir = documento.querySelector('#reduzir-fonte');
     const restaurar = documento.querySelector('#restaurar-leitura');
@@ -42,15 +48,21 @@ function iniciarAcessibilidade(janela, documento) {
     function atualizar(salvar = false) {
       aplicarPreferencias(documento.documentElement, preferencias, sistema.matches);
       tema.value = preferencias.tema;
+      const escuro = temaEfetivo(preferencias.tema, sistema.matches) === 'escuro';
+      alternar.setAttribute('aria-pressed', String(escuro));
+      alternar.setAttribute('title', escuro ? 'Mudar para modo claro' : 'Mudar para modo escuro');
       aumentar.disabled = preferencias.fonte === 150;
       reduzir.disabled = preferencias.fonte === 100;
       documento.querySelector('#tamanho-fonte').textContent = preferencias.fonte + '%';
       if (salvar) {
         const persistiu = salvarPreferencias(armazenamento, preferencias);
+        temaStatus.textContent = `Modo ${escuro ? 'escuro' : 'claro'} ativado.` + (persistiu ? '' : ' O ajuste vale nesta sessão.');
         aviso.textContent = `Preferência de tema: ${tema.options[tema.selectedIndex].text}. Fonte: ${preferencias.fonte}%.` +
           (persistiu ? '' : ' O navegador não permitiu guardar; o ajuste vale nesta sessão.');
       }
     }
+    sistema.addEventListener('change', () => atualizar());
+    alternar.addEventListener('click', () => { preferencias.tema = proximoTema(preferencias.tema, sistema.matches); atualizar(true); });
     tema.addEventListener('change', () => { preferencias.tema = tema.value; atualizar(true); });
     aumentar.addEventListener('click', () => { preferencias.fonte = alterarFonte(preferencias.fonte, 1); atualizar(true); });
     reduzir.addEventListener('click', () => { preferencias.fonte = alterarFonte(preferencias.fonte, -1); atualizar(true); });
@@ -59,5 +71,5 @@ function iniciarAcessibilidade(janela, documento) {
   });
 }
 if (typeof module !== 'undefined') module.exports = { normalizarPreferencias, lerPreferencias,
-  salvarPreferencias, temaEfetivo, alterarFonte, aplicarPreferencias, iniciarAcessibilidade };
+  salvarPreferencias, temaEfetivo, proximoTema, alterarFonte, aplicarPreferencias, iniciarAcessibilidade };
 else iniciarAcessibilidade(window, document);
