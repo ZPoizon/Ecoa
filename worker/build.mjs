@@ -8,7 +8,7 @@ const mime = {
   '.webp': 'image/webp',
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
-  '.json': 'application/manifest+json; charset=utf-8'
+  '.json': 'application/json; charset=utf-8'
 };
 const arquivos = {};
 for (const caminho of await readdir('dist', { recursive: true })) {

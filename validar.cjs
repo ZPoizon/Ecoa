@@ -68,7 +68,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
+  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -645,3 +645,55 @@ function validarEstimativas() {
   console.log('OK Estimativas: interface, validação, resultado, limpeza ao editar, fonte atualizada e atalho');
 }
 validarEstimativas();
+
+async function validarCidade() {
+  const c=require('./dist/cidade');
+  const p={id:'teste',nome:'Local de teste',cidade:'São Paulo, SP',categoria:'coleta',endereco:'Endereço de teste',detalhes:'Dados sintéticos apenas para testes',latitude:-23,longitude:-46,fonte:'https://example.org',consultadoEm:'2026-01-01'};
+  const envelope=pontos=>({versao:1,pontos});
+  assert.deepEqual(c.lerJsonCidade('\uFEFF'+JSON.stringify(envelope([p]))),c.validarPontosCidade(envelope([p])));
+  assert.deepEqual(c.validarPontosCidade(envelope([])),[]);
+  for(const dados of [null,{},envelope(Array(201).fill(p)),{versao:2,pontos:[]},envelope([p,p])])assert.throws(()=>c.validarPontosCidade(dados));
+  for(const [campo,valor] of [['latitude',91],['latitude','-23'],['longitude',NaN],['longitude',-181],['nome',''],['detalhes','a'.repeat(601)],['categoria','__proto__'],['fonte','javascript:alert(1)'],['fonte','https://user:pass@example.org'],['consultadoEm','2026-02-30'],['consultadoEm','2999-01-01']])assert.throws(()=>c.validarPontosCidade(envelope([{...p,[campo]:valor}])));
+  assert.throws(()=>c.lerJsonCidade('{'),/JSON/);assert.throws(()=>c.lerJsonCidade('a'.repeat(500001)),/500 KB/);
+  assert.equal(c.unirPontosCidade([p],[{...p,nome:'não sobrescrever'}])[0].nome,p.nome);
+  assert.equal(c.unirPontosCidade([p],[{...p,id:'segundo'}]).length,2);
+  assert.equal(c.filtrarPontosCidade([p],'sao paulo','coleta').length,1);
+  assert.equal(c.filtrarPontosCidade([p],'são','horta').length,0);
+  const storage={valor:null,setItem(k,v){this.valor=v;},getItem(){return this.valor;}};
+  c.salvarPontosCidade(storage,[p]);assert.equal(c.lerJsonCidade(storage.valor)[0].id,p.id);
+  assert.throws(()=>c.salvarPontosCidade({setItem(){throw Error();}},[p]),/Não foi possível salvar/);
+  const ui=require('./dist/cidade-ui');
+  const {iniciarCidade,carregarLeafletCidade}=ui;
+  const elementos=new Map();
+  const criar=()=>({value:'',textContent:'',children:[],eventos:{},setAttribute(k,v){this[k]=v;},append(...v){this.children.push(...v);},replaceChildren(...v){this.children=v;},addEventListener(k,v){this.eventos[k]=v;},focus(){this.focado=true;},reset(){},remove(){},click(){this.clicado=true;}});
+  const el=id=>{if(!elementos.has(id))elementos.set(id,criar());return elementos.get(id);};
+  const doc={getElementById:el,createElement:criar,head:criar(),body:criar()};
+  const ambiente={localStorage:storage,crypto:{randomUUID:()=> 'novo'},confirm:()=>true,URL:{createObjectURL:()=> 'blob:teste',revokeObjectURL(){}},setTimeout:fn=>{fn();return 1;},clearTimeout(){}};
+  await iniciarCidade(doc,ambiente,c);
+  assert.equal(el('cidade-lista').children.length,1);
+  el('cidade-filtro').value='outra';el('cidade-filtro').eventos.input();assert.equal(el('cidade-lista').children.length,0);
+  el('cidade-filtro').value='';el('cidade-filtro').eventos.input();
+  el('cidade-lista').children[0].children.at(-1).children.at(-1).eventos.click();assert.equal(c.lerJsonCidade(storage.valor).length,0);
+  for(const campo of Object.keys(p).filter(k=>k!=='id'))el('ponto-'+campo).value=String(p[campo]);
+  el('cidade-form').eventos.submit({preventDefault(){}});assert.equal(c.lerJsonCidade(storage.valor).length,1);
+  const anterior=storage.valor;
+  await el('cidade-importar').eventos.change({target:{files:[{name:'ruim.json',size:2,text:async()=>'{'}],value:'x'}});assert.equal(storage.valor,anterior);assert.match(el('cidade-status').textContent,/JSON/);
+  await el('cidade-importar').eventos.change({target:{files:[{name:'bom.json',size:500,text:async()=>JSON.stringify(envelope([p]))}],value:'x'}});assert.equal(c.lerJsonCidade(storage.valor).length,2);
+  el('cidade-exportar').eventos.click();assert.equal(doc.body.children.at(-1).download,'ecoa-pontos-locais.json');
+  await el('cidade-carregar').eventos.click();assert.equal(el('cidade-carregar').disabled,false);assert.match(el('cidade-status').textContent,/Não foi possível carregar o mapa/);
+  const docCarga={head:{append(el){el.onload();}},createElement:criar};
+  const envCarga={setTimeout:()=>1,clearTimeout(){}};
+  await carregarLeafletCidade(docCarga,envCarga);assert.equal(envCarga.__ecoaLeafletPronto,true);await carregarLeafletCidade(docCarga,envCarga);
+  let marcadores=0,limpezas=0;
+  const mapaFake={setView(){return this;},fitBounds(){},remove(){}};
+  ambiente.__ecoaLeafletPronto=true;
+  ambiente.L={map:()=>mapaFake,control:{zoom:()=>({addTo(){}})},tileLayer:()=>({on(){return this;},addTo(){}}),layerGroup:()=>({addTo(){return this;},clearLayers(){limpezas++;}}),marker:()=>({bindPopup(popup){assert.equal(typeof popup,'object');return this;},addTo(){marcadores++;}})};
+  await el('cidade-carregar').eventos.click();assert.equal(el('cidade-mapa').hidden,false);assert.equal(marcadores,2);
+  el('cidade-categoria').value='horta';el('cidade-categoria').eventos.change();assert.equal(el('cidade-lista').children.length,0);assert.ok(limpezas>=2);
+  storage.valor='JSON inválido';await iniciarCidade(doc,ambiente,c);
+  for(const campo of Object.keys(p).filter(k=>k!=='id'))el('ponto-'+campo).value=String(p[campo]);
+  el('cidade-form').eventos.submit({preventDefault(){}});assert.equal(storage.valor,'JSON inválido');
+  const html=require('fs').readFileSync('dist/index.html','utf8');assert.match(html,/id="na-minha-cidade"/);assert.match(html,/id="cidade-lista"/);
+  console.log('OK Cidade: schema, limites, links seguros, datas, filtros, união, persistência, cadastro, remoção, importação, exportação, falha de mapa e proteção de dados inválidos (DOM simulado)');
+}
+validarCidade().catch(erro=>{console.error(erro);process.exitCode=1;});
