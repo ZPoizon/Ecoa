@@ -39,13 +39,14 @@ async function validarPwa() {
   let nomeCache;
   let assumiuControle = false;
   const rede = [];
+  let abertaNotificacao,fechadaNotificacao=false;
   runInNewContext(readFileSync('dist/sw.js', 'utf8'), {
     URL, Request,
     fetch: async pedido => { rede.push(pedido.url); return 'rede'; },
     self: {
       registration: { scope: origem },
       addEventListener: (nome, callback) => { eventos[nome] = callback; },
-      clients: { claim: async () => { assumiuControle = true; } }
+      clients: { claim: async () => { assumiuControle = true; }, matchAll: async()=>[], openWindow: async url=>{abertaNotificacao=url;} }
     },
     caches: {
       open: async nome => {
@@ -68,7 +69,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
+  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -76,6 +77,9 @@ async function validarPwa() {
   assert.deepEqual(excluidos, ['oqdpf:' + origem + ':antigo']);
   assert.ok(assumiuControle);
   console.log('OK Ativação preserva caches de outros apps');
+  await rodar('notificationclick',{notification:{data:{ecoa:true,url:'https://invalido.test'},close(){fechadaNotificacao=true;}}});
+  assert.equal(abertaNotificacao,origem+'#meu-plano');assert.ok(fechadaNotificacao);
+  console.log('OK Notificação abre somente o Meu plano no escopo do site');
 
   function requisitar(url, modo = 'cors', metodo = 'GET') {
     let resposta;
@@ -770,3 +774,55 @@ async function validarCep() {
 }
 // Executado após a suíte existente para manter isolado o teste do idioma inicial.
 setTimeout(()=>validarCep().catch(e=>{console.error(e);process.exitCode=1;}),0);
+
+async function validarLembretesEtapa10(){
+  const a=require('./dist/lembretes'),acao=acoes[0],chave=acao.ods+':'+acao.titulo;
+  const storage={v:null,getItem(){return this.v;},setItem(k,v){this.v=v;}};
+  let d=a.lerLembretes(storage,acoes),p=new Map([[chave,false]]);
+  const futuro=Date.now()+60000;
+  d=a.agendarLembrete(d,chave,futuro,p);
+  assert.equal(a.agendarLembrete(d,chave,futuro+1,p).itens.length,1);
+  assert.throws(()=>a.agendarLembrete(d,chave,0,p));
+  assert.throws(()=>a.agendarLembrete(d,chave,futuro,new Map([[chave,true]])));
+  a.salvarLembretes(storage,d,acoes);assert.deepEqual(a.lerLembretes(storage,acoes),d);
+  assert.equal(a.lembretesVencidos(d,p,futuro-1).length,0);assert.equal(a.lembretesVencidos(d,p,futuro).length,1);
+  assert.equal(a.lembretesVencidos({...d,itens:[{...d.itens[0],avisado:true}]},p,futuro).length,0);
+  assert.equal(a.reconciliarLembretes(d,new Map()).itens.length,0);
+  assert.equal(a.reconciliarLembretes(d,new Map([[chave,true]])).itens.length,0);
+  for(const ruim of [{}, {...d,versao:2},{...d,itens:[...d.itens,...d.itens]},{...d,itens:[{chave:'falsa',quando:futuro,avisado:false}]}])assert.throws(()=>a.validarLembretes(ruim,acoes));
+  assert.throws(()=>a.salvarLembretes({setItem(){throw Error();}},d,acoes));
+  assert.throws(()=>a.horarioLembrete('2027-02-30T12:00',0));assert.throws(()=>a.horarioLembrete('',0));
+  assert.ok(a.horarioLembrete('2030-01-01T12:00',0)>0);
+  let pedidos=0;
+  const ambiente={isSecureContext:true,Notification:{permission:'default',requestPermission:async()=>{pedidos++;return 'granted';}}};
+  assert.equal(await a.permitirNotificacoes(ambiente),'granted');assert.equal(pedidos,1);
+  ambiente.Notification.permission='denied';assert.equal(await a.permitirNotificacoes(ambiente),'denied');assert.equal(pedidos,1);
+  assert.equal(await a.permitirNotificacoes({}),'indisponivel');
+  assert.equal(await a.notificarLembrete(ambiente,acao),false);
+  let notificadas=0;ambiente.Notification.permission='granted';ambiente.location={href:'https://example.org/sub/'};
+  ambiente.navigator={serviceWorker:{getRegistration:async()=>({active:true,showNotification:async(t,o)=>{notificadas++;assert.equal(o.data.ecoa,true);}})}};
+  assert.equal(await a.notificarLembrete(ambiente,acao),true);assert.equal(notificadas,1);
+  const ics=a.calendarioLembrete({...acao,titulo:'Á'.repeat(100)+'\nBEGIN:TESTE'},futuro);
+  assert.ok(ics.includes('BEGIN:VCALENDAR\r\n'));assert.ok(ics.includes('BEGIN:VALARM'));assert.ok(!ics.includes('\r\nBEGIN:TESTE'));
+  assert.ok(ics.split('\r\n').every(l=>Buffer.byteLength(l)<=75));
+  assert.notEqual(a.calendarioLembrete(acao,futuro),a.calendarioLembrete({...acao,titulo:'outra'},futuro));
+  const elementos=new Map();
+  const criar=()=>({children:[],eventos:{},value:'',textContent:'',setAttribute(){},replaceChildren(...x){this.children=x;},append(...x){this.children.push(...x);},addEventListener(k,f){this.eventos[k]=f;},focus(){},click(){},remove(){}});
+  const el=id=>{if(!elementos.has(id))elementos.set(id,criar());return elementos.get(id);};
+  const doc={getElementById:el,createElement:criar,body:criar(),addEventListener(){}};
+  storage.v=null;let solicitacoes=0,envios=0;
+  const env={localStorage:storage,navigator:{},Notification:{permission:'default'},setInterval(){},setTimeout(){},addEventListener(){}};
+  const api={...a,permitirNotificacoes:async()=>{solicitacoes++;env.Notification.permission='granted';return 'granted';},notificarLembrete:async()=>{envios++;return true;}};
+  const ui=require('./dist/lembretes-ui').iniciarLembretes(doc,env,acoes,()=>p,api);
+  assert.equal(solicitacoes,0);assert.equal(el('lembrete-salvar').disabled,false);
+  await el('lembrete-ativar').eventos.click();assert.equal(solicitacoes,1);assert.equal(a.lerLembretes(storage,acoes).notificacoes,true);
+  el('lembrete-acao').value=chave;el('lembrete-quando').value='2030-01-01T12:00';el('lembrete-form').eventos.submit({preventDefault(){}});
+  assert.equal(a.lerLembretes(storage,acoes).itens.length,1);
+  let salvo=a.lerLembretes(storage,acoes);salvo.itens[0].quando=Date.now()-1;a.salvarLembretes(storage,salvo,acoes);
+  await ui.verificar();await ui.verificar();assert.equal(envios,1);assert.match(el('lembrete-status').textContent,/Hora de agir/);
+  el('lembrete-desativar').eventos.click();assert.equal(a.lerLembretes(storage,acoes).notificacoes,false);
+  p.set(chave,true);ui.atualizar();assert.equal(a.lerLembretes(storage,acoes).itens.length,0);assert.equal(el('lembrete-salvar').disabled,true);
+  storage.v='{inválido';ui.atualizar();assert.equal(storage.v,'{inválido');assert.equal(el('lembrete-salvar').disabled,true);
+  console.log('OK Lembretes: datas, persistência, substituição, conclusão/remoção, permissão só por clique, recusa, disparo único, falha, calendário seguro e interface simulada');
+}
+validarLembretesEtapa10().catch(e=>{console.error(e);process.exitCode=1;});

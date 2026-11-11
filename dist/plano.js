@@ -29,6 +29,7 @@ function atualizarBotaoSalvar() {
 }
 
 function atualizarPlano() {
+  if(typeof window!=='undefined')window.ecoaLembretes?.atualizar();
   atualizarProgressoPlano(plano);
   planoLista.replaceChildren();
   exportarJson.disabled = plano.size === 0;
@@ -71,6 +72,7 @@ function atualizarPlano() {
 }
 
 function guardarPlano() {
+  if(typeof window!=='undefined')window.ecoaLembretes?.atualizar();
   try {
     localStorage.setItem(planoChave, JSON.stringify(Object.fromEntries(plano)));
     planoAviso.textContent = '';
@@ -174,4 +176,14 @@ arquivoPlano.addEventListener('change', async () => {
     importarJson.disabled = false;
     importarJson.focus();
   }
+});
+
+// Mantém o plano e os lembretes coerentes quando outra aba conclui/remove uma ação.
+if(typeof window!=='undefined')window.addEventListener('storage',evento=>{
+  if(evento.key!==planoChave)return;
+  try{
+    const dados=JSON.parse(evento.newValue||'{}');
+    plano=new Map(acoes.map(chaveAcao).filter(chave=>typeof dados?.[chave]==='boolean').map(chave=>[chave,dados[chave]]));
+    atualizarPlano();
+  }catch{planoAviso.textContent='Não foi possível atualizar o plano de outra aba.';}
 });

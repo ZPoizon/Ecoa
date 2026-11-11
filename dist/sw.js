@@ -1,9 +1,9 @@
 // Incremente a versão ao atualizar arquivos armazenados para uso offline.
 const prefixo = 'oqdpf:' + self.registration.scope + ':';
-const versao = prefixo + 'v16';
+const versao = prefixo + 'v17';
 const arquivos = [
   'acessibilidade.js', 'acessibilidade.css', 'index.html', 'style.css', 'manifest.json', 'pwa.js', 'acoes.js', 'app.js',
-  'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'compartilhar.js', 'compartilhar-ui.js', 'onu.js', 'plano.js', 'progresso.js', 'plano-json.js', 'plano-pdf.js', 'guias.js', 'vendor/pdf-lib.min.js',
+  'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'compartilhar.js', 'compartilhar-ui.js', 'onu.js', 'plano.js', 'progresso.js', 'plano-json.js', 'plano-pdf.js', 'guias.js', 'vendor/pdf-lib.min.js',
   'icons/ecoa.svg', 'icons/favicon.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
   ...Array.from({ length: 17 }, (_, i) => 'ods/' + (i + 1) + '.webp')
 ].map(caminho => new URL(caminho, self.registration.scope).href);
@@ -40,5 +40,18 @@ self.addEventListener('fetch', evento => {
   evento.respondWith((async () => {
     const cache = await caches.open(versao);
     return await cache.match(destino) || fetch(pedido);
+  })());
+});
+
+// O destino é fixo e interno: nunca abrir URLs recebidas de notificações.
+self.addEventListener('notificationclick',evento=>{
+  if(!evento.notification.data?.ecoa)return;
+  evento.notification.close();
+  evento.waitUntil((async()=>{
+    const destino=new URL('./#meu-plano',self.registration.scope).href;
+    const abas=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+    const aba=abas.find(a=>a.url.startsWith(self.registration.scope));
+    if(aba){await aba.navigate(destino);return aba.focus();}
+    return self.clients.openWindow(destino);
   })());
 });

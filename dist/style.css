@@ -371,3 +371,10 @@ legend { font-weight: 750; }
 .endereco-lista li:hover,.endereco-lista li[aria-selected="true"] { background:var(--soft); outline:2px solid var(--green); outline-offset:-2px; }
 .endereco-status { font-size:.9rem; font-weight:400; margin:.25rem 0; }
 .endereco-status:empty { display:none; }
+
+.lembretes { margin:2rem 0; padding:clamp(1rem,3vw,1.5rem); background:var(--surface); border:1px solid var(--line); border-radius:.75rem; }
+.lembretes input { width:100%; min-width:0; padding:.65rem; min-height:48px; background:var(--surface); color:var(--text); border:1px solid var(--control); border-radius:.4rem; font:inherit; }
+#lembrete-lista { padding:0; list-style:none; }
+#lembrete-lista li { padding:1rem 0; border-top:1px solid var(--line); }
+#lembrete-lista button { margin:.3rem .5rem .3rem 0; }
+#lembrete-status:not(:empty) { padding:1rem; background:var(--soft); border-left:3px solid var(--green); }
