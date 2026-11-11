@@ -1,6 +1,6 @@
 // Incremente a versão ao atualizar arquivos armazenados para uso offline.
 const prefixo = 'oqdpf:' + self.registration.scope + ':';
-const versao = prefixo + 'v14';
+const versao = prefixo + 'v15';
 const arquivos = [
   'acessibilidade.js', 'acessibilidade.css', 'index.html', 'style.css', 'manifest.json', 'pwa.js', 'acoes.js', 'app.js',
   'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'compartilhar.js', 'compartilhar-ui.js', 'onu.js', 'plano.js', 'progresso.js', 'plano-json.js', 'plano-pdf.js', 'guias.js', 'vendor/pdf-lib.min.js',
@@ -28,7 +28,7 @@ self.addEventListener('activate', evento => {
 self.addEventListener('fetch', evento => {
   const pedido = evento.request;
   // Photon e demais APIs externas seguem somente pela rede, nunca CacheStorage.
-  if (new URL(pedido.url).origin === 'https://photon.komoot.io') return;
+  if (['https://photon.komoot.io','https://viacep.com.br'].includes(new URL(pedido.url).origin)) return;
   const inicio = self.registration.scope;
   if (pedido.method !== 'GET' || !pedido.url.startsWith(inicio)) return;
 

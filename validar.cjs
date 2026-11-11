@@ -745,3 +745,28 @@ async function validarEnderecos() {
   console.log('OK Endereços: Photon simulado, pt/viés/Brasil, debounce 350ms, mínimo, cancelamento/resposta tardia, LRU, vazio, erro, textContent anti-XSS, ARIA, teclado, toque fora e busca por Enter');
 }
 validarEnderecos().catch(erro=>{console.error(erro);process.exitCode=1;});
+
+async function validarCep() {
+  const a=require('./dist/enderecos');
+  assert.equal(a.normalizarBuscaEndereco('  SÃO   PAULO '),'sao paulo');
+  assert.equal(a.identificarCepEndereco('18300-000'),'18300000');
+  assert.equal(a.identificarCepEndereco('18300000'),'18300000');
+  assert.equal(a.identificarCepEndereco('18300'),null);
+  let chamadas=0;
+  const s=a.criarServicoEnderecos(async()=>{chamadas++;return [];});
+  await s('SÃO PAULO');await s('sao paulo');assert.equal(chamadas,1);
+  await s('18300-000');await s('18300000');assert.equal(chamadas,2);
+  const requests=[];
+  const fallback=await a.consultarProvedorEndereco('TESTE',{fetcher:async u=>{
+    requests.push(new URL(u));return requests.length===1?{ok:false,status:400,json:async()=>({lang:[{}]})}:{ok:true,json:async()=>({features:[]})};
+  }});
+  assert.equal(requests[0].searchParams.get('lang'),'pt');assert.equal(requests[1].searchParams.get('lang'),'default');assert.deepEqual(fallback,[]);
+  const cep=await a.consultarProvedorEndereco('18300-000',{fetcher:async u=>u.includes('viacep')?{ok:true,json:async()=>({logradouro:'',bairro:'',localidade:'Capão Bonito',uf:'SP'})}:{ok:false,status:503}});
+  assert.equal(cep[0].cep,'18300-000');assert.equal(cep[0].latitude,null);assert.equal(cep[0].cidade,'Capão Bonito');
+  assert.deepEqual(await a.consultarProvedorEndereco('99999999',{fetcher:async()=>({ok:true,json:async()=>({erro:true})})}),[]);
+  assert.deepEqual(await a.consultarProvedorEndereco('18300',{fetcher:async()=>{throw Error('Não deveria consultar');}}),[]);
+  await assert.rejects(()=>a.consultarProvedorEndereco('18300000',{fetcher:async()=>{throw Error('offline');}}));
+  console.log('OK CEP: com/sem hífen, cache sem acentos/caixa, fallback de idioma, CEP inexistente/incompleto, falha de rede e endereço sem coordenadas');
+}
+// Executado após a suíte existente para manter isolado o teste do idioma inicial.
+setTimeout(()=>validarCep().catch(e=>{console.error(e);process.exitCode=1;}),0);

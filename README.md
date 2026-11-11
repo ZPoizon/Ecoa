@@ -275,3 +275,9 @@ Combobox/listbox ARIA, setas, Enter, Esc, Tab, suporte à composição de texto,
 O Photon público aceita uso razoável, não publica cota numérica garantida e pode limitar/bloquear uso intenso. Política: https://github.com/komoot/photon#demo-server ; parâmetros: https://github.com/komoot/photon/blob/master/docs/api-v1.md (consulta em 11/11/2026). Ao digitar, texto e centro aproximado são enviados ao Photon, conforme aviso no site. Nenhuma chave ou nova biblioteca foi adicionada.
 
 Testes com API, relógio e DOM simulados cobrem debounce, mínimo, cancelamento, LRU, respostas tardias, vazio, falhas, segurança de texto, ARIA/teclado e busca explícita. Integração ao mapa reutiliza o módulo cidade. Acesso real ao Photon não pôde ser confirmado pela ferramenta de consulta; verificação visual no celular, leitor de tela e disponibilidade/CORS do provedor ficam pendentes.
+
+### Correção de busca e CEP
+
+O Photon público respondeu HTTP 400 a `lang=pt` em 11/11/2026: suporta `default`, `de`, `en` e `fr`. O adaptador tenta pt e, somente se a API rejeitar explicitamente o idioma, passa a default pelo restante da sessão. Consultas e chaves do cache ignoram caixa, acentos e espaços repetidos; os nomes exibidos preservam o retorno original.
+
+Todos os campos com autocomplete aceitam CEP com oito dígitos, com ou sem hífen. O mesmo adaptador consulta ViaCEP (`https://viacep.com.br/`), sem chave. CEP incompleto não gera chamada; CEP inexistente mostra estado vazio. O endereço postal é geocodificado pelo Photon quando possível, com posição aproximada e comparação de cidade/UF. Sem coordenadas, o endereço continua disponível e o formulário pede preenchimento manual; coordenadas antigas são limpas. A pesquisa no mapa não centraliza uma posição inexistente. O ViaCEP não fornece latitude/longitude. Sem novo backend/biblioteca. PWA v15; Photon e ViaCEP não são interceptados pelo service worker.

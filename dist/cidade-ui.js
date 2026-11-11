@@ -29,12 +29,14 @@ async function iniciarCidade(doc,ambiente,api) {
   function guardar(novos){if(leituraFalhou)throw Error('O armazenamento contém dados que não puderam ser lidos. Nenhum cadastro foi sobrescrito.');pontos=salvarPontosCidade(ambiente.localStorage,unirPontosCidade(pontos,novos));desenhar();}
   function baixar(){const url=ambiente.URL.createObjectURL(new Blob([JSON.stringify({versao:1,pontos},null,2)],{type:'application/json'}));const a=criar('a');a.href=url;a.download='ecoa-pontos-locais.json';doc.body.append(a);a.click();a.remove();ambiente.setTimeout(()=>ambiente.URL.revokeObjectURL(url),1000);aviso('JSON preparado com todos os seus pontos, inclusive os ocultos pelos filtros.');}
   function posicionarEndereco(item) {
+    if(!Number.isFinite(item.latitude)||!Number.isFinite(item.longitude)){enderecoSelecionado=null;aviso('Endereço encontrado pelo CEP, mas sem posição confirmada. Preencha as coordenadas manualmente para cadastrar.');return false;}
     enderecoSelecionado=item;
     if(mapa)mapa.setView([item.latitude,item.longitude],16,{animate:false});
+    return true;
   }
   $('cidade-busca-endereco').addEventListener('submit',e=>{e.preventDefault();ambiente.Enderecos?.buscar($('cidade-endereco'));});
   $('cidade-endereco').addEventListener('endereco-selecionado',e=>{
-    posicionarEndereco(e.detail);
+    if(!posicionarEndereco(e.detail))return;
     if(!mapa)$('cidade-carregar').click();
     aviso('Endereço localizado. A busca não adiciona iniciativas à lista.');
   });
@@ -42,7 +44,7 @@ async function iniciarCidade(doc,ambiente,api) {
     $('cidade-filtro').value=e.detail.cidade||e.detail.nome;desenhar();posicionarEndereco(e.detail);
   });
   $('ponto-endereco').addEventListener('endereco-selecionado',e=>{
-    $('ponto-latitude').value=e.detail.latitude;$('ponto-longitude').value=e.detail.longitude;
+    $('ponto-latitude').value=e.detail.latitude??'';$('ponto-longitude').value=e.detail.longitude??'';
     $('ponto-cidade').value=e.detail.cidadeUF;posicionarEndereco(e.detail);
   });
   $('ponto-cidade').addEventListener('endereco-selecionado',e=>posicionarEndereco(e.detail));

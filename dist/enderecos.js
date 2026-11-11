@@ -3,14 +3,47 @@
  * https://github.com/komoot/photon#demo-server — consultado em 11/11/2026.
  */
 const ufsEndereco={'Acre':'AC','Alagoas':'AL','Amapá':'AP','Amazonas':'AM','Bahia':'BA','Ceará':'CE','Distrito Federal':'DF','Espírito Santo':'ES','Goiás':'GO','Maranhão':'MA','Mato Grosso':'MT','Mato Grosso do Sul':'MS','Minas Gerais':'MG','Pará':'PA','Paraíba':'PB','Paraná':'PR','Pernambuco':'PE','Piauí':'PI','Rio de Janeiro':'RJ','Rio Grande do Norte':'RN','Rio Grande do Sul':'RS','Rondônia':'RO','Roraima':'RR','Santa Catarina':'SC','São Paulo':'SP','Sergipe':'SE','Tocantins':'TO'};
+function normalizarBuscaEndereco(texto) {
+  return texto.normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().trim().replace(/\s+/g,' ');
+}
+function identificarCepEndereco(texto) {
+  const limpo=texto.trim();
+  return /^\d{5}-?\d{3}$/.test(limpo)?limpo.replace('-',''):null;
+}
+let idiomaPhotonEndereco='pt';
 // Único adaptador do provedor: retorna o formato interno, independente do Photon.
 async function consultarProvedorEndereco(consulta,{signal,vies,fetcher=globalThis.fetch}={}) {
+  const cep=identificarCepEndereco(consulta);
+  if(cep) {
+    // ViaCEP público: sem validação em massa; apenas consultas interativas com cache.
+    const resposta=await fetcher(`https://viacep.com.br/ws/${cep}/json/`,{signal,cache:'no-store',credentials:'omit'});
+    if(!resposta.ok)throw Error('Consulta de CEP indisponível');
+    const p=await resposta.json();if(p.erro)return [];
+    const texto=x=>typeof x==='string'?x.slice(0,300):'';
+    const cidade=texto(p.localidade),uf=texto(p.uf),bairro=texto(p.bairro),rua=texto(p.logradouro);
+    if(!cidade||!uf)throw Error('Resposta de CEP inválida');
+    let coordenadas=null;
+    try {
+      const locais=await consultarProvedorEndereco([rua,cidade,uf,'Brasil'].filter(Boolean).join(' '),{signal,vies,fetcher});
+      coordenadas=locais.find(l=>l.brasil&&normalizarBuscaEndereco(l.cidade)===normalizarBuscaEndereco(cidade)&&l.uf===uf);
+    }catch(e){if(signal?.aborted)throw e;}
+    const nome=rua||cidade,cidadeUF=cidade+'/'+uf,formatado=cep.slice(0,5)+'-'+cep.slice(5);
+    const subtitulo=[bairro,cidadeUF,'CEP '+formatado,coordenadas?'Posição aproximada — confira no mapa':'Sem coordenadas — preencha manualmente'].filter(Boolean).join(' · ');
+    return [{nome,bairro,cidade,uf,cidadeUF,cep:formatado,rotulo:[nome,bairro,cidadeUF,'CEP '+formatado].filter(Boolean).join(' — '),subtitulo,latitude:coordenadas?.latitude??null,longitude:coordenadas?.longitude??null,brasil:true}];
+  }
+  // Evita consultas de CEP incompleto e inválido.
+  if(/^[\d\s-]+$/.test(consulta))return [];
   const url=new URL('https://photon.komoot.io/api/');
-  url.searchParams.set('q',consulta);url.searchParams.set('lang','pt');url.searchParams.set('limit','5');
+  url.searchParams.set('q',normalizarBuscaEndereco(consulta));url.searchParams.set('lang',idiomaPhotonEndereco);url.searchParams.set('limit','5');
   const centro=vies||{latitude:-14.2,longitude:-51.9};
   url.searchParams.set('lat',String(centro.latitude));url.searchParams.set('lon',String(centro.longitude));
   // Brasil primeiro, sem excluir endereços de outros países.
-  const resposta=await fetcher(url.href,{signal,cache:'no-store',credentials:'omit'});
+  let resposta=await fetcher(url.href,{signal,cache:'no-store',credentials:'omit'});
+  // A instância pública atualmente não suporta pt. Só repete em caso de rejeição explícita do idioma.
+  if(resposta.status===400&&idiomaPhotonEndereco==='pt') {
+    const erro=await resposta.json();
+    if(erro.lang){idiomaPhotonEndereco='default';url.searchParams.set('lang','default');resposta=await fetcher(url.href,{signal,cache:'no-store',credentials:'omit'});}
+  }
   if(!resposta.ok)throw Error('Serviço de endereços indisponível');
   const dados=await resposta.json();if(!Array.isArray(dados.features))throw Error('Resposta inválida');
   const texto=x=>typeof x==='string'?x.slice(0,300):'';
@@ -20,7 +53,7 @@ async function consultarProvedorEndereco(consulta,{signal,vies,fetcher=globalThi
     const nome=texto(p.name)||texto(p.street)||texto(p.city)||texto(p.state);
     const rua=[texto(p.street),texto(p.housenumber)].filter(Boolean).join(', ');
     const bairro=texto(p.district)||texto(p.suburb)||texto(p.locality);
-    const cidade=texto(p.city)||texto(p.town)||texto(p.village)||texto(p.county);
+    const cidade=texto(p.city)||texto(p.town)||texto(p.village)||(['city','town','village','municipality'].includes(p.type||p.osm_value)?texto(p.name):'')||texto(p.county);
     const uf=ufsEndereco[texto(p.state)]||texto(p.state);
     const cidadeUF=[cidade,uf].filter(Boolean).join('/');
     const titulo=rua&&rua!==nome?`${nome} · ${rua}`:nome;
@@ -31,7 +64,7 @@ async function consultarProvedorEndereco(consulta,{signal,vies,fetcher=globalThi
 function criarServicoEnderecos(provedor=consultarProvedorEndereco) {
   const cache=new Map();
   return async function buscar(consulta,opcoes={}) {
-    consulta=consulta.trim();if(consulta.length<3)return [];
+    consulta=identificarCepEndereco(consulta)||normalizarBuscaEndereco(consulta);if(consulta.length<3)return [];
     const chave=JSON.stringify([consulta.toLocaleLowerCase('pt-BR'),opcoes.vies||null]);
     if(cache.has(chave)){const valor=cache.get(chave);cache.delete(chave);cache.set(chave,valor);return valor;}
     const itens=(await provedor(consulta,opcoes)).slice(0,5);
@@ -78,7 +111,7 @@ function iniciarEnderecos(doc,ambiente,provedor=consultarProvedorEndereco) {
     }
     ambiente.addEventListener('resize',posicionarLista);doc.addEventListener('scroll',posicionarLista,true);
     function atualizar(estado,resultados){itens=resultados;ativo=-1;lista.replaceChildren();input.removeAttribute('aria-activedescendant');lista.hidden=estado!=='pronto';input.setAttribute('aria-expanded',String(!lista.hidden));
-      status.textContent=({carregando:'Buscando endereços…',vazio:'Nenhum endereço encontrado. Você pode digitar livremente.',erro:'Sugestões indisponíveis. Continue digitando o endereço.',fechado:'',pronto:`${itens.length} sugestões. Use as setas para escolher.`})[estado];
+      status.textContent=({carregando:'Buscando endereços…',vazio:'Nenhum endereço encontrado. Informe rua e cidade ou um CEP com 8 dígitos.',erro:'Sugestões indisponíveis. Continue digitando o endereço.',fechado:'',pronto:`${itens.length} sugestões. Use as setas para escolher.`})[estado];
       itens.forEach((item,i)=>{const li=doc.createElement('li');li.id=lista.id+'-'+i;li.setAttribute('role','option');li.setAttribute('aria-selected','false');const nome=doc.createElement('strong'),detalhe=doc.createElement('span');nome.textContent=item.nome;detalhe.textContent=item.subtitulo;li.append(nome,detalhe);
         li.addEventListener('pointerdown',e=>e.preventDefault());li.addEventListener('click',()=>selecionar(item));lista.append(li);});posicionarLista();
     }
@@ -104,5 +137,5 @@ function iniciarEnderecos(doc,ambiente,provedor=consultarProvedorEndereco) {
   if(ambiente.MutationObserver)new ambiente.MutationObserver(atualizar).observe(doc.body,{childList:true,subtree:true});
   return {buscar:input=>campos.get(input)?.buscar()};
 }
-if(typeof module!=='undefined')module.exports={consultarProvedorEndereco,criarServicoEnderecos,criarControleEndereco,iniciarEnderecos};
+if(typeof module!=='undefined')module.exports={normalizarBuscaEndereco,identificarCepEndereco,consultarProvedorEndereco,criarServicoEnderecos,criarControleEndereco,iniciarEnderecos};
 else window.Enderecos=iniciarEnderecos(document,window);
