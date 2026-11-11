@@ -333,3 +333,13 @@ legend { font-weight: 750; }
 .selo h4 { margin: .6rem 0; font-size: 1.05rem; }
 .selo p { margin-bottom: .4rem; }
 .selo-estado { color: var(--green); font-weight: 700; font-size: .9rem; }
+
+.estimativa { padding: clamp(1rem,3vw,2rem); border: 1px solid var(--line); border-radius: .85rem; background: var(--surface); scroll-margin-top: 1rem; }
+#estimativa-campos { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,14rem),1fr)); gap: 1rem; }
+#estimativa-campos label { display: block; font-size: 1rem; }
+#estimativa-campos input { display: block; width: 100%; min-height: 48px; padding: .6rem; margin-top: .4rem; border: 1px solid var(--control); border-radius: .4rem; background: var(--surface); color: var(--text); font: inherit; }
+.estimativa-fontes { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.estimativa-fontes p { margin-block: .5rem; }
+#estimativa-resultado:not(:empty) { padding: 1rem; margin-top: 1rem; background: var(--soft); border-left: 3px solid var(--green); font-weight: 650; }
+#estimativa-erro:empty, #estimativa-resultado:empty { display: none; }
+.link-estimativa { display: block; margin-bottom: .75rem; }

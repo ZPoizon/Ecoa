@@ -68,7 +68,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
+  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -571,3 +571,47 @@ async function validarProgresso() {
   console.log('OK Progresso: renderização e integração com salvar, concluir, desmarcar, remover e importar JSON');
 }
 validarProgresso().catch(erro=>{console.error(erro);process.exitCode=1;});
+
+function validarEstimativas() {
+  const e=require('./dist/estimativa');
+  assert.equal(e.calcularEstimativa('agua',{quantidade:1,dias:30}).valor,1380);
+  assert.equal(e.calcularEstimativa('agua',{quantidade:2,dias:0}).valor,0);
+  assert.equal(e.calcularEstimativa('energia',{potencia:10,quantidade:2,horas:3,dias:30}).valor,1.8);
+  assert.equal(e.calcularEstimativa('energia',{potencia:'9,5',quantidade:'1',horas:'0,5',dias:'1'}).valor,.00475);
+  assert.equal(e.calcularEstimativa('energia',{potencia:10,quantidade:1,horas:0,dias:1}).valor,0);
+  assert.throws(()=>e.calcularEstimativa('__proto__',{}));
+  assert.throws(()=>e.calcularEstimativa('outra',{}));
+  for(const tipo of Object.keys(e.modelosEstimativa)) {
+    const modelo=e.modelosEstimativa[tipo];
+    assert.ok(acoes.some(a=>a.ods===modelo.ods&&a.titulo===modelo.acao));
+    assert.equal(new URL(modelo.url).protocol,'https:');
+    for(const campo of modelo.campos) {
+      assert.equal(e.numeroEstimativa(String(campo.min),campo),campo.min);
+      assert.equal(e.numeroEstimativa(campo.max,campo),campo.max);
+      for(const valor of ['', ' ',null,undefined,true,NaN,Infinity,-1,campo.max+1,'abc']) assert.throws(()=>e.numeroEstimativa(valor,campo));
+      if(campo.inteiro)assert.throws(()=>e.numeroEstimativa(1.5,campo));
+    }
+  }
+  assert.match(e.formatarEstimativa(e.calcularEstimativa('agua',{quantidade:1,dias:1})),/até 46 L/);
+  assert.match(e.formatarEstimativa(e.calcularEstimativa('energia',{potencia:10,quantidade:2,horas:3,dias:30})),/1,8 kWh/);
+  console.log('OK Estimativas: fórmulas, unidades, zero, decimais, limites, erros e fontes por ação');
+  const {iniciarEstimativa}=require('./dist/estimativa-ui');
+  const elementos=new Map();
+  const elemento=()=>({children:[],eventos:{},value:'',textContent:'',
+    setAttribute(){},addEventListener(k,v){this.eventos[k]=v;},append(...v){this.children.push(...v);v.forEach(x=>{if(x.id)elementos.set('#'+x.id,x);});},
+    replaceChildren(...v){this.children=v;},focus(){this.focado=true;}});
+  const el=id=>{if(!elementos.has(id))elementos.set(id,elemento());return elementos.get(id);};
+  el('#estimativa-tipo').value='agua';let aberta;
+  iniciarEstimativa({querySelector:el,createElement:elemento},e.modelosEstimativa,e.calcularEstimativa,e.formatarEstimativa,m=>{aberta=m;});
+  const enviar=()=>el('#estimativa-form').eventos.submit({preventDefault(){}});
+  enviar();assert.match(el('#estimativa-erro').textContent,/Preencha/);
+  el('#estimativa-quantidade').value='1';el('#estimativa-dias').value='30';enviar();
+  assert.match(el('#estimativa-resultado').textContent,/1.380 L/);assert.match(el('#estimativa-resultado').textContent,/não economia medida/);
+  el('#estimativa-form').eventos.input();assert.equal(el('#estimativa-resultado').textContent,'');
+  el('#estimativa-tipo').value='energia';el('#estimativa-tipo').eventos.change();
+  assert.equal(el('#estimativa-campos').children.length,4);
+  assert.equal(el('#estimativa-fonte').href,e.modelosEstimativa.energia.url);
+  el('#estimativa-abrir').eventos.click();assert.equal(aberta.ods,7);
+  console.log('OK Estimativas: interface, validação, resultado, limpeza ao editar, fonte atualizada e atalho');
+}
+validarEstimativas();
