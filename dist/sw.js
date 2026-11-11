@@ -1,6 +1,6 @@
 // Incremente a versão ao atualizar arquivos armazenados para uso offline.
 const prefixo = 'oqdpf:' + self.registration.scope + ':';
-const versao = prefixo + 'v11';
+const versao = prefixo + 'v12';
 const arquivos = [
   'acessibilidade.js', 'acessibilidade.css', 'index.html', 'style.css', 'manifest.json', 'pwa.js', 'acoes.js', 'app.js',
   'estimativa.js', 'estimativa-ui.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'compartilhar.js', 'compartilhar-ui.js', 'onu.js', 'plano.js', 'progresso.js', 'plano-json.js', 'plano-pdf.js', 'guias.js', 'vendor/pdf-lib.min.js',

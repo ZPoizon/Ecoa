@@ -90,11 +90,16 @@ Não há chave nova de armazenamento nem alteração no JSON/PDF. O painel é de
 
 ### Calculadora de estimativas (etapa 8)
 
-A seção **Quanto uma ação pode evitar?** simula duas ações existentes, sem modificar o catálogo:
+A seção **Calcule e acompanhe suas ações** oferece seis opções, sem modificar o catálogo:
 
 - ODS 6, identificar desperdício na pia: cenário **após eliminar o gotejamento**, com referência de até 46 L/dia por torneira. CASAN, publicação de 08/12/2022: https://www.casan.com.br/noticia/index/url/casan-orienta-boas-praticas-para-uso-da-agua . A extrapolação considera o gotejamento ausente durante todos os dias informados. Apenas observar a torneira não gera essa economia. Não se aplica como limite universal a outros vazamentos.
 - ODS 7, aproveitar a luz natural: potência em W × número de lâmpadas iguais × horas apagadas por dia × dias ÷ 1.000. Fórmula de energia da AGEMS (23/07/2015): https://www.agems.ms.gov.br/gastos-com-energia-eletrica-podem-ser-controlados-estimando-o-consumo-dos-aparelhos/ . Usar potência real, não equivalente. Não calcula tarifas nem emissões.
 
+- Banho (ODS 6): minutos reduzidos × 10 L/min × total de banhos, usando a referência da CASAN acima. Vazão real pode variar; rejeita nova duração maior que a anterior.
+- Aparelhos (ODS 7): mesma fórmula da AGEMS, aplicada a aparelhos iguais de potência aproximadamente constante. Não estima adequadamente equipamentos com ciclos variáveis pela potência nominal máxima.
+- Alimentos (ODS 2): converte gramas de alimentos efetivamente aproveitados em quilogramas. Quantidade declarada pelo usuário, sem equivalência ambiental.
+- Óleo (ODS 14): converte mililitros já entregues à coleta em litros. Quantidade declarada; não calcula água protegida.
+
 Fontes consultadas em 11/11/2026. O usuário informa todos os valores; não há valores previamente preenchidos, gravação, envio ou soma ao painel de progresso. As demais ações não recebem estimativas numéricas. Valores são cenários educativos do Ecoa, não medições, metas oficiais da ONU ou economias certificadas. Campos aceitam zero dias/horas (resultado zero), validam limites e rejeitam valores vazios/negativos/não finitos; dias e quantidades são inteiros. Limites dos campos são de uso da ferramenta, não limites físicos.
 
-Testes em `validar.cjs` cobrem fórmulas, conversão de unidades, decimais, zeros, limites, entradas inválidas e interface simulada. Cache offline v11 inclui os módulos; abrir as fontes requer internet. Teste visual em celular e navegador real permanece pendente.
+Testes em `validar.cjs` cobrem fórmulas, conversão de unidades, decimais, zeros, limites, entradas inválidas e interface simulada. Cache offline v12 inclui os módulos; abrir as fontes requer internet. Teste visual em celular e navegador real permanece pendente.
