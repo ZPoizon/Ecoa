@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 🌱 Ecoa
 Pequenas ações, grandes mudanças.
 O Ecoa é um projeto acadêmico de Desenvolvimento Web, desenvolvido no curso de Análise e Desenvolvimento de Sistemas (ADS). Seu objetivo é aproximar os 17 Objetivos de Desenvolvimento Sustentável (ODS) da ONU da realidade das pessoas, apresentando informações acessíveis e sugestões de ações práticas para o dia a dia.
@@ -79,8 +78,8 @@ As metas oficiais, os exemplos didáticos e as ações sugeridas pelo Ecoa são 
 🌿 Sobre o projeto
 O Ecoa nasceu da proposta de transformar conhecimento em atitude. Mais do que apresentar os ODS, o site procura responder a uma pergunta cotidiana: qual pequena ação posso começar hoje?
 Ecoa — Pequenas ações, grandes mudanças.
-=======
-# Ecoa
+
+## Documentação técnica do Ecoa
 
 Guia de ações práticas da Agenda 2030. Abra dist/index.html diretamente no navegador. Para hospedar no GitHub Pages, publique o conteúdo de dist como raiz do site. Para validar os filtros, rode `node validar.cjs` na raiz do projeto.
 
@@ -184,9 +183,27 @@ A seção **Calcule e acompanhe suas ações** oferece seis opções, sem modifi
 
 Fontes consultadas em 11/11/2026. O usuário informa todos os valores; não há valores previamente preenchidos, gravação, envio ou soma ao painel de progresso. As demais ações não recebem estimativas numéricas. Valores são cenários educativos do Ecoa, não medições, metas oficiais da ONU ou economias certificadas. Campos aceitam zero dias/horas (resultado zero), validam limites e rejeitam valores vazios/negativos/não finitos; dias e quantidades são inteiros. Limites dos campos são de uso da ferramenta, não limites físicos.
 
-<<<<<<< HEAD
-Testes em `validar.cjs` cobrem fórmulas, conversão de unidades, decimais, zeros, limites, entradas inválidas e interface simulada. Cache offline v11 inclui os módulos; abrir as fontes requer internet. Teste visual em celular e navegador real permanece pendente.
->>>>>>> c515e38aca649c0f743fe0b3d6ec45da56b60b82
-=======
 Testes em `validar.cjs` cobrem fórmulas, conversão de unidades, decimais, zeros, limites, entradas inválidas e interface simulada. Cache offline v12 inclui os módulos; abrir as fontes requer internet. Teste visual em celular e navegador real permanece pendente.
->>>>>>> ef72434bb610bc1c8d94fd6a94338ed13efaa218
+
+### Na minha cidade (etapa 9)
+
+Mapa Leaflet **1.9.4** carregado por CDN (unpkg, com SRI) somente ao clicar em “Abrir mapa interativo”. Base cartográfica OpenStreetMap com atribuição visível, sem geolocalização, geocodificação, busca automática de estabelecimentos ou backend novo. Documentação: https://leafletjs.com/reference-1.9.4.html e política dos mapas: https://operations.osmfoundation.org/policies/tiles/ (consultadas em 11/11/2026).
+
+A base inicial é vazia: **nenhum ponto real foi verificado nesta etapa**. O usuário pode cadastrar locais públicos de coleta seletiva, hortas e doações com nome, cidade/UF, endereço, coordenadas, descrição, URL HTTPS da fonte e data de consulta. A fonte é informada pelo usuário, não verificada pelo Ecoa. Filtros por cidade (sem distinção de acentos) e categoria atualizam lista e mapa. A lista é uma alternativa navegável por teclado, com os mesmos dados e links externos.
+
+Cadastros ficam em `localStorage`, chave `ecoa-pontos-v1`, sem alterar o Meu plano. Importação une por identificador e preserva o registro existente em caso de conflito. Remover pede confirmação. Falhas de leitura bloqueiam novos cadastros, preservando dados anteriores. Exportação inclui todos os pontos, mesmo com filtros ativos. Máximo 200 pontos/500 KB; campos, coordenadas, datas, links e IDs são validados antes da gravação. Conteúdo importado é exibido como texto, nunca HTML.
+
+Arquivo `dist/pontos-modelo.json`: `{"versao":1,"pontos":[]}`. Cada item de `pontos` deve conter:
+
+- `id`: identificador único, até 80 caracteres;
+- `nome`, `cidade`, `endereco`, `detalhes`: textos preenchidos (limites 120, 100, 240 e 600);
+- `categoria`: `coleta`, `horta` ou `doacao`;
+- `latitude` e `longitude`: números de -90 a 90 e -180 a 180;
+- `fonte`: URL HTTPS (até 500 caracteres), sem credenciais;
+- `consultadoEm`: data real no formato `AAAA-MM-DD`, não futura.
+
+O formulário gera esse formato sem editar código. Não há sincronização entre pessoas ou aparelhos; transfira o JSON manualmente. Não inclua endereços privados ou informações pessoais.
+
+PWA v13 guarda os módulos e o modelo JSON. **O mapa precisa de internet**: não armazenamos tiles externos no service worker nem fazemos download em massa. A lista/cadastro permanecem disponíveis offline após o primeiro carregamento do site. CDN ou tiles indisponíveis mostram mensagem de erro e mantêm a lista funcionando. Não há integração com o plano, cálculo de distância ou rotas nesta etapa.
+
+Validação: `node validar.cjs`, testes de dados e interface/mapa simulados, sintaxe JS e build Worker. Testes visuais em celular, leitor de tela e carregamento real de CDN/tiles ainda pendentes; a infraestrutura de preview deste checkout Worker não oferece servidor de desenvolvimento configurado.

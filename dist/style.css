@@ -343,3 +343,21 @@ legend { font-weight: 750; }
 #estimativa-resultado:not(:empty) { padding: 1rem; margin-top: 1rem; background: var(--soft); border-left: 3px solid var(--green); font-weight: 650; }
 #estimativa-erro:empty, #estimativa-resultado:empty { display: none; }
 .link-estimativa { display: block; margin-bottom: .75rem; }
+
+/* Lista acessível e cadastro continuam úteis sem a camada de mapa. */
+.cidade { border-top: 4px solid var(--green); }
+.cidade-campos { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr)); gap:1rem; margin:1rem 0; }
+.cidade-campos label { display:block; font-size:1rem; }
+.cidade input, .cidade textarea { display:block; width:100%; max-width:100%; min-height:48px; padding:.65rem; margin:.4rem 0; border:1px solid var(--control); border-radius:.4rem; background:var(--surface); color:var(--text); font:inherit; }
+.cidade-largo { grid-column:1/-1; }
+#cidade-mapa { height:clamp(18rem,50vh,30rem); margin:1rem 0; border-radius:.7rem; isolation:isolate; z-index:0; }
+.cidade-lista { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr)); gap:1rem; list-style:none; padding:0; }
+.cidade-lista li { padding:1.25rem; border:1px solid var(--line); border-radius:.7rem; background:var(--surface); overflow-wrap:anywhere; }
+.cidade-lista h3 { font-size:1.3rem; margin:.5rem 0; }
+.cidade details { margin-top:1.25rem; }
+.cidade details > input { margin-block:1rem; }
+#cidade-status:not(:empty) { padding:1rem; background:var(--soft); border-left:3px solid var(--green); }
+.cidade .leaflet-popup-content { color:#182e25; }
+.cidade .leaflet-popup-content a, .cidade .leaflet-control-attribution a { color:#065c45; }
+.cidade .leaflet-control-attribution { color:#222; background:#fff; }
+.cidade .leaflet-control-zoom a { color:#222; background:#fff; }
