@@ -69,7 +69,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
+  for (const arquivo of ['index.html', 'sobre.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -91,6 +91,7 @@ async function validarPwa() {
   }
   assert.equal(await requisitar(origem + '?via=atalho', 'navigate'), origem + 'index.html');
   assert.equal(await requisitar(origem + 'ods/6.webp'), origem + 'ods/6.webp');
+  assert.equal(await requisitar(origem + 'sobre.html?via=link', 'navigate'), origem + 'sobre.html');
   assert.equal(requisitar(origem + 'api/onu?ods=6'), undefined);
   assert.equal(requisitar('https://brasil.un.org/pt-br/sdgs'), undefined);
   assert.equal(requisitar('https://photon.komoot.io/api/?q=rua&lang=pt'), undefined);
@@ -826,3 +827,30 @@ async function validarLembretesEtapa10(){
   console.log('OK Lembretes: datas, persistência, substituição, conclusão/remoção, permissão só por clique, recusa, disparo único, falha, calendário seguro e interface simulada');
 }
 validarLembretesEtapa10().catch(e=>{console.error(e);process.exitCode=1;});
+
+function validarSobreEFontes(){
+  const fs=require('fs'),path=require('path');
+  const origem='https://o-que-da-pra-fazer-ods.gardendogwood1.chatgpt.site';
+  for(const pagina of ['index.html','sobre.html']){
+    const h=fs.readFileSync('dist/'+pagina,'utf8');
+    const canonico=origem+(pagina==='index.html'?'/':'/sobre.html');
+    assert.ok(h.includes(`rel="canonical" href="${canonico}"`));
+    assert.ok(h.includes(`property="og:url" content="${canonico}"`));
+    for(const nome of ['og:title','og:description','og:type','og:locale','og:site_name','og:image','og:image:alt','og:image:width','og:image:height'])assert.equal((h.match(new RegExp(`property="${nome}"`,'g'))||[]).length,1);
+    assert.match(h,/name="twitter:card" content="summary"/);
+    const ids=[...h.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);assert.equal(new Set(ids).size,ids.length);
+    for(const m of h.matchAll(/(?:href|src)="([^"]+)"/g)){
+      const url=m[1];if(url.startsWith('https:'))continue;
+      if(url.startsWith('#')){assert.ok(ids.includes(url.slice(1)),url);continue;}
+      const destino=url.split('#')[0]||'index.html';assert.ok(fs.existsSync(path.join('dist',destino)),destino);
+    }
+  }
+  const sobre=fs.readFileSync('dist/sobre.html','utf8');
+  for(let i=1;i<=17;i++)assert.ok(sobre.includes(`href="https://brasil.un.org/pt-br/sdgs/${i}"`));
+  for(const id of ['proposta','metodologia','limites','dados','fontes','alternar-tema','preferencia-tema','aumentar-fonte','reduzir-fonte','restaurar-leitura'])assert.ok(sobre.includes(`id="${id}"`));
+  assert.match(sobre,/Meta oficial/);assert.match(sobre,/Exemplo didático/);assert.match(sobre,/Ação do projeto/);
+  assert.ok(!sobre.includes('src="app.js"'));
+  assert.match(fs.readFileSync('dist/index.html','utf8'),/href="sobre.html"/);
+  console.log('OK Sobre e fontes: 17 links oficiais, seções, controles de leitura, links internos, IDs únicos e metadados de ambas as páginas');
+}
+validarSobreEFontes();

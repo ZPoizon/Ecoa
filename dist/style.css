@@ -378,3 +378,24 @@ legend { font-weight: 750; }
 #lembrete-lista li { padding:1rem 0; border-top:1px solid var(--line); }
 #lembrete-lista button { margin:.3rem .5rem .3rem 0; }
 #lembrete-status:not(:empty) { padding:1rem; background:var(--soft); border-left:3px solid var(--green); }
+
+.sobre { max-width:1100px; padding-block:clamp(1.5rem,5vw,4rem); }
+.sobre-intro { max-width:48rem; }
+.sobre h1 { font-size:clamp(2.4rem,6vw,4rem); line-height:1.1; margin:.7rem 0 1.5rem; }
+.sobre h2 { font-size:clamp(1.6rem,3vw,2.2rem); }
+.sobre p,.sobre li,.sobre dd { line-height:1.75; }
+.sobre section { padding-block:2rem; border-top:1px solid var(--line); scroll-margin-top:1rem; }
+.sobre-indice { display:flex; flex-wrap:wrap; gap:.6rem 1.4rem; padding:1.5rem 0; margin-block:1rem; }
+.sobre-indice a { padding:.5rem 0; }
+.sobre-destaque { padding:1.2rem; background:var(--soft); border-left:4px solid var(--green); border-radius:.3rem; }
+.sobre-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr)); gap:1rem; margin-top:1.5rem; }
+.sobre-cards article { background:var(--surface); border:1px solid var(--line); border-radius:.7rem; padding:1.2rem; }
+.sobre-cards h3 { margin-top:0; }
+.sobre-passos li { padding-left:.4rem; margin-bottom:1rem; }
+.sobre details { margin:1rem 0; }
+.sobre-limites dt { font-weight:750; color:var(--green); margin-top:1rem; }
+.sobre-limites dd { margin:.3rem 0 1.2rem; }
+.sobre-ods { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr)); list-style:none; padding:0; gap:.65rem; }
+.sobre-ods a { display:block; padding:.8rem; border:1px solid var(--line); border-radius:.4rem; }
+.sobre-ods span { display:block; font-weight:750; }
+.sobre a { overflow-wrap:anywhere; }
