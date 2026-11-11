@@ -68,7 +68,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
+  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -385,3 +385,61 @@ function validarIsolamentoTema() {
   console.log('OK Regressão: clique no tema não aciona busca; atalhos de ODS continuam funcionando');
 }
 validarIsolamentoTema();
+
+function validarQuiz() {
+  const {perguntasQuiz,calcularResultadoQuiz} = require('./dist/quiz');
+  const {iniciarQuiz} = require('./dist/quiz-ui');
+  assert.equal(perguntasQuiz.length,5);
+  perguntasQuiz.forEach(p=>p.opcoes.forEach(o=>o.ods.forEach(ods=>assert.ok(Number.isInteger(ods)&&ods>=1&&ods<=17))));
+  for (const entrada of [null,[],[0,0,0,0],[0,0,0,0,5],[0,0,0,0,-1],[0,0,0,0,1.5],['0',0,0,0,0]]) assert.throws(()=>calcularResultadoQuiz(entrada));
+  const vistos=new Set();
+  for (let n=0;n<3125;n++) {
+    let numero=n;
+    const respostas=Array.from({length:5},()=>{const r=numero%5;numero=Math.floor(numero/5);return r;});
+    const esperado=Array(17).fill(0);
+    respostas.forEach((r,i)=>perguntasQuiz[i].opcoes[r].ods.forEach(ods=>esperado[ods-1]++));
+    const ordem=esperado.map((p,i)=>({ods:i+1,pontos:p})).sort((a,b)=>b.pontos-a.pontos||a.ods-b.ods).slice(0,2);
+    const resultado=calcularResultadoQuiz(respostas);
+    assert.deepEqual(resultado.map(({ods,pontos})=>({ods,pontos})),ordem);
+    resultado.forEach(r=>{vistos.add(r.ods);assert.equal(r.afinidades.length,r.pontos);assert.ok(filtrarAcoes(acoes,{ods:r.ods}).length);});
+  }
+  assert.equal(vistos.size,17,'Todos os ODS devem poder aparecer no resultado');
+  console.log('OK Quiz: 3.125 combinações, pontuação, desempate, entradas inválidas e cobertura dos 17 ODS');
+
+  const elemento = () => ({children:[],eventos:{},hidden:false,disabled:false,textContent:'',checked:false,
+    addEventListener(k,v){this.eventos[k]=v;},append(...v){this.children.push(...v);},
+    replaceChildren(...v){this.children=v;},focus(){this.focado=true;},querySelector(){return this.children[0].children[0];}});
+  const elementos=new Map();
+  const el=id=>{if(!elementos.has(id))elementos.set(id,elemento());return elementos.get(id);};
+  let guia,tema;
+  iniciarQuiz({querySelector:el,createElement:elemento},perguntasQuiz,calcularResultadoQuiz,objetivos,ods=>{guia=ods;},ods=>{tema=ods;});
+  const enviar=()=>el('#quiz-form').eventos.submit({preventDefault(){}});
+  el('#quiz-comecar').eventos.click();
+  assert.equal(el('#quiz-opcoes').children.length,5);
+  enviar();
+  assert.match(el('#quiz-erro').textContent,/Escolha/);
+  assert.equal(el('#quiz-opcoes').querySelector().focado,true);
+  el('#quiz-opcoes').children[1].children[0].eventos.change();
+  enviar();
+  el('#quiz-voltar').eventos.click();
+  assert.equal(el('#quiz-opcoes').children[1].children[0].checked,true);
+  for(let i=0;i<5;i++) {
+    el('#quiz-opcoes').children[0].children[0].eventos.change();
+    enviar();
+  }
+  assert.equal(el('#quiz-form').hidden,true);
+  assert.equal(el('#quiz-resultado').hidden,false);
+  assert.equal(el('#quiz-resultado-titulo').focado,true);
+  const cards=el('#quiz-cartoes').children;
+  assert.equal(cards.length,2);
+  cards[0].children[2].children[0].eventos.click();
+  cards[0].children[2].children[1].eventos.click();
+  assert.equal(guia,calcularResultadoQuiz([0,0,0,0,0])[0].ods);
+  assert.equal(tema,guia);
+  el('#quiz-refazer').eventos.click();
+  assert.equal(el('#quiz-resultado').hidden,true);
+  assert.equal(el('#quiz-voltar').disabled,true);
+  assert.ok(el('#quiz-opcoes').children.every(c=>!c.children[0].checked));
+  console.log('OK Quiz: início, validação, voltar, respostas preservadas, resultado, atalhos e reinício (DOM simulado)');
+}
+validarQuiz();
