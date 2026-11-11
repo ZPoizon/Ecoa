@@ -270,7 +270,7 @@ Toda consulta e interpretação do Photon estão em `consultarProvedorEndereco`,
 
 Debounce de 350 ms, mínimo de três caracteres, AbortController, proteção contra respostas atrasadas, timeout de 10 segundos e cache LRU em memória de 50 buscas (chave inclui o viés). Sem cache persistente das buscas e `fetch` com `cache: no-store`; o service worker v14 não intercepta o Photon. O JS do módulo é incluído no cache offline. Sem internet, os campos continuam aceitando texto livre.
 
-Combobox/listbox ARIA, setas, Enter, Esc, Tab, suporte à composição de texto, toque e fechamento externo. Sugestões usam somente `textContent`, nunca HTML da API. A lista se posiciona acima ou abaixo do campo conforme o espaço na tela e respeita as cores do tema. A seleção de endereço público preenche coordenadas/cidade do cadastro; a busca do mapa centraliza o endereço sem inventar iniciativas.
+Combobox/listbox ARIA, setas, Enter, Esc, Tab, suporte à composição de texto, toque e fechamento externo. Sugestões usam somente `textContent`, nunca HTML da API. A lista aparece sempre imediatamente abaixo do campo, no fluxo da página, com altura limitada e rolagem própria; respeita as cores do tema. A seleção de endereço público preenche coordenadas/cidade do cadastro; a busca do mapa centraliza o endereço sem inventar iniciativas.
 
 O Photon público aceita uso razoável, não publica cota numérica garantida e pode limitar/bloquear uso intenso. Política: https://github.com/komoot/photon#demo-server ; parâmetros: https://github.com/komoot/photon/blob/master/docs/api-v1.md (consulta em 11/11/2026). Ao digitar, texto e centro aproximado são enviados ao Photon, conforme aviso no site. Nenhuma chave ou nova biblioteca foi adicionada.
 
@@ -281,3 +281,5 @@ Testes com API, relógio e DOM simulados cobrem debounce, mínimo, cancelamento,
 O Photon público respondeu HTTP 400 a `lang=pt` em 11/11/2026: suporta `default`, `de`, `en` e `fr`. O adaptador tenta pt e, somente se a API rejeitar explicitamente o idioma, passa a default pelo restante da sessão. Consultas e chaves do cache ignoram caixa, acentos e espaços repetidos; os nomes exibidos preservam o retorno original.
 
 Todos os campos com autocomplete aceitam CEP com oito dígitos, com ou sem hífen. O mesmo adaptador consulta ViaCEP (`https://viacep.com.br/`), sem chave. CEP incompleto não gera chamada; CEP inexistente mostra estado vazio. O endereço postal é geocodificado pelo Photon quando possível, com posição aproximada e comparação de cidade/UF. Sem coordenadas, o endereço continua disponível e o formulário pede preenchimento manual; coordenadas antigas são limpas. A pesquisa no mapa não centraliza uma posição inexistente. O ViaCEP não fornece latitude/longitude. Sem novo backend/biblioteca. PWA v15; Photon e ViaCEP não são interceptados pelo service worker.
+
+Ajuste de apresentação: sugestões sempre abaixo do input, sem inversão para cima ou sobreposição aos campos seguintes. PWA v16.

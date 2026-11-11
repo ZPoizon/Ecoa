@@ -101,19 +101,10 @@ function iniciarEnderecos(doc,ambiente,provedor=consultarProvedorEndereco) {
     let itens=[],ativo=-1,compondo=false;
     function fechar(){controle.cancelar();lista.hidden=true;input.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');status.textContent='';ativo=-1;}
     function selecionar(item){input.value=input.dataset.enderecoFormato==='cidade'?(item.cidadeUF||item.nome):item.rotulo;fechar();input.dispatchEvent(new ambiente.Event('input',{bubbles:true}));controle.cancelar();input.dispatchEvent(new ambiente.CustomEvent('endereco-selecionado',{bubbles:true,detail:item}));}
-    function posicionarLista(){
-      if(lista.hidden)return;
-      const r=input.getBoundingClientRect(),altura=ambiente.innerHeight,largura=ambiente.innerWidth;
-      const abaixo=altura-r.bottom-8,acima=r.top-8,subir=abaixo<180&&acima>abaixo;
-      lista.style.position='fixed';lista.style.left=Math.max(8,r.left)+'px';lista.style.width=Math.max(0,Math.min(r.width,largura-16))+'px';lista.style.right='auto';
-      lista.style.top=subir?'auto':Math.max(8,r.bottom)+'px';lista.style.bottom=subir?Math.max(8,altura-r.top)+'px':'auto';
-      lista.style.maxHeight=Math.max(0,Math.min(288,subir?acima:abaixo))+'px';
-    }
-    ambiente.addEventListener('resize',posicionarLista);doc.addEventListener('scroll',posicionarLista,true);
     function atualizar(estado,resultados){itens=resultados;ativo=-1;lista.replaceChildren();input.removeAttribute('aria-activedescendant');lista.hidden=estado!=='pronto';input.setAttribute('aria-expanded',String(!lista.hidden));
       status.textContent=({carregando:'Buscando endereços…',vazio:'Nenhum endereço encontrado. Informe rua e cidade ou um CEP com 8 dígitos.',erro:'Sugestões indisponíveis. Continue digitando o endereço.',fechado:'',pronto:`${itens.length} sugestões. Use as setas para escolher.`})[estado];
       itens.forEach((item,i)=>{const li=doc.createElement('li');li.id=lista.id+'-'+i;li.setAttribute('role','option');li.setAttribute('aria-selected','false');const nome=doc.createElement('strong'),detalhe=doc.createElement('span');nome.textContent=item.nome;detalhe.textContent=item.subtitulo;li.append(nome,detalhe);
-        li.addEventListener('pointerdown',e=>e.preventDefault());li.addEventListener('click',()=>selecionar(item));lista.append(li);});posicionarLista();
+        li.addEventListener('pointerdown',e=>e.preventDefault());li.addEventListener('click',()=>selecionar(item));lista.append(li);});
     }
     const controle=criarControleEndereco({buscar,atualizar,relogio:ambiente,vies:()=>{
       const lat=Number(input.dataset.enderecoLat),lon=Number(input.dataset.enderecoLon);
