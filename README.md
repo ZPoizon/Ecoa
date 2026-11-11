@@ -1,15 +1,9 @@
-<<<<<<< HEAD
 # 🌱 Ecoa
 
 **Pequenas ações, grandes mudanças.**
 
 O **Ecoa** é um projeto acadêmico de Desenvolvimento Web, desenvolvido no curso de **Análise e Desenvolvimento de Sistemas (ADS)**. Seu objetivo é aproximar os **17 Objetivos de Desenvolvimento Sustentável (ODS)** da ONU da realidade das pessoas, apresentando informações acessíveis e sugestões de ações práticas para o dia a dia.
 
-=======
-🌱 Ecoa
-Pequenas ações, grandes mudanças.
-O Ecoa é um projeto acadêmico de Desenvolvimento Web, desenvolvido no curso de Análise e Desenvolvimento de Sistemas (ADS). Seu objetivo é aproximar os 17 Objetivos de Desenvolvimento Sustentável (ODS) da ONU da realidade das pessoas, apresentando informações acessíveis e sugestões de ações práticas para o dia a dia.
->>>>>>> 1332865b53199a2a15a32ed9a64011fa5a605701
 A ideia que orienta o projeto é simples:
 
 > **Com o tempo e o dinheiro que tenho hoje, o que posso fazer?**
@@ -120,21 +114,6 @@ node validar.cjs
 ## ♿ Acessibilidade e experiência
 
 O Ecoa busca oferecer uma experiência clara, acessível e responsiva, especialmente em dispositivos móveis. A navegação por teclado, a legibilidade dos textos e a facilidade de encontrar uma ação são prioridades do desenvolvimento.
-<<<<<<< HEAD
-=======
-📌 Organização do desenvolvimento
-O projeto utiliza Git e GitHub para controle de versões e um quadro Scrum no Trello para organizar o backlog, as sprints, o desenvolvimento, os testes e as entregas.
-📖 Fontes e referências
-ONU Brasil — Objetivos de Desenvolvimento Sustentável
-Nações Unidas — Sustainable Development Goals
-ONU — Indicadores Globais dos ODS
-As metas oficiais, os exemplos didáticos e as ações sugeridas pelo Ecoa são apresentados como conteúdos de naturezas diferentes.
-🌿 Sobre o projeto
-O Ecoa nasceu da proposta de transformar conhecimento em atitude. Mais do que apresentar os ODS, o site procura responder a uma pergunta cotidiana: qual pequena ação posso começar hoje?
-Ecoa — Pequenas ações, grandes mudanças.
-
-## Documentação técnica do Ecoa
->>>>>>> 1332865b53199a2a15a32ed9a64011fa5a605701
 
 ## 📌 Organização do desenvolvimento
 
@@ -152,9 +131,32 @@ As **metas oficiais**, os **exemplos didáticos** e as **ações sugeridas pelo 
 
 O **Ecoa** nasceu da proposta de transformar conhecimento em atitude. Mais do que apresentar os ODS, o site procura responder a uma pergunta cotidiana: *qual pequena ação posso começar hoje?*
 
-<<<<<<< HEAD
 **Ecoa — Pequenas ações, grandes mudanças.**
-=======
+
+## Documentação técnica do Ecoa
+
+Guia de ações práticas da Agenda 2030. Abra dist/index.html diretamente no navegador. Para hospedar no GitHub Pages, publique o conteúdo de dist como raiz do site. Para validar os filtros, rode `node validar.cjs` na raiz do projeto.
+
+## Estrutura
+- dist/index.html — interface e formulário
+- dist/style.css — layout responsivo
+- dist/acoes.js — dados e regras de filtragem
+- dist/app.js — interação e atualização da página
+- validar.cjs — testes automatizados do catálogo e da filtragem
+- BACKLOG.md — tarefas, critérios, histórico e registro de equipe
+
+## Demonstração
+Escolha até 15 min, sem gastar e na rua. Avance entre as duas ações. Troque para até 5 min para demonstrar o estado vazio. Limpe e clique no ODS 17 para demonstrar a navegação pelo catálogo.
+
+## Histórico Git
+Execute `git log --oneline --decorate` e `git tag -n`. O ZIP contém um arquivo projeto.bundle para restaurar a branch e as tags com `git clone -b entrega projeto.bundle projeto-com-historico`.
+
+### Instalação e uso offline
+
+Abra o site em HTTPS. No Android, procure **Instalar app** ou **Adicionar à tela inicial** no menu do navegador. No iPhone, abra no Safari e use **Compartilhar → Adicionar à Tela de Início**.
+
+A primeira visita precisa de internet para armazenar os arquivos. Depois, a busca, os guias, o plano salvo e a exportação em PDF usam os arquivos locais. As consultas à ONU e a abertura de links externos exigem conexão.
+
 Ao atualizar arquivos incluídos no cache, incremente a versão em `dist/sw.js`. A nova versão entra em uso quando as abas da versão anterior forem fechadas.
 
 ### Backup do Meu plano em JSON (etapa 2)
@@ -259,4 +261,17 @@ O formulário gera esse formato sem editar código. Não há sincronização ent
 PWA v13 guarda os módulos e o modelo JSON. **O mapa precisa de internet**: não armazenamos tiles externos no service worker nem fazemos download em massa. A lista/cadastro permanecem disponíveis offline após o primeiro carregamento do site. CDN ou tiles indisponíveis mostram mensagem de erro e mantêm a lista funcionando. Não há integração com o plano, cálculo de distância ou rotas nesta etapa.
 
 Validação: `node validar.cjs`, testes de dados e interface/mapa simulados, sintaxe JS e build Worker. Testes visuais em celular, leitor de tela e carregamento real de CDN/tiles ainda pendentes; a infraestrutura de preview deste checkout Worker não oferece servidor de desenvolvimento configurado.
->>>>>>> 1332865b53199a2a15a32ed9a64011fa5a605701
+
+### Autocomplete reutilizável de endereços
+
+`dist/enderecos.js` conecta automaticamente inputs com `data-autocomplete-endereco`, inclusive inseridos depois no DOM. O atributo opcional `data-endereco-formato="cidade"` preenche cidade/UF; demais campos recebem o endereço. O evento `endereco-selecionado` fornece `detail` com rótulo, bairro, cidade, UF, latitude e longitude. `window.Enderecos.buscar(input)` executa a busca explícita e seleciona o primeiro resultado (formulário do mapa, inclusive Enter sem opção ativa).
+
+Toda consulta e interpretação do Photon estão em `consultarProvedorEndereco`, único adaptador para trocar de provedor. Usa `lang=pt`, cinco resultados e viés de localização: centro aproximado do mapa (duas casas decimais), ou centro do Brasil. Resultados brasileiros recebidos são ordenados primeiro, sem excluir outros países. A cobertura e os nomes dependem do OpenStreetMap; campos ausentes não são inventados.
+
+Debounce de 350 ms, mínimo de três caracteres, AbortController, proteção contra respostas atrasadas, timeout de 10 segundos e cache LRU em memória de 50 buscas (chave inclui o viés). Sem cache persistente das buscas e `fetch` com `cache: no-store`; o service worker v14 não intercepta o Photon. O JS do módulo é incluído no cache offline. Sem internet, os campos continuam aceitando texto livre.
+
+Combobox/listbox ARIA, setas, Enter, Esc, Tab, suporte à composição de texto, toque e fechamento externo. Sugestões usam somente `textContent`, nunca HTML da API. A lista se posiciona acima ou abaixo do campo conforme o espaço na tela e respeita as cores do tema. A seleção de endereço público preenche coordenadas/cidade do cadastro; a busca do mapa centraliza o endereço sem inventar iniciativas.
+
+O Photon público aceita uso razoável, não publica cota numérica garantida e pode limitar/bloquear uso intenso. Política: https://github.com/komoot/photon#demo-server ; parâmetros: https://github.com/komoot/photon/blob/master/docs/api-v1.md (consulta em 11/11/2026). Ao digitar, texto e centro aproximado são enviados ao Photon, conforme aviso no site. Nenhuma chave ou nova biblioteca foi adicionada.
+
+Testes com API, relógio e DOM simulados cobrem debounce, mínimo, cancelamento, LRU, respostas tardias, vazio, falhas, segurança de texto, ARIA/teclado e busca explícita. Integração ao mapa reutiliza o módulo cidade. Acesso real ao Photon não pôde ser confirmado pela ferramenta de consulta; verificação visual no celular, leitor de tela e disponibilidade/CORS do provedor ficam pendentes.

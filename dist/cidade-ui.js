@@ -1,7 +1,7 @@
 async function iniciarCidade(doc,ambiente,api) {
   const {categoriasCidade,chaveCidade,validarPontosCidade,lerJsonCidade,unirPontosCidade,filtrarPontosCidade,salvarPontosCidade}=api;
   const $=id=>doc.getElementById(id);
-  let pontos=[],mapa,camada,carregando=false,leituraFalhou=false;
+  let pontos=[],mapa,camada,carregando=false,leituraFalhou=false,enderecoSelecionado;
   const aviso=texto=>{$('cidade-status').textContent=texto;};
   function criar(tag,texto){const el=doc.createElement(tag);if(texto)el.textContent=texto;return el;}
   function link(texto,url){const a=criar('a',texto);a.href=url;a.target='_blank';a.rel='noopener noreferrer';return a;}
@@ -28,6 +28,24 @@ async function iniciarCidade(doc,ambiente,api) {
   }
   function guardar(novos){if(leituraFalhou)throw Error('O armazenamento contém dados que não puderam ser lidos. Nenhum cadastro foi sobrescrito.');pontos=salvarPontosCidade(ambiente.localStorage,unirPontosCidade(pontos,novos));desenhar();}
   function baixar(){const url=ambiente.URL.createObjectURL(new Blob([JSON.stringify({versao:1,pontos},null,2)],{type:'application/json'}));const a=criar('a');a.href=url;a.download='ecoa-pontos-locais.json';doc.body.append(a);a.click();a.remove();ambiente.setTimeout(()=>ambiente.URL.revokeObjectURL(url),1000);aviso('JSON preparado com todos os seus pontos, inclusive os ocultos pelos filtros.');}
+  function posicionarEndereco(item) {
+    enderecoSelecionado=item;
+    if(mapa)mapa.setView([item.latitude,item.longitude],16,{animate:false});
+  }
+  $('cidade-busca-endereco').addEventListener('submit',e=>{e.preventDefault();ambiente.Enderecos?.buscar($('cidade-endereco'));});
+  $('cidade-endereco').addEventListener('endereco-selecionado',e=>{
+    posicionarEndereco(e.detail);
+    if(!mapa)$('cidade-carregar').click();
+    aviso('Endereço localizado. A busca não adiciona iniciativas à lista.');
+  });
+  $('cidade-filtro').addEventListener('endereco-selecionado',e=>{
+    $('cidade-filtro').value=e.detail.cidade||e.detail.nome;desenhar();posicionarEndereco(e.detail);
+  });
+  $('ponto-endereco').addEventListener('endereco-selecionado',e=>{
+    $('ponto-latitude').value=e.detail.latitude;$('ponto-longitude').value=e.detail.longitude;
+    $('ponto-cidade').value=e.detail.cidadeUF;posicionarEndereco(e.detail);
+  });
+  $('ponto-cidade').addEventListener('endereco-selecionado',e=>posicionarEndereco(e.detail));
   $('cidade-exportar').addEventListener('click',baixar);
   $('cidade-filtro').addEventListener('input',desenhar);$('cidade-categoria').addEventListener('change',desenhar);
   $('cidade-form').addEventListener('submit',e=>{
@@ -54,7 +72,16 @@ async function iniciarCidade(doc,ambiente,api) {
       mapa=ambiente.L.map('cidade-mapa',{scrollWheelZoom:false,zoomAnimation:false,fadeAnimation:false,zoomControl:false}).setView([-14.2,-51.9],4);
       ambiente.L.control.zoom({zoomInTitle:'Aproximar',zoomOutTitle:'Afastar'}).addTo(mapa);
       ambiente.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'}).on('tileerror',()=>aviso('Parte do mapa não carregou. Verifique a conexão; a lista abaixo continua disponível.')).addTo(mapa);
-      camada=ambiente.L.layerGroup().addTo(mapa);desenhar();$('cidade-carregar').hidden=true;aviso('Mapa aberto. Os mesmos locais estão na lista abaixo.');
+      camada=ambiente.L.layerGroup().addTo(mapa);desenhar();
+      if(enderecoSelecionado)posicionarEndereco(enderecoSelecionado);
+      const atualizarVies=()=>{
+        const centro=mapa.getCenter();
+        for(const id of ['cidade-endereco','cidade-filtro','ponto-endereco','ponto-cidade']){
+          $(id).dataset.enderecoLat=centro.lat.toFixed(2);$(id).dataset.enderecoLon=centro.lng.toFixed(2);
+        }
+      };
+      if(mapa.on){mapa.on('moveend',atualizarVies);atualizarVies();}
+      $('cidade-carregar').hidden=true;aviso('Mapa aberto. Os mesmos locais estão na lista abaixo.');
     }catch{if(mapa){mapa.remove();mapa=null;camada=null;}$('cidade-mapa').hidden=true;aviso('Não foi possível carregar o mapa. A lista e os cadastros continuam funcionando. Você pode tentar novamente.');}
     finally{carregando=false;$('cidade-carregar').disabled=false;}
   });

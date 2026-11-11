@@ -68,7 +68,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
+  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -89,6 +89,7 @@ async function validarPwa() {
   assert.equal(await requisitar(origem + 'ods/6.webp'), origem + 'ods/6.webp');
   assert.equal(requisitar(origem + 'api/onu?ods=6'), undefined);
   assert.equal(requisitar('https://brasil.un.org/pt-br/sdgs'), undefined);
+  assert.equal(requisitar('https://photon.komoot.io/api/?q=rua&lang=pt'), undefined);
   assert.equal(requisitar(origem + 'index.html', 'cors', 'POST'), undefined);
   assert.deepEqual(rede, []);
   armazenados.delete(origem + 'style.css');
@@ -697,3 +698,50 @@ async function validarCidade() {
   console.log('OK Cidade: schema, limites, links seguros, datas, filtros, união, persistência, cadastro, remoção, importação, exportação, falha de mapa e proteção de dados inválidos (DOM simulado)');
 }
 validarCidade().catch(erro=>{console.error(erro);process.exitCode=1;});
+
+async function validarEnderecos() {
+  const a=require('./dist/enderecos');
+  const feature=(nome,pais='BR')=>({geometry:{coordinates:[-48,-23]},properties:{name:nome,street:'Rua A',district:'Centro',city:'Capão Bonito',state:'São Paulo',countrycode:pais}});
+  let url,opcoes;
+  const itens=await a.consultarProvedorEndereco('Rua A',{vies:{latitude:-23,longitude:-48},fetcher:async(u,o)=>{url=new URL(u);opcoes=o;return {ok:true,json:async()=>({features:[feature('Outro','PT'),feature('<img src=x onerror=alert(1)>')]})};}});
+  assert.equal(url.searchParams.get('lang'),'pt');assert.equal(url.searchParams.get('lat'),'-23');assert.equal(url.searchParams.get('limit'),'5');assert.equal(opcoes.cache,'no-store');assert.equal(itens[0].uf,'SP');assert.match(itens[0].nome,/<img/);
+  let chamadas=0;const servico=a.criarServicoEnderecos(async()=>{chamadas++;return itens;});
+  assert.deepEqual(await servico('ab'),[]);assert.equal(chamadas,0);
+  await servico('abc');await servico('ABC');assert.equal(chamadas,1);
+  await servico('abc',{vies:{latitude:1,longitude:2}});assert.equal(chamadas,2);
+  for(let i=0;i<51;i++)await servico('busca '+i);await servico('abc');assert.equal(chamadas,54);
+  let agora=0,id=0;const timers=new Map();
+  const clock={setTimeout(fn,ms){timers.set(++id,{fn,quando:agora+ms});return id;},clearTimeout(i){timers.delete(i);}};
+  const tick=async ms=>{agora+=ms;for(const [i,t]of [...timers])if(t.quando<=agora){timers.delete(i);t.fn();}for(let j=0;j<8;j++)await Promise.resolve();};
+  let pedidos=[],estados=[];
+  const controle=a.criarControleEndereco({relogio:clock,atualizar:(estado,dados)=>estados.push({estado,dados}),buscar:(q,o)=>new Promise((resolve,reject)=>pedidos.push({q,...o,resolve,reject}))});
+  controle.digitar('ab');await tick(400);assert.equal(pedidos.length,0);
+  controle.digitar('abc');await tick(349);assert.equal(pedidos.length,0);await tick(1);assert.equal(pedidos.length,1);
+  controle.digitar('abcd');assert.equal(pedidos[0].signal.aborted,true);await tick(350);assert.equal(pedidos.length,2);
+  pedidos[0].resolve(itens);await tick(0);assert.equal(estados.at(-1).estado,'carregando');
+  pedidos[1].resolve([]);await tick(0);assert.equal(estados.at(-1).estado,'vazio');
+  controle.digitar('erro');await tick(350);pedidos.at(-1).reject(Error('offline'));await tick(0);assert.equal(estados.at(-1).estado,'erro');
+  controle.digitar('tarde');await tick(350);controle.cancelar();pedidos.at(-1).resolve(itens);await tick(0);assert.notEqual(estados.at(-1).estado,'pronto');
+  // DOM mínimo: qualquer uso de innerHTML falha; dados maliciosos devem ser texto.
+  function el(tag){return {tag,children:[],attrs:{},eventos:{},dataset:{},style:{},value:'',hidden:false,
+    set innerHTML(v){throw Error('HTML inseguro');},setAttribute(k,v){this.attrs[k]=v;},getAttribute(k){return this.attrs[k];},removeAttribute(k){delete this.attrs[k];},
+    append(...xs){xs.forEach(x=>{this.children.push(x);x.parentNode=this;});},insertBefore(x){this.append(x);},replaceChildren(...xs){this.children=[];this.append(...xs);},
+    addEventListener(k,v){(this.eventos[k]??=[]).push(v);},dispatchEvent(e){e.target??=this;for(const fn of this.eventos[e.type]||[])fn(e);},contains(x){return x===this||this.children.some(y=>y.contains(x));},getBoundingClientRect(){return {left:10,top:500,bottom:548,width:300};},scrollIntoView(){}};}
+  const input=el('input'),body=el('body');body.append(input);
+  const doc=el('document');doc.body=body;doc.createElement=el;doc.querySelectorAll=()=>[input];
+  const env={...clock,innerWidth:360,innerHeight:640,addEventListener(){},Event:class{constructor(type,args){this.type=type;Object.assign(this,args);}},CustomEvent:class{constructor(type,args){this.type=type;Object.assign(this,args);}}};
+  const api=a.iniciarEnderecos(doc,env,async()=>itens);
+  input.value='Rua A';input.dispatchEvent({type:'input'});await tick(350);
+  const lista=input.parentNode.children[1];assert.equal(lista.children.length,2);assert.equal(input.attrs['aria-expanded'],'true');assert.equal(lista.children[0].children[0].textContent,itens[0].nome);
+  let bloqueado=false,selecionado;
+  input.addEventListener('endereco-selecionado',e=>selecionado=e.detail);
+  input.dispatchEvent({type:'keydown',key:'ArrowDown',preventDefault(){bloqueado=true;}});assert.equal(input.attrs['aria-activedescendant'],lista.children[0].id);
+  input.dispatchEvent({type:'keydown',key:'Enter',preventDefault(){bloqueado=true;}});assert.equal(selecionado.latitude,-23);assert.equal(input.value,itens[0].rotulo);assert.equal(lista.hidden,true);
+  bloqueado=false;input.dispatchEvent({type:'keydown',key:'Enter',preventDefault(){bloqueado=true;}});assert.equal(bloqueado,false);
+  input.value='Rua A';input.dispatchEvent({type:'input'});await tick(350);input.dispatchEvent({type:'keydown',key:'Escape'});assert.equal(lista.hidden,true);
+  input.dispatchEvent({type:'input'});await tick(350);input.dispatchEvent({type:'keydown',key:'Tab'});assert.equal(lista.hidden,true);
+  input.dispatchEvent({type:'input'});await tick(350);doc.dispatchEvent({type:'pointerdown',target:el('outro')});assert.equal(lista.hidden,true);
+  await api.buscar(input);assert.equal(input.value,itens[0].rotulo);
+  console.log('OK Endereços: Photon simulado, pt/viés/Brasil, debounce 350ms, mínimo, cancelamento/resposta tardia, LRU, vazio, erro, textContent anti-XSS, ARIA, teclado, toque fora e busca por Enter');
+}
+validarEnderecos().catch(erro=>{console.error(erro);process.exitCode=1;});
