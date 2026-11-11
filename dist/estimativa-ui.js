@@ -10,7 +10,12 @@ function iniciarEstimativa(documento, modelos, calcular, formatar, abrirAcao) {
     limparResultado();campos.replaceChildren();
     documento.querySelector('#estimativa-hipoteses').textContent=modelo.limite;
     documento.querySelector('#estimativa-referencia').textContent=modelo.referencia;
-    const fonte=documento.querySelector('#estimativa-fonte');fonte.href=modelo.url;fonte.textContent=modelo.fonte;
+    const fonte=documento.querySelector('#estimativa-fonte');
+    fonte.hidden=!modelo.url;
+    fonte.href=modelo.url || '#estimativa';fonte.textContent=modelo.url?modelo.fonte:'';
+    documento.querySelector('#estimativa-origem').textContent=modelo.url?'':modelo.fonte;
+    documento.querySelector('#estimativa-calcular').textContent=modelo.registro?'Conferir quantidade':'Calcular estimativa';
+    documento.querySelector('#estimativa-abrir').textContent=modelo.acao?'Ver ação relacionada':`Ver ações do ODS ${modelo.ods}`;
     modelo.campos.forEach(campo=>{
       const grupo=documento.createElement('div');
       const rotulo=documento.createElement('label');rotulo.htmlFor='estimativa-'+campo.id;rotulo.textContent=campo.rotulo;
@@ -25,7 +30,10 @@ function iniciarEstimativa(documento, modelos, calcular, formatar, abrirAcao) {
     try {
       const valores={};modelos[seletor.value].campos.forEach(c=>{valores[c.id]=documento.querySelector('#estimativa-'+c.id).value;});
       const resultado=calcular(seletor.value,valores);
-      saida.textContent=formatar(resultado)+' Cálculo: '+resultado.formula+'. É uma simulação educativa, não economia medida. Não é somada ao progresso ou aos selos.';
+      const aviso=modelos[seletor.value].registro
+        ? 'É uma quantidade informada por você, não uma estimativa de impacto ambiental. Não fica salva.'
+        : 'É uma simulação educativa, não economia medida.';
+      saida.textContent=formatar(resultado)+' Cálculo: '+resultado.formula+'. '+aviso+' Não é somada ao progresso ou aos selos.';
       saida.focus();
     } catch(e) {erro.textContent=e.message;erro.focus();}
   });
@@ -37,6 +45,8 @@ function iniciarEstimativa(documento, modelos, calcular, formatar, abrirAcao) {
 if(typeof module!=='undefined')module.exports={iniciarEstimativa};
 else iniciarEstimativa(document,modelosEstimativa,calcularEstimativa,formatarEstimativa,modelo=>{
   const acao=acoes.find(a=>a.ods===modelo.ods&&a.titulo===modelo.acao);
-  if(!acao)return;
+  if(!acao) {
+    form.reset();opcoes.querySelector(`input[value="${modelo.ods}"]`).checked=true;atualizarSelecao();buscar();return;
+  }
   form.reset();encontradas=[acao];indice=0;mostrar();
 });

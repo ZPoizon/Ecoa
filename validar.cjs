@@ -583,8 +583,9 @@ function validarEstimativas() {
   assert.throws(()=>e.calcularEstimativa('outra',{}));
   for(const tipo of Object.keys(e.modelosEstimativa)) {
     const modelo=e.modelosEstimativa[tipo];
-    assert.ok(acoes.some(a=>a.ods===modelo.ods&&a.titulo===modelo.acao));
-    assert.equal(new URL(modelo.url).protocol,'https:');
+    assert.ok(acoes.some(a=>a.ods===modelo.ods&&(!modelo.acao||a.titulo===modelo.acao)));
+    if(modelo.url) assert.equal(new URL(modelo.url).protocol,'https:');
+    else assert.equal(modelo.registro,true);
     for(const campo of modelo.campos) {
       assert.equal(e.numeroEstimativa(String(campo.min),campo),campo.min);
       assert.equal(e.numeroEstimativa(campo.max,campo),campo.max);
@@ -594,6 +595,18 @@ function validarEstimativas() {
   }
   assert.match(e.formatarEstimativa(e.calcularEstimativa('agua',{quantidade:1,dias:1})),/até 46 L/);
   assert.match(e.formatarEstimativa(e.calcularEstimativa('energia',{potencia:10,quantidade:2,horas:3,dias:30})),/1,8 kWh/);
+  assert.equal(e.calcularEstimativa('banho',{antes:10,depois:5,banhos:7}).valor,350);
+  assert.equal(e.calcularEstimativa('banho',{antes:5,depois:5,banhos:7}).valor,0);
+  assert.throws(()=>e.calcularEstimativa('banho',{antes:5,depois:10,banhos:1}),/nova duração/);
+  assert.equal(e.calcularEstimativa('aparelhos',{potencia:100,quantidade:2,horas:2,dias:30}).valor,12);
+  assert.equal(e.calcularEstimativa('alimentos',{gramas:1250}).valor,1.25);
+  assert.equal(e.calcularEstimativa('oleo',{mililitros:2500}).valor,2.5);
+  for(const [tipo,campo] of [['alimentos','gramas'],['oleo','mililitros']]) {
+    assert.equal(e.calcularEstimativa(tipo,{[campo]:0}).valor,0);
+    assert.equal(e.calcularEstimativa(tipo,{[campo]:'0,5'}).valor,.0005);
+    assert.match(e.formatarEstimativa(e.calcularEstimativa(tipo,{[campo]:1500})),/Quantidade informada: 1,5/);
+  }
+  assert.match(e.formatarEstimativa(e.calcularEstimativa('banho',{antes:10,depois:5,banhos:7})),/350 L/);
   console.log('OK Estimativas: fórmulas, unidades, zero, decimais, limites, erros e fontes por ação');
   const {iniciarEstimativa}=require('./dist/estimativa-ui');
   const elementos=new Map();
@@ -612,6 +625,23 @@ function validarEstimativas() {
   assert.equal(el('#estimativa-campos').children.length,4);
   assert.equal(el('#estimativa-fonte').href,e.modelosEstimativa.energia.url);
   el('#estimativa-abrir').eventos.click();assert.equal(aberta.ods,7);
+  for(const [tipo,campo] of [['alimentos','gramas'],['oleo','mililitros']]) {
+    el('#estimativa-tipo').value=tipo;el('#estimativa-tipo').eventos.change();
+    assert.equal(el('#estimativa-campos').children.length,1);
+    assert.equal(el('#estimativa-fonte').hidden,true);
+    assert.match(el('#estimativa-origem').textContent,/informada por você/);
+    assert.equal(el('#estimativa-calcular').textContent,'Conferir quantidade');
+    el('#estimativa-'+campo).value='1500';enviar();
+    assert.match(el('#estimativa-resultado').textContent,/Quantidade informada: 1,5/);
+    assert.match(el('#estimativa-resultado').textContent,/não uma estimativa de impacto/);
+  }
+  el('#estimativa-tipo').value='banho';el('#estimativa-tipo').eventos.change();
+  assert.equal(el('#estimativa-resultado').textContent,'');
+  assert.equal(el('#estimativa-fonte').hidden,false);
+  assert.equal(el('#estimativa-origem').textContent,'');
+  assert.equal(el('#estimativa-calcular').textContent,'Calcular estimativa');
+  el('#estimativa-abrir').eventos.click();assert.equal(aberta.ods,6);
+  assert.equal(el('#estimativa-abrir').textContent,'Ver ações do ODS 6');
   console.log('OK Estimativas: interface, validação, resultado, limpeza ao editar, fonte atualizada e atalho');
 }
 validarEstimativas();
