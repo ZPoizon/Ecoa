@@ -2,7 +2,7 @@ function dadosCompartilhamento(acao, endereco) {
   const url = new URL(endereco);
   url.search = '';
   url.hash = 'acao=' + encodeURIComponent(acao.ods + ':' + acao.titulo);
-  const text = `${acao.titulo}\nODS ${acao.ods} · ${acao.tempo} min · ${acao.custo ? 'Até R$ ' + acao.custo : 'Sem gastar'} · ${acao.local}\n\n${acao.passos.map((passo, i) => `${i + 1}. ${passo}`).join('\n')}\n\nAção sugerida pelo projeto O Que Dá Pra Fazer?`;
+  const text = `${acao.titulo}\nODS ${acao.ods} · ${acao.tempo} min · ${acao.custo ? 'Até R$ ' + acao.custo : 'Sem gastar'} · ${acao.local}\n\n${acao.passos.map((passo, i) => `${i + 1}. ${passo}`).join('\n')}\n\nAção sugerida pelo projeto Ecoa — Pequenas ações, 17 objetivos. Projeto independente e educativo, não oficial da ONU.`;
   return { title: acao.titulo, text, url: url.href };
 }
 

@@ -1,7 +1,7 @@
 async function gerarPdfPlano({ PDFDocument, StandardFonts, rgb }, itens, data) {
   const pdf = await PDFDocument.create();
-  pdf.setTitle('Meu plano de ações');
-  pdf.setAuthor('O Que Dá Pra Fazer?');
+  pdf.setTitle('Ecoa — Meu plano de ações');
+  pdf.setAuthor('Ecoa');
   const normal = await pdf.embedFont(StandardFonts.Helvetica);
   const forte = await pdf.embedFont(StandardFonts.HelveticaBold);
   const verde = rgb(.08, .25, .19);
@@ -39,7 +39,10 @@ async function gerarPdfPlano({ PDFDocument, StandardFonts, rgb }, itens, data) {
     const altura = primeira ? 162 : 86;
     pagina.drawRectangle({ x: 0, y: 0, width: 595, height: 842, color: papel });
     pagina.drawRectangle({ x: 0, y: 842 - altura, width: 595, height: altura, color: verde });
-    texto('O QUE DÁ PRA FAZER?', margem, 812, 10, forte, suave);
+    for (const raio of [4, 7.5, 11]) pagina.drawCircle({x:margem + 12, y:807, size:raio, borderWidth:.75, borderColor:suave});
+    pagina.drawCircle({x:margem + 12, y:807, size:1.25, color:suave});
+    texto('Ecoa', margem + 30, 818, 18, forte, branco);
+    texto('Pequenas ações, 17 objetivos.', margem + 88, 812, 10, normal, suave);
     texto('Meu plano de ações', margem, 790, primeira ? 30 : 20, forte, branco);
     if (primeira) {
       texto(`Exportado em ${data}`, margem, 748, 11, normal, suave);
@@ -88,7 +91,7 @@ async function gerarPdfPlano({ PDFDocument, StandardFonts, rgb }, itens, data) {
 
   pdf.getPages().forEach((folha, indice) => {
     pagina = folha;
-    texto('O Que Dá Pra Fazer?  |  Plano pessoal', margem, 33, 9);
+    texto('Ecoa | Projeto independente e educativo, não oficial da ONU.', margem, 33, 8);
     texto(`${indice + 1} / ${pdf.getPageCount()}`, 510, 33, 9);
   });
   return pdf.save();

@@ -302,3 +302,6 @@ legend { font-weight: 750; }
 .quiz-card h4 { margin-top: 0; font-size: 1.2rem; }
 .quiz-metodo { margin: 1.5rem 0 0; padding-top: 1rem; border-top: 1px solid var(--line); }
 #quiz-erro:empty { display: none; }
+
+.brand { display: inline-flex; align-items: center; gap: .65rem; font-size: 1.5rem; letter-spacing: -.035em; }
+.brand img { border-radius: .65rem; flex: none; }

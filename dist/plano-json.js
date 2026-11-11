@@ -1,3 +1,4 @@
+// O identificador oqdpf e a versão 1 são preservados para compatibilidade com backups anteriores ao Ecoa.
 // Formato de backup independente do armazenamento interno do navegador.
 const limitePlanoJson = 100 * 1024;
 

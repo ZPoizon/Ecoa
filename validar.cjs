@@ -443,3 +443,29 @@ function validarQuiz() {
   console.log('OK Quiz: início, validação, voltar, respostas preservadas, resultado, atalhos e reinício (DOM simulado)');
 }
 validarQuiz();
+
+function validarMarcaEcoa() {
+  const {readFileSync}=require('node:fs');
+  const {runInNewContext}=require('node:vm');
+  const html=readFileSync('dist/index.html','utf8');
+  const manifesto=require('./dist/manifest.json');
+  assert.equal(manifesto.name,'Ecoa');assert.equal(manifesto.short_name,'Ecoa');assert.equal(manifesto.id,'./');
+  assert.ok(html.includes('<title>Ecoa</title>'));
+  assert.ok(html.includes('Pequenas ações,'));assert.ok(html.includes('Com o tempo e o dinheiro que tenho hoje, o que posso fazer?'));
+  assert.ok(html.includes('og:title'));assert.ok(html.includes('não oficial da ONU'));
+  const legado = new Map([[acoes[0].ods+':'+acoes[0].titulo,true]]);
+  const json=require('./dist/plano-json');
+  const backup=JSON.stringify({projeto:'oqdpf',versao:1,acoes:[...legado].map(([chave,concluida])=>({chave,concluida}))});
+  assert.deepEqual(json.validarPlanoJson(backup,acoes),legado);
+  const elementos=new Map();const el=id=>{if(!elementos.has(id))elementos.set(id,{addEventListener(){},replaceChildren(){},append(){},setAttribute(){}});return elementos.get(id);};
+  let leu,escreveu=false;
+  const contexto={document:{querySelector:el,querySelectorAll:()=>[],addEventListener(){},createElement:()=>el(Symbol())},
+    localStorage:{getItem:k=>{leu=k;return JSON.stringify(Object.fromEntries(legado));},setItem:()=>{escreveu=true;}},acoes,encontradas:[],indice:0};
+  runInNewContext(readFileSync('dist/plano.js','utf8'),contexto);
+  assert.equal(leu,'oqdpf-plano-v1');assert.equal(escreveu,false);
+  assert.equal(runInNewContext('plano.size',contexto),1);
+  assert.equal(runInNewContext('[...plano.values()][0]',contexto),true);
+  assert.ok(readFileSync('dist/acessibilidade.js','utf8').includes("'oqdpf-acessibilidade-v1'"));
+  console.log('OK Ecoa: título, manifesto, marca independente e preservação de plano/preferências/JSON antigos sem migração');
+}
+validarMarcaEcoa();
