@@ -68,7 +68,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
+  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -469,3 +469,55 @@ function validarMarcaEcoa() {
   console.log('OK Ecoa: título, manifesto, marca independente e preservação de plano/preferências/JSON antigos sem migração');
 }
 validarMarcaEcoa();
+
+function validarDesafioSeteDias() {
+  const d=require('./dist/desafio');
+  const {readFileSync}=require('node:fs');const {runInNewContext}=require('node:vm');
+  assert.equal(d.dataLocalDesafio(new Date(2026,10,11,23,59)),'2026-11-11');
+  assert.equal(d.numeroDiaDesafio('2024-03-01')-d.numeroDiaDesafio('2024-02-28'),2);
+  assert.equal(d.numeroDiaDesafio('2026-01-01')-d.numeroDiaDesafio('2025-12-31'),1);
+  for(const x of ['2026-02-30','2026-13-01','texto',null])assert.throws(()=>d.numeroDiaDesafio(x));
+  for(const ods of [0,18,1.5,'1'])assert.throws(()=>d.novoDesafio(ods,'2026-11-11'));
+  const original=d.novoDesafio(6,'2026-11-11');
+  assert.equal(d.estadoDesafio(original,'2026-11-11').dia,0);
+  assert.throws(()=>d.concluirDiaDesafio(original,'2026-11-10',true));
+  assert.throws(()=>d.concluirDiaDesafio(original,'2026-11-18',true));
+  let atual=d.concluirDiaDesafio(original,'2026-11-11',true);
+  assert.equal(original.dias[0],false);
+  assert.equal(d.estadoDesafio(atual,'2026-11-12').sequencia,1);
+  assert.equal(d.estadoDesafio(atual,'2026-11-13').sequencia,0);
+  for(let i=1;i<7;i++)atual=d.concluirDiaDesafio(atual,`2026-11-${11+i}`,true);
+  assert.equal(d.estadoDesafio(atual,'2026-11-17').sequencia,7);
+  assert.equal(d.estadoDesafio(atual,'2026-11-18').encerrado,true);
+  assert.equal(d.estadoDesafio(atual,'2026-11-19').sequencia,0);
+  assert.equal(d.estadoDesafio(d.concluirDiaDesafio(atual,'2026-11-17',false),'2026-11-17').sequencia,6);
+  let salvo;d.salvarDesafio({setItem:(k,v)=>{assert.equal(k,'ecoa-desafio-v1');salvo=v;}},atual);
+  assert.deepEqual(d.validarDesafio(JSON.parse(salvo)),atual);
+  assert.throws(()=>d.salvarDesafio({setItem(){throw Error();}},atual),/progresso anterior/);
+  assert.throws(()=>d.validarDesafio({...original,dias:[true]}));
+  const praticas=objetivos.map(nome=>[nome,'Primeiro passo','Segundo passo','Indicador']);
+  for(let ods=1;ods<=17;ods++) {
+    const roteiro=d.roteiroDesafio(ods,acoes,praticas);
+    assert.equal(roteiro.length,7);assert.ok(roteiro.every(r=>r.titulo&&r.passos.length===2));
+  }
+  assert.throws(()=>d.roteiroDesafio(18,acoes,praticas));
+  console.log('OK Desafio: datas locais, ano bissexto, calendário, sequência, desfazer, fim, validação e persistência');
+  const elemento=()=>({children:[],eventos:{},value:'1',hidden:true,dataset:{},
+    addEventListener(k,v){this.eventos[k]=v;},add(){},append(...v){this.children.push(...v);},replaceChildren(...v){this.children=v;},focus(){this.focado=true;}});
+  const elementos=new Map();const el=id=>{if(!elementos.has(id))elementos.set(id,elemento());return elementos.get(id);};
+  let escritas=0,buscou=false;
+  const ctx={...d,document:{querySelector:el,createElement:elemento,addEventListener(){}},objetivos,acoes,praticasOds:praticas,
+    Option:function(){},localStorage:{getItem:()=>null,setItem(){escritas++;}},setInterval(){},
+    form:{reset(){}},opcoes:{querySelector:el},atualizarSelecao(){},buscar(){buscou=true;}};
+  runInNewContext(readFileSync('dist/desafio-ui.js','utf8'),ctx);
+  el('#desafio-iniciar').eventos.click();
+  assert.equal(escritas,1);assert.equal(el('#desafio-dias').children.length,7);
+  const caixa=el('#desafio-dias').children[0].children[3].children[0];caixa.checked=true;caixa.eventos.change();
+  assert.equal(escritas,2);assert.ok(el('#desafio-resumo').textContent.includes('1 de 7'));
+  el('#desafio-iniciar').eventos.click();assert.equal(escritas,2);assert.equal(el('#desafio-confirmar').hidden,false);
+  el('#desafio-cancelar').eventos.click();assert.equal(escritas,2);
+  el('#desafio-iniciar').eventos.click();el('#desafio-substituir').eventos.click();assert.equal(escritas,3);
+  el('#desafio-acoes').eventos.click();assert.equal(buscou,true);
+  console.log('OK Desafio: início, checklist, confirmação de substituição, cancelar e busca (DOM simulado)');
+}
+validarDesafioSeteDias();

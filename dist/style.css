@@ -305,3 +305,14 @@ legend { font-weight: 750; }
 
 .brand { display: inline-flex; align-items: center; gap: .65rem; font-size: 1.5rem; letter-spacing: -.035em; }
 .brand img { border-radius: .65rem; flex: none; }
+
+.desafio { padding: clamp(1rem,3vw,2rem); background: var(--soft); border: 1px solid var(--line); border-radius: .85rem; scroll-margin-top: 1rem; }
+#desafio-ods { max-width: 34rem; }
+#desafio-dias { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,20rem),1fr)); gap: 1rem; padding: 0; list-style: none; }
+#desafio-dias > li { margin: 0; padding: 1rem; border: 1px solid var(--line); background: var(--surface); border-radius: .7rem; }
+#desafio-dias h3 { margin-top: 0; }
+#desafio-dias label { display: flex; align-items: center; gap: .6rem; min-height: 44px; font-size: 1rem; }
+#desafio-dias input { flex: none; width: 1.25rem; height: 1.25rem; accent-color: var(--green); }
+#desafio-resumo { margin-top: 1rem; font-weight: 700; }
+#desafio-aviso:empty { display:none; }
+#desafio-confirmar { padding: 1rem; margin-top: 1rem; border: 2px solid var(--control); border-radius: .6rem; }
