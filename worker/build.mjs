@@ -7,6 +7,7 @@ const mime = {
   '.js': 'text/javascript; charset=utf-8',
   '.webp': 'image/webp',
   '.png': 'image/png',
+  '.svg': 'image/svg+xml',
   '.json': 'application/manifest+json; charset=utf-8'
 };
 const arquivos = {};

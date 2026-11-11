@@ -1,10 +1,10 @@
 // Incremente a versão ao atualizar arquivos armazenados para uso offline.
 const prefixo = 'oqdpf:' + self.registration.scope + ':';
-const versao = prefixo + 'v7';
+const versao = prefixo + 'v11';
 const arquivos = [
   'acessibilidade.js', 'acessibilidade.css', 'index.html', 'style.css', 'manifest.json', 'pwa.js', 'acoes.js', 'app.js',
-  'quiz.js', 'quiz-ui.js', 'compartilhar.js', 'compartilhar-ui.js', 'onu.js', 'plano.js', 'plano-json.js', 'plano-pdf.js', 'guias.js', 'vendor/pdf-lib.min.js',
-  'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
+  'estimativa.js', 'estimativa-ui.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'compartilhar.js', 'compartilhar-ui.js', 'onu.js', 'plano.js', 'progresso.js', 'plano-json.js', 'plano-pdf.js', 'guias.js', 'vendor/pdf-lib.min.js',
+  'icons/ecoa.svg', 'icons/favicon.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
   ...Array.from({ length: 17 }, (_, i) => 'ods/' + (i + 1) + '.webp')
 ].map(caminho => new URL(caminho, self.registration.scope).href);
 const paginaInicial = new URL('index.html', self.registration.scope).href;

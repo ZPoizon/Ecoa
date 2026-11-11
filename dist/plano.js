@@ -1,3 +1,4 @@
+// Chave legada preservada para manter os planos existentes, sem migração destrutiva.
 const planoChave = 'oqdpf-plano-v1';
 const planoLista = document.querySelector('#plano-lista');
 const planoResumo = document.querySelector('#plano-resumo');
@@ -28,6 +29,7 @@ function atualizarBotaoSalvar() {
 }
 
 function atualizarPlano() {
+  atualizarProgressoPlano(plano);
   planoLista.replaceChildren();
   exportarJson.disabled = plano.size === 0;
   baixarPlano.disabled = exportandoPlano || plano.size === 0;
@@ -47,6 +49,7 @@ function atualizarPlano() {
     concluida.addEventListener('change', () => {
       plano.set(chave, concluida.checked);
       guardarPlano();
+      atualizarProgressoPlano(plano);
       planoResumo.textContent = `${[...plano.values()].filter(Boolean).length} de ${plano.size} ações concluídas. Seu plano fica neste navegador.`;
     });
     rotulo.append(concluida, acao.titulo);
@@ -117,7 +120,7 @@ baixarPlano.addEventListener('click', async () => {
     const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'meu-plano-ods.pdf';
+    link.download = 'ecoa-meu-plano.pdf';
     document.body.append(link);
     link.click();
     link.remove();
@@ -138,7 +141,7 @@ exportarJson.addEventListener('click', () => {
     const url = URL.createObjectURL(new Blob([texto], { type: 'application/json;charset=utf-8' }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'meu-plano-ods.json';
+    link.download = 'ecoa-meu-plano.json';
     document.body.append(link);
     link.click();
     link.remove();

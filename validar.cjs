@@ -68,7 +68,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
+  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -371,7 +371,7 @@ function validarIsolamentoTema() {
       return seletor.includes('#explorar button') ? [atalho] : [raiz,atalho];
     }};
   runInNewContext(readFileSync('dist/plano.js','utf8'),{
-    document:doc,localStorage:{getItem:()=>null,setItem(){}},acoes,encontradas:[],indice:0,
+    atualizarProgressoPlano(){},document:doc,localStorage:{getItem:()=>null,setItem(){}},acoes,encontradas:[],indice:0,
     form:{reset(){resets++;},elements:{},querySelectorAll:()=>campos},buscar(){buscas++;}
   });
   // Um clique no tema borbulha até o HTML e não deve disparar o buscador.
@@ -443,3 +443,175 @@ function validarQuiz() {
   console.log('OK Quiz: início, validação, voltar, respostas preservadas, resultado, atalhos e reinício (DOM simulado)');
 }
 validarQuiz();
+
+function validarMarcaEcoa() {
+  const {readFileSync}=require('node:fs');
+  const {runInNewContext}=require('node:vm');
+  const html=readFileSync('dist/index.html','utf8');
+  const manifesto=require('./dist/manifest.json');
+  assert.equal(manifesto.name,'Ecoa');assert.equal(manifesto.short_name,'Ecoa');assert.equal(manifesto.id,'./');
+  assert.ok(html.includes('<title>Ecoa</title>'));
+  assert.ok(html.includes('Pequenas ações,'));assert.ok(html.includes('Com o tempo e o dinheiro que tenho hoje, o que posso fazer?'));
+  assert.ok(html.includes('og:title'));assert.ok(html.includes('não oficial da ONU'));
+  const legado = new Map([[acoes[0].ods+':'+acoes[0].titulo,true]]);
+  const json=require('./dist/plano-json');
+  const backup=JSON.stringify({projeto:'oqdpf',versao:1,acoes:[...legado].map(([chave,concluida])=>({chave,concluida}))});
+  assert.deepEqual(json.validarPlanoJson(backup,acoes),legado);
+  const elementos=new Map();const el=id=>{if(!elementos.has(id))elementos.set(id,{addEventListener(){},replaceChildren(){},append(){},setAttribute(){}});return elementos.get(id);};
+  let leu,escreveu=false;
+  const contexto={atualizarProgressoPlano(){},document:{querySelector:el,querySelectorAll:()=>[],addEventListener(){},createElement:()=>el(Symbol())},
+    localStorage:{getItem:k=>{leu=k;return JSON.stringify(Object.fromEntries(legado));},setItem:()=>{escreveu=true;}},acoes,encontradas:[],indice:0};
+  runInNewContext(readFileSync('dist/plano.js','utf8'),contexto);
+  assert.equal(leu,'oqdpf-plano-v1');assert.equal(escreveu,false);
+  assert.equal(runInNewContext('plano.size',contexto),1);
+  assert.equal(runInNewContext('[...plano.values()][0]',contexto),true);
+  assert.ok(readFileSync('dist/acessibilidade.js','utf8').includes("'oqdpf-acessibilidade-v1'"));
+  console.log('OK Ecoa: título, manifesto, marca independente e preservação de plano/preferências/JSON antigos sem migração');
+}
+validarMarcaEcoa();
+
+function validarDesafioSeteDias() {
+  const d=require('./dist/desafio');
+  const {readFileSync}=require('node:fs');const {runInNewContext}=require('node:vm');
+  assert.equal(d.dataLocalDesafio(new Date(2026,10,11,23,59)),'2026-11-11');
+  assert.equal(d.numeroDiaDesafio('2024-03-01')-d.numeroDiaDesafio('2024-02-28'),2);
+  assert.equal(d.numeroDiaDesafio('2026-01-01')-d.numeroDiaDesafio('2025-12-31'),1);
+  for(const x of ['2026-02-30','2026-13-01','texto',null])assert.throws(()=>d.numeroDiaDesafio(x));
+  for(const ods of [0,18,1.5,'1'])assert.throws(()=>d.novoDesafio(ods,'2026-11-11'));
+  const original=d.novoDesafio(6,'2026-11-11');
+  assert.equal(d.estadoDesafio(original,'2026-11-11').dia,0);
+  assert.throws(()=>d.concluirDiaDesafio(original,'2026-11-10',true));
+  assert.throws(()=>d.concluirDiaDesafio(original,'2026-11-18',true));
+  let atual=d.concluirDiaDesafio(original,'2026-11-11',true);
+  assert.equal(original.dias[0],false);
+  assert.equal(d.estadoDesafio(atual,'2026-11-12').sequencia,1);
+  assert.equal(d.estadoDesafio(atual,'2026-11-13').sequencia,0);
+  for(let i=1;i<7;i++)atual=d.concluirDiaDesafio(atual,`2026-11-${11+i}`,true);
+  assert.equal(d.estadoDesafio(atual,'2026-11-17').sequencia,7);
+  assert.equal(d.estadoDesafio(atual,'2026-11-18').encerrado,true);
+  assert.equal(d.estadoDesafio(atual,'2026-11-19').sequencia,0);
+  assert.equal(d.estadoDesafio(d.concluirDiaDesafio(atual,'2026-11-17',false),'2026-11-17').sequencia,6);
+  let salvo;d.salvarDesafio({setItem:(k,v)=>{assert.equal(k,'ecoa-desafio-v1');salvo=v;}},atual);
+  assert.deepEqual(d.validarDesafio(JSON.parse(salvo)),atual);
+  assert.throws(()=>d.salvarDesafio({setItem(){throw Error();}},atual),/progresso anterior/);
+  assert.throws(()=>d.validarDesafio({...original,dias:[true]}));
+  const praticas=objetivos.map(nome=>[nome,'Primeiro passo','Segundo passo','Indicador']);
+  for(let ods=1;ods<=17;ods++) {
+    const roteiro=d.roteiroDesafio(ods,acoes,praticas);
+    assert.equal(roteiro.length,7);assert.ok(roteiro.every(r=>r.titulo&&r.passos.length===2));
+  }
+  assert.throws(()=>d.roteiroDesafio(18,acoes,praticas));
+  console.log('OK Desafio: datas locais, ano bissexto, calendário, sequência, desfazer, fim, validação e persistência');
+  const elemento=()=>({children:[],eventos:{},value:'1',hidden:true,dataset:{},
+    addEventListener(k,v){this.eventos[k]=v;},add(){},append(...v){this.children.push(...v);},replaceChildren(...v){this.children=v;},focus(){this.focado=true;}});
+  const elementos=new Map();const el=id=>{if(!elementos.has(id))elementos.set(id,elemento());return elementos.get(id);};
+  let escritas=0,buscou=false;
+  const ctx={...d,document:{querySelector:el,createElement:elemento,addEventListener(){}},objetivos,acoes,praticasOds:praticas,
+    Option:function(){},localStorage:{getItem:()=>null,setItem(){escritas++;}},setInterval(){},
+    form:{reset(){}},opcoes:{querySelector:el},atualizarSelecao(){},buscar(){buscou=true;}};
+  runInNewContext(readFileSync('dist/desafio-ui.js','utf8'),ctx);
+  el('#desafio-iniciar').eventos.click();
+  assert.equal(escritas,1);assert.equal(el('#desafio-dias').children.length,7);
+  const caixa=el('#desafio-dias').children[0].children[3].children[0];caixa.checked=true;caixa.eventos.change();
+  assert.equal(escritas,2);assert.ok(el('#desafio-resumo').textContent.includes('1 de 7'));
+  el('#desafio-iniciar').eventos.click();assert.equal(escritas,2);assert.equal(el('#desafio-confirmar').hidden,false);
+  el('#desafio-cancelar').eventos.click();assert.equal(escritas,2);
+  el('#desafio-iniciar').eventos.click();el('#desafio-substituir').eventos.click();assert.equal(escritas,3);
+  el('#desafio-acoes').eventos.click();assert.equal(buscou,true);
+  console.log('OK Desafio: início, checklist, confirmação de substituição, cancelar e busca (DOM simulado)');
+}
+validarDesafioSeteDias();
+
+async function validarProgresso() {
+  const {calcularProgressoPlano,renderizarProgressoPlano}=require('./dist/progresso');
+  const chave=a=>a.ods+':'+a.titulo;
+  const vazio=calcularProgressoPlano(new Map(),acoes);
+  assert.equal(vazio.salvas,0);assert.equal(vazio.concluidas,0);assert.equal(vazio.pendentes,0);
+  assert.ok(vazio.selos.every(s=>!s.conquistado));
+  const cinco=new Map(acoes.slice(0,5).map(a=>[chave(a),true]));
+  let dados=calcularProgressoPlano(cinco,acoes);
+  assert.equal(dados.objetivosAtendidos,5);assert.deepEqual(dados.selos.map(s=>s.conquistado),[true,true,true,false]);
+  cinco.set(chave(acoes[0]),false);
+  dados=calcularProgressoPlano(cinco,acoes);assert.equal(dados.pendentes,1);assert.equal(dados.objetivosAtendidos,4);assert.equal(dados.selos[2].conquistado,false);
+  cinco.delete(chave(acoes[1]));assert.equal(calcularProgressoPlano(cinco,acoes).salvas,4);
+  const completo=new Map(acoes.map(a=>[chave(a),true]));
+  dados=calcularProgressoPlano(completo,acoes);assert.equal(dados.concluidas,20);assert.equal(dados.objetivosAtendidos,17);assert.ok(dados.selos.every(s=>s.conquistado));
+  assert.equal(dados.porOds[11].concluidas,3);
+  const invalidos=new Map([['desconhecida',true],[chave(acoes[0]),'true']]);assert.equal(calcularProgressoPlano(invalidos,acoes).salvas,0);
+  assert.equal(calcularProgressoPlano(completo,[...acoes,acoes[0]]).concluidas,20);
+  console.log('OK Progresso: totais, ODS únicos, duplicatas, estados inválidos e limites dos quatro selos');
+
+  const {runInNewContext}=require('node:vm');const {readFileSync}=require('node:fs');
+  const elemento=()=>({children:[],eventos:{},style:{},dataset:{},value:'',hidden:false,
+    addEventListener(k,v){this.eventos[k]=v;},setAttribute(k,v){this[k]=v;},
+    append(...v){this.children.push(...v);},replaceChildren(...v){this.children=v;},focus(){this.focado=true;}});
+  const elementos=new Map();const el=id=>{if(!elementos.has(id))elementos.set(id,elemento());return elementos.get(id);};
+  const doc={querySelector:el,createElement:elemento,querySelectorAll:()=>[],addEventListener(){}};
+  renderizarProgressoPlano(doc,vazio,objetivos);
+  assert.equal(el('#progresso-vazio').hidden,false);assert.equal(el('#progresso-grafico').children.length,0);
+  renderizarProgressoPlano(doc,dados,objetivos);
+  assert.equal(el('#progresso-vazio').hidden,true);assert.equal(el('#progresso-grafico').children.length,17);
+  assert.equal(el('#progresso-grafico').children[11].children[2].children[0].style.width,'100%');
+  assert.equal(el('#progresso-selos').children.length,4);
+  let salvo;
+  const ctx={document:doc,acoes,objetivos,encontradas:[acoes[0]],indice:0,
+    localStorage:{getItem:()=>null,setItem:(k,v)=>{salvo=v;}},
+    ...require('./dist/plano-json')};
+  runInNewContext(readFileSync('dist/progresso.js','utf8')+'\n'+readFileSync('dist/plano.js','utf8'),ctx);
+  el('#salvar-acao').eventos.click();assert.equal(el('#progresso-pendentes').textContent,'1');
+  const caixa=el('#plano-lista').children[0].children[0].children[0];caixa.checked=true;caixa.eventos.change();
+  assert.equal(el('#progresso-concluidas').textContent,'1');assert.equal(el('#progresso-ods').textContent,'1');
+  caixa.checked=false;caixa.eventos.change();assert.equal(el('#progresso-concluidas').textContent,'0');
+  el('#plano-lista').children[0].children[1].eventos.click();assert.equal(el('#progresso-pendentes').textContent,'0');
+  const backup=require('./dist/plano-json').exportarPlanoJson(completo,acoes);
+  el('#arquivo-plano').files=[{name:'ecoa.json',size:backup.length,text:async()=>backup}];
+  await el('#arquivo-plano').eventos.change();
+  assert.equal(el('#progresso-concluidas').textContent,'20');assert.equal(el('#progresso-ods').textContent,'17');
+  assert.equal(Object.keys(JSON.parse(salvo)).length,20);
+  console.log('OK Progresso: renderização e integração com salvar, concluir, desmarcar, remover e importar JSON');
+}
+validarProgresso().catch(erro=>{console.error(erro);process.exitCode=1;});
+
+function validarEstimativas() {
+  const e=require('./dist/estimativa');
+  assert.equal(e.calcularEstimativa('agua',{quantidade:1,dias:30}).valor,1380);
+  assert.equal(e.calcularEstimativa('agua',{quantidade:2,dias:0}).valor,0);
+  assert.equal(e.calcularEstimativa('energia',{potencia:10,quantidade:2,horas:3,dias:30}).valor,1.8);
+  assert.equal(e.calcularEstimativa('energia',{potencia:'9,5',quantidade:'1',horas:'0,5',dias:'1'}).valor,.00475);
+  assert.equal(e.calcularEstimativa('energia',{potencia:10,quantidade:1,horas:0,dias:1}).valor,0);
+  assert.throws(()=>e.calcularEstimativa('__proto__',{}));
+  assert.throws(()=>e.calcularEstimativa('outra',{}));
+  for(const tipo of Object.keys(e.modelosEstimativa)) {
+    const modelo=e.modelosEstimativa[tipo];
+    assert.ok(acoes.some(a=>a.ods===modelo.ods&&a.titulo===modelo.acao));
+    assert.equal(new URL(modelo.url).protocol,'https:');
+    for(const campo of modelo.campos) {
+      assert.equal(e.numeroEstimativa(String(campo.min),campo),campo.min);
+      assert.equal(e.numeroEstimativa(campo.max,campo),campo.max);
+      for(const valor of ['', ' ',null,undefined,true,NaN,Infinity,-1,campo.max+1,'abc']) assert.throws(()=>e.numeroEstimativa(valor,campo));
+      if(campo.inteiro)assert.throws(()=>e.numeroEstimativa(1.5,campo));
+    }
+  }
+  assert.match(e.formatarEstimativa(e.calcularEstimativa('agua',{quantidade:1,dias:1})),/até 46 L/);
+  assert.match(e.formatarEstimativa(e.calcularEstimativa('energia',{potencia:10,quantidade:2,horas:3,dias:30})),/1,8 kWh/);
+  console.log('OK Estimativas: fórmulas, unidades, zero, decimais, limites, erros e fontes por ação');
+  const {iniciarEstimativa}=require('./dist/estimativa-ui');
+  const elementos=new Map();
+  const elemento=()=>({children:[],eventos:{},value:'',textContent:'',
+    setAttribute(){},addEventListener(k,v){this.eventos[k]=v;},append(...v){this.children.push(...v);v.forEach(x=>{if(x.id)elementos.set('#'+x.id,x);});},
+    replaceChildren(...v){this.children=v;},focus(){this.focado=true;}});
+  const el=id=>{if(!elementos.has(id))elementos.set(id,elemento());return elementos.get(id);};
+  el('#estimativa-tipo').value='agua';let aberta;
+  iniciarEstimativa({querySelector:el,createElement:elemento},e.modelosEstimativa,e.calcularEstimativa,e.formatarEstimativa,m=>{aberta=m;});
+  const enviar=()=>el('#estimativa-form').eventos.submit({preventDefault(){}});
+  enviar();assert.match(el('#estimativa-erro').textContent,/Preencha/);
+  el('#estimativa-quantidade').value='1';el('#estimativa-dias').value='30';enviar();
+  assert.match(el('#estimativa-resultado').textContent,/1.380 L/);assert.match(el('#estimativa-resultado').textContent,/não economia medida/);
+  el('#estimativa-form').eventos.input();assert.equal(el('#estimativa-resultado').textContent,'');
+  el('#estimativa-tipo').value='energia';el('#estimativa-tipo').eventos.change();
+  assert.equal(el('#estimativa-campos').children.length,4);
+  assert.equal(el('#estimativa-fonte').href,e.modelosEstimativa.energia.url);
+  el('#estimativa-abrir').eventos.click();assert.equal(aberta.ods,7);
+  console.log('OK Estimativas: interface, validação, resultado, limpeza ao editar, fonte atualizada e atalho');
+}
+validarEstimativas();

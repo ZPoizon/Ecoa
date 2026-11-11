@@ -302,3 +302,44 @@ legend { font-weight: 750; }
 .quiz-card h4 { margin-top: 0; font-size: 1.2rem; }
 .quiz-metodo { margin: 1.5rem 0 0; padding-top: 1rem; border-top: 1px solid var(--line); }
 #quiz-erro:empty { display: none; }
+
+.brand { display: inline-flex; align-items: center; gap: .65rem; font-size: 1.5rem; letter-spacing: -.035em; }
+.brand img { border-radius: .65rem; flex: none; }
+
+.desafio { padding: clamp(1rem,3vw,2rem); background: var(--soft); border: 1px solid var(--line); border-radius: .85rem; scroll-margin-top: 1rem; }
+#desafio-ods { max-width: 34rem; }
+#desafio-dias { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,20rem),1fr)); gap: 1rem; padding: 0; list-style: none; }
+#desafio-dias > li { margin: 0; padding: 1rem; border: 1px solid var(--line); background: var(--surface); border-radius: .7rem; }
+#desafio-dias h3 { margin-top: 0; }
+#desafio-dias label { display: flex; align-items: center; gap: .6rem; min-height: 44px; font-size: 1rem; }
+#desafio-dias input { flex: none; width: 1.25rem; height: 1.25rem; accent-color: var(--green); }
+#desafio-resumo { margin-top: 1rem; font-weight: 700; }
+#desafio-aviso:empty { display:none; }
+#desafio-confirmar { padding: 1rem; margin-top: 1rem; border: 2px solid var(--control); border-radius: .6rem; }
+
+.progresso { margin-block: 1.5rem; padding-block: 1rem; border-block: 1px solid var(--line); }
+.progresso-numeros { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,11rem),1fr)); gap: .75rem; }
+.progresso-numeros > div { padding: 1rem; background: var(--surface); border: 1px solid var(--line); border-radius: .6rem; }
+.progresso-numeros dt { color: var(--muted); }
+.progresso-numeros dd { margin: .25rem 0 0; font-size: 2rem; font-weight: 750; color: var(--green); }
+#progresso-grafico, #progresso-selos { list-style: none; padding: 0; }
+#progresso-grafico li { display: grid; gap: .35rem; margin-block: .9rem; }
+.progresso-rotulo { font-weight: 650; }
+.progresso-trilho { display: block; height: .7rem; overflow: hidden; background: var(--surface); border: 1px solid var(--control); border-radius: 1rem; }
+.progresso-trilho > span { display: block; height: 100%; background: var(--green); }
+#progresso-selos { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,13rem),1fr)); gap: .75rem; }
+#progresso-selos .selo { margin: 0; padding: 1rem; border: 1px dashed var(--control); border-radius: .7rem; background: var(--surface); }
+#progresso-selos .conquistado { border: 2px solid var(--green); }
+.selo h4 { margin: .6rem 0; font-size: 1.05rem; }
+.selo p { margin-bottom: .4rem; }
+.selo-estado { color: var(--green); font-weight: 700; font-size: .9rem; }
+
+.estimativa { padding: clamp(1rem,3vw,2rem); border: 1px solid var(--line); border-radius: .85rem; background: var(--surface); scroll-margin-top: 1rem; }
+#estimativa-campos { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,14rem),1fr)); gap: 1rem; }
+#estimativa-campos label { display: block; font-size: 1rem; }
+#estimativa-campos input { display: block; width: 100%; min-height: 48px; padding: .6rem; margin-top: .4rem; border: 1px solid var(--control); border-radius: .4rem; background: var(--surface); color: var(--text); font: inherit; }
+.estimativa-fontes { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.estimativa-fontes p { margin-block: .5rem; }
+#estimativa-resultado:not(:empty) { padding: 1rem; margin-top: 1rem; background: var(--soft); border-left: 3px solid var(--green); font-weight: 650; }
+#estimativa-erro:empty, #estimativa-resultado:empty { display: none; }
+.link-estimativa { display: block; margin-bottom: .75rem; }
