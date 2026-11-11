@@ -316,3 +316,20 @@ legend { font-weight: 750; }
 #desafio-resumo { margin-top: 1rem; font-weight: 700; }
 #desafio-aviso:empty { display:none; }
 #desafio-confirmar { padding: 1rem; margin-top: 1rem; border: 2px solid var(--control); border-radius: .6rem; }
+
+.progresso { margin-block: 1.5rem; padding-block: 1rem; border-block: 1px solid var(--line); }
+.progresso-numeros { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,11rem),1fr)); gap: .75rem; }
+.progresso-numeros > div { padding: 1rem; background: var(--surface); border: 1px solid var(--line); border-radius: .6rem; }
+.progresso-numeros dt { color: var(--muted); }
+.progresso-numeros dd { margin: .25rem 0 0; font-size: 2rem; font-weight: 750; color: var(--green); }
+#progresso-grafico, #progresso-selos { list-style: none; padding: 0; }
+#progresso-grafico li { display: grid; gap: .35rem; margin-block: .9rem; }
+.progresso-rotulo { font-weight: 650; }
+.progresso-trilho { display: block; height: .7rem; overflow: hidden; background: var(--surface); border: 1px solid var(--control); border-radius: 1rem; }
+.progresso-trilho > span { display: block; height: 100%; background: var(--green); }
+#progresso-selos { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,13rem),1fr)); gap: .75rem; }
+#progresso-selos .selo { margin: 0; padding: 1rem; border: 1px dashed var(--control); border-radius: .7rem; background: var(--surface); }
+#progresso-selos .conquistado { border: 2px solid var(--green); }
+.selo h4 { margin: .6rem 0; font-size: 1.05rem; }
+.selo p { margin-bottom: .4rem; }
+.selo-estado { color: var(--green); font-weight: 700; font-size: .9rem; }

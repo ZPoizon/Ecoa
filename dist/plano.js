@@ -29,6 +29,7 @@ function atualizarBotaoSalvar() {
 }
 
 function atualizarPlano() {
+  atualizarProgressoPlano(plano);
   planoLista.replaceChildren();
   exportarJson.disabled = plano.size === 0;
   baixarPlano.disabled = exportandoPlano || plano.size === 0;
@@ -48,6 +49,7 @@ function atualizarPlano() {
     concluida.addEventListener('change', () => {
       plano.set(chave, concluida.checked);
       guardarPlano();
+      atualizarProgressoPlano(plano);
       planoResumo.textContent = `${[...plano.values()].filter(Boolean).length} de ${plano.size} ações concluídas. Seu plano fica neste navegador.`;
     });
     rotulo.append(concluida, acao.titulo);

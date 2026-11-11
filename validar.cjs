@@ -68,7 +68,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
+  for (const arquivo of ['index.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -371,7 +371,7 @@ function validarIsolamentoTema() {
       return seletor.includes('#explorar button') ? [atalho] : [raiz,atalho];
     }};
   runInNewContext(readFileSync('dist/plano.js','utf8'),{
-    document:doc,localStorage:{getItem:()=>null,setItem(){}},acoes,encontradas:[],indice:0,
+    atualizarProgressoPlano(){},document:doc,localStorage:{getItem:()=>null,setItem(){}},acoes,encontradas:[],indice:0,
     form:{reset(){resets++;},elements:{},querySelectorAll:()=>campos},buscar(){buscas++;}
   });
   // Um clique no tema borbulha até o HTML e não deve disparar o buscador.
@@ -459,7 +459,7 @@ function validarMarcaEcoa() {
   assert.deepEqual(json.validarPlanoJson(backup,acoes),legado);
   const elementos=new Map();const el=id=>{if(!elementos.has(id))elementos.set(id,{addEventListener(){},replaceChildren(){},append(){},setAttribute(){}});return elementos.get(id);};
   let leu,escreveu=false;
-  const contexto={document:{querySelector:el,querySelectorAll:()=>[],addEventListener(){},createElement:()=>el(Symbol())},
+  const contexto={atualizarProgressoPlano(){},document:{querySelector:el,querySelectorAll:()=>[],addEventListener(){},createElement:()=>el(Symbol())},
     localStorage:{getItem:k=>{leu=k;return JSON.stringify(Object.fromEntries(legado));},setItem:()=>{escreveu=true;}},acoes,encontradas:[],indice:0};
   runInNewContext(readFileSync('dist/plano.js','utf8'),contexto);
   assert.equal(leu,'oqdpf-plano-v1');assert.equal(escreveu,false);
@@ -521,3 +521,53 @@ function validarDesafioSeteDias() {
   console.log('OK Desafio: início, checklist, confirmação de substituição, cancelar e busca (DOM simulado)');
 }
 validarDesafioSeteDias();
+
+async function validarProgresso() {
+  const {calcularProgressoPlano,renderizarProgressoPlano}=require('./dist/progresso');
+  const chave=a=>a.ods+':'+a.titulo;
+  const vazio=calcularProgressoPlano(new Map(),acoes);
+  assert.equal(vazio.salvas,0);assert.equal(vazio.concluidas,0);assert.equal(vazio.pendentes,0);
+  assert.ok(vazio.selos.every(s=>!s.conquistado));
+  const cinco=new Map(acoes.slice(0,5).map(a=>[chave(a),true]));
+  let dados=calcularProgressoPlano(cinco,acoes);
+  assert.equal(dados.objetivosAtendidos,5);assert.deepEqual(dados.selos.map(s=>s.conquistado),[true,true,true,false]);
+  cinco.set(chave(acoes[0]),false);
+  dados=calcularProgressoPlano(cinco,acoes);assert.equal(dados.pendentes,1);assert.equal(dados.objetivosAtendidos,4);assert.equal(dados.selos[2].conquistado,false);
+  cinco.delete(chave(acoes[1]));assert.equal(calcularProgressoPlano(cinco,acoes).salvas,4);
+  const completo=new Map(acoes.map(a=>[chave(a),true]));
+  dados=calcularProgressoPlano(completo,acoes);assert.equal(dados.concluidas,20);assert.equal(dados.objetivosAtendidos,17);assert.ok(dados.selos.every(s=>s.conquistado));
+  assert.equal(dados.porOds[11].concluidas,3);
+  const invalidos=new Map([['desconhecida',true],[chave(acoes[0]),'true']]);assert.equal(calcularProgressoPlano(invalidos,acoes).salvas,0);
+  assert.equal(calcularProgressoPlano(completo,[...acoes,acoes[0]]).concluidas,20);
+  console.log('OK Progresso: totais, ODS únicos, duplicatas, estados inválidos e limites dos quatro selos');
+
+  const {runInNewContext}=require('node:vm');const {readFileSync}=require('node:fs');
+  const elemento=()=>({children:[],eventos:{},style:{},dataset:{},value:'',hidden:false,
+    addEventListener(k,v){this.eventos[k]=v;},setAttribute(k,v){this[k]=v;},
+    append(...v){this.children.push(...v);},replaceChildren(...v){this.children=v;},focus(){this.focado=true;}});
+  const elementos=new Map();const el=id=>{if(!elementos.has(id))elementos.set(id,elemento());return elementos.get(id);};
+  const doc={querySelector:el,createElement:elemento,querySelectorAll:()=>[],addEventListener(){}};
+  renderizarProgressoPlano(doc,vazio,objetivos);
+  assert.equal(el('#progresso-vazio').hidden,false);assert.equal(el('#progresso-grafico').children.length,0);
+  renderizarProgressoPlano(doc,dados,objetivos);
+  assert.equal(el('#progresso-vazio').hidden,true);assert.equal(el('#progresso-grafico').children.length,17);
+  assert.equal(el('#progresso-grafico').children[11].children[2].children[0].style.width,'100%');
+  assert.equal(el('#progresso-selos').children.length,4);
+  let salvo;
+  const ctx={document:doc,acoes,objetivos,encontradas:[acoes[0]],indice:0,
+    localStorage:{getItem:()=>null,setItem:(k,v)=>{salvo=v;}},
+    ...require('./dist/plano-json')};
+  runInNewContext(readFileSync('dist/progresso.js','utf8')+'\n'+readFileSync('dist/plano.js','utf8'),ctx);
+  el('#salvar-acao').eventos.click();assert.equal(el('#progresso-pendentes').textContent,'1');
+  const caixa=el('#plano-lista').children[0].children[0].children[0];caixa.checked=true;caixa.eventos.change();
+  assert.equal(el('#progresso-concluidas').textContent,'1');assert.equal(el('#progresso-ods').textContent,'1');
+  caixa.checked=false;caixa.eventos.change();assert.equal(el('#progresso-concluidas').textContent,'0');
+  el('#plano-lista').children[0].children[1].eventos.click();assert.equal(el('#progresso-pendentes').textContent,'0');
+  const backup=require('./dist/plano-json').exportarPlanoJson(completo,acoes);
+  el('#arquivo-plano').files=[{name:'ecoa.json',size:backup.length,text:async()=>backup}];
+  await el('#arquivo-plano').eventos.change();
+  assert.equal(el('#progresso-concluidas').textContent,'20');assert.equal(el('#progresso-ods').textContent,'17');
+  assert.equal(Object.keys(JSON.parse(salvo)).length,20);
+  console.log('OK Progresso: renderização e integração com salvar, concluir, desmarcar, remover e importar JSON');
+}
+validarProgresso().catch(erro=>{console.error(erro);process.exitCode=1;});
