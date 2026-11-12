@@ -344,3 +344,30 @@ O resumo só aparece quando existem ações no Meu plano: concluídas, pendentes
 `inicio.css` usa os tokens existentes, grade auto-fit/minmax, largura limitada pelo conteúdo disponível, tamanhos de texto/padding fluidos e nenhuma altura fixa de conteúdo. Cartões se reorganizam em celulares/tablets/desktops, botões ocupam a largura disponível em telas pequenas e as ondas não aumentam a largura rolável. Os links continuam acessíveis por teclado; layout mantém a barra inferior e sua safe-area. Sem imagens externas, fontes remotas ou bibliotecas novas. Cache PWA **v20** inclui os dois novos arquivos.
 
 Validação: `node validar.cjs` passou, incluindo testes de resumo vazio, singular/plural, links, conclusão total/parcial, leitura do plano legado sem gravação e integração com os eventos reais dos módulos em DOM simulado. Sintaxe e build Worker verificados. Mantida a limitação de preview Worker documentada na fase 1: responsividade foi implementada no CSS, mas ainda não foi inspecionada em navegador real nas larguras 320/360/390/768/1024/1440 px nem com zoom/fonte ampliada. Lighthouse, leitor de tela e atualização do PWA em aparelho real permanecem pendentes. Não declarar essas inspeções como realizadas.
+
+
+## Protótipo interativo — revisão de 12/11/2026
+
+Mantidas as cinco áreas, o catálogo, os cálculos educativos, as chaves legadas e a hospedagem com acesso restrito. Agir inicia em Buscar e oferece a aba Calcular impacto com teclado (setas, Home e End). Guias completos aparecem nas rotas `#/aprender/ods-N`, com Voltar, ODS anterior e Próximo ODS. Rotas desconhecidas levam ao Início; âncoras antigas e ações compartilhadas são normalizadas pelo roteador.
+
+O indicador âmbar em Meu espaço agora acompanha ações pendentes e o desafio disponível na data atual; desaparece ao concluir as pendências. O rótulo acessível informa o motivo e a mesma navegação funciona como menu no desktop e barra inferior no celular. `atividades.js` só deriva estado: não grava nem migra dados. O plano mostra suas ações antes das estatísticas e oferece atalhos para desafio, conquistas e preferências.
+
+Os estados de informação, aviso, erro e resultado usam os tokens dos dois temas; o acento âmbar também identifica conquistas, e os estados desativados e sobreposição permanecem definidos. Números herdam `lining-nums`. O controle de tema anuncia a próxima opção disponível. Cache PWA v22 inclui o módulo de atividades.
+
+Verificações realizadas nesta revisão:
+
+- `node validar.cjs`: catálogo, filtros, cálculos, contraste, 17 guias, rotas, links legados/novos, persistência, compartilhamento, desafio, indicador e demais regressões aprovados. Contraste dos pares de tokens de texto: mínimo 4,98:1; bordas/foco: pelo menos 3:1.
+- Chrome na prévia gerenciada: Início, Buscar, Calcular, ODS 6, Na cidade e Meu espaço em viewports de iframe de 320, 375, 768, 1024 e 1440 px. Nenhuma largura de documento excedeu a viewport. Conferidos tema claro com fonte padrão e escuro com fonte de 150%, além de inspeção visual.
+- Fluxos reais no navegador: buscar ação gratuita, salvar e concluir no plano, indicador aparecer/desaparecer, iniciar e concluir o dia do desafio, cálculo de 1 torneira por 7 dias = cenário de até 322 L, alternar abas por seta, ODS 6 → 7 → Voltar, `#estimativa`, ação antiga `#acao=…` e rota desconhecida. Dados reapareceram após reabrir a prévia.
+- A prévia usou temporariamente os arquivos estáticos para verificar a interface; o manifesto final preserva o Worker e sua API da ONU. O arquivo auxiliar de viewports foi removido antes do pacote. Assim, esta revisão supera a limitação de inspeção visual descrita nas fases anteriores.
+
+Limites: os viewports são simulações de layout no Chrome, não testes em aparelhos físicos. Não foram medidos Lighthouse nem testes com leitor de tela. Mapas, consultas de endereços e conteúdo externo continuam dependentes dos serviços descritos na página Sobre; esta revisão não comprova sua disponibilidade em tempo real. A verificação de contraste dos tokens não equivale a uma auditoria WCAG completa.
+
+## Redesign — Fase 3: Agir
+
+- Busca e calculadora permanecem em abas separadas. Atalhos de tempo, gratuidade, local e assuntos agora ficam em um único lugar e preservam os demais filtros.
+- Objetivos específicos ficam em seção expansível; links antigos abrem a seção antes de rolar. Resultado reúne salvar, outra sugestão e compartilhar, com conteúdos da ONU recolhidos no próprio cartão.
+- Calculadora mantém os seis modelos e fontes; hipóteses e referências podem ser expandidas. Estado vazio permite limpar e buscar novamente.
+- Layout usa grade flexível, controles com pelo menos 48px e empilhamento em telas estreitas. Nenhuma chave ou formato de armazenamento foi alterado. Cache offline v23 inclui agir.js e agir.css.
+- Validação: node validar.cjs e build Worker. Testes novos cobrem filtros combinados, alternância, horas/minutos, edição manual, isolamento do tema, validação e recuperação vazia.
+- Limite: a prévia gerenciada exibiu a versão anterior mesmo após reinício; não foi possível confirmar visualmente esta fase em dispositivos diferentes. Lighthouse e APIs externas ao vivo não medidos nesta fase.

@@ -25,7 +25,7 @@ try {
 function atualizarBotaoSalvar() {
   const acao = encontradas[indice];
   const salva = acao && plano.has(chaveAcao(acao));
-  salvarAcao.textContent = salva ? 'Ver no meu plano' : 'Salvar no meu plano';
+  salvarAcao.textContent = salva ? 'Ver no meu plano' : 'Salvar no plano';
 }
 
 function atualizarPlano() {
@@ -94,20 +94,6 @@ salvarAcao.addEventListener('click', () => {
 });
 document.addEventListener('tema-ods', atualizarBotaoSalvar);
 
-document.querySelectorAll('#explorar button[data-rapida], #explorar button[data-tema]').forEach(botao => {
-  botao.addEventListener('click', () => {
-    form.reset();
-    if (botao.dataset.rapida === 'tempo') form.elements.tempo.value = '5';
-    if (botao.dataset.rapida === 'rua') form.elements.local.value = 'Na rua';
-    if (botao.dataset.rapida === 'gratis') form.elements.custo.value = '0';
-    if (botao.dataset.tema) {
-      const temas = botao.dataset.tema.split(',');
-      for (const campo of form.querySelectorAll('[name="ods"]')) campo.checked = temas.includes(campo.value);
-
-    }
-    buscar();
-  });
-});
 atualizarPlano();
 
 baixarPlano.addEventListener('click', async () => {

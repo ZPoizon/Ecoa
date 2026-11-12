@@ -50,6 +50,7 @@ function iniciarAcessibilidade(janela, documento) {
       tema.value = preferencias.tema;
       const escuro = temaEfetivo(preferencias.tema, sistema.matches) === 'escuro';
       alternar.setAttribute('aria-pressed', String(escuro));
+      alternar.setAttribute('aria-label', escuro ? 'Ativar modo claro' : 'Ativar modo escuro');
       alternar.setAttribute('title', escuro ? 'Mudar para modo claro' : 'Mudar para modo escuro');
       aumentar.disabled = preferencias.fonte === 150;
       reduzir.disabled = preferencias.fonte === 100;

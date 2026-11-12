@@ -1,0 +1,35 @@
+/* Escopo da fase 3: as outras telas mantêm seus componentes. */
+#tela-agir .finder { padding:clamp(1rem,3vw,2rem); }
+#tela-agir .busca-barra { grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr)); gap:var(--space-4); border:0; padding:0; background:transparent; }
+#tela-agir .busca-campo { padding:0; border:0; }
+#tela-agir .busca-campo input,#tela-agir .busca-campo select { min-height:48px; padding:var(--space-2); }
+#tela-agir .busca-submit { align-self:end; min-height:48px; }
+#tela-agir .agir-atalhos { margin-block:var(--space-6); padding-block:var(--space-4); border-block:1px solid var(--line); }
+#tela-agir .agir-atalhos h3 { font-family:var(--font-body); font-size:1rem; font-weight:650; margin:var(--space-4) 0 var(--space-2); }
+#tela-agir .atalhos { gap:var(--space-2); }
+#tela-agir .atalhos button { font-size:1rem; min-height:48px; padding:var(--space-2) var(--space-4); border:1px solid var(--control); background:var(--surface); color:var(--text); }
+#tela-agir .atalhos button[aria-pressed="true"] { background:var(--button); color:var(--button-text); border-color:var(--button); box-shadow:inset 0 -3px currentColor; }
+#agir-filtros-resumo { margin:0; color:var(--muted); }
+#tela-agir #tema-filtro { border:0; padding:0; margin-top:var(--space-4); }
+#tela-agir #area-ods { margin-top:var(--space-6); }
+#tela-agir #opcoes-ods { grid-template-columns:repeat(auto-fit,minmax(min(100%,8rem),1fr)); }
+#tela-agir #resultado { background:var(--surface); margin-top:var(--space-6); padding:clamp(1rem,3vw,2rem); border:1px solid var(--line); border-top:4px solid var(--green); border-radius:var(--radius-md); }
+#tela-agir #titulo { font-size:var(--text-h2); margin-block:var(--space-4); }
+#tela-agir #passos { display:grid; gap:var(--space-3); }
+#tela-agir #resultado h4 { margin-bottom:var(--space-3); }
+#tela-agir #resultado .agir-acoes { gap:var(--space-3); margin-block:var(--space-6); }
+#tela-agir #resultado .agir-acoes button { flex:1 1 10rem; }
+#tela-agir #outra[hidden] { display:none; }
+#tela-agir .compartilhar { border:0; padding:0; }
+#tela-agir #onu { border:0; padding:0; margin-top:var(--space-4); }
+#tela-agir .estimativa { padding:clamp(1rem,3vw,2rem); }
+#tela-agir .agir-explicacao,#tela-agir .estimativa-fontes { margin-block:var(--space-6); border:0; padding:0; }
+#tela-agir #estimativa-tipo { min-height:48px; padding:var(--space-2); }
+#tela-agir #estimativa-campos { grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr)); }
+#tela-agir #agir-vazio { margin-top:var(--space-6); }
+@media(max-width:40rem) {
+  #tela-agir .busca-barra { grid-template-columns:minmax(0,1fr); }
+  #tela-agir .busca-submit,#tela-agir .buscar-ods { width:100%; }
+  #tela-agir .ods-layout { grid-template-columns:minmax(0,1fr); }
+  #tela-agir #painel-ods { position:static; max-height:none; }
+}

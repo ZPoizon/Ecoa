@@ -96,7 +96,7 @@
 }
 
 /* O script de preferências aplica o tema do sistema antes de pintar a página. */
-body { font-family: var(--font-body); font-size: var(--text-base); line-height: 1.6; }
+body { font-family: var(--font-body); font-size: var(--text-base); line-height: 1.6; font-variant-numeric: lining-nums; }
 h1,h2,h3,h4 { font-family: var(--font-title); font-variant-numeric: lining-nums; font-weight: 500; }
 h1,.tela-titulo { font-size: var(--text-h1); line-height: 1.1; }
 h2,.finder h2 { font-size: var(--text-h2); }
@@ -145,6 +145,25 @@ dialog::backdrop { background: var(--color-overlay); }
 .subvoltar { margin-bottom: var(--space-4); }
 .guia-navegacao { display: flex; justify-content: space-between; gap: var(--space-4); margin-block: var(--space-4); }
 .guia-navegacao a { flex: 1; }
+.tela-intro { max-width: 58ch; color: var(--muted); margin: calc(-1 * var(--space-3)) 0 var(--space-6); }
+.espaco-atalhos { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-6); }
+.espaco-atalhos a { min-height: 48px; padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-pill); color: var(--green); background: var(--surface); text-decoration: none; }
+[data-feedback]:not(:empty) { padding: var(--space-4); border: 1px solid currentColor; border-radius: var(--radius-sm); }
+[data-feedback="sucesso"] { color: var(--color-success); background: var(--color-success-bg); }
+[data-feedback="erro"] { color: var(--color-error); background: var(--color-error-bg); }
+[data-feedback="aviso"] { color: var(--color-warning); background: var(--color-warning-bg); }
+[data-feedback="info"] { color: var(--color-info); background: var(--color-info-bg); }
+[data-feedback]:empty { display: none; }
+.plano-vazio-cta { display: inline-block; margin-block: var(--space-2); font-weight: 650; }
+.nav-badge { outline: 2px solid var(--surface); }
+/* O foco permanece visível para teclado, sem contornar títulos ao abrir a página. */
+[tabindex="-1"]:focus:not(:focus-visible) { outline: none; }
+@media (max-width: 30rem) {
+  .ecoa-tabs { width: 100%; flex-wrap: nowrap; }
+  .ecoa-tabs [role="tab"] { flex: 1; min-width: 0; padding-inline: var(--space-2); }
+  .guia-navegacao { flex-wrap: wrap; }
+  .guia-navegacao a { flex-basis: 8rem; }
+}
 @media (hover:hover) {
   button:not(:disabled):not(.guia-escolha):hover,.ecoa-button:hover { background: var(--button); color: var(--button-text); border-color: var(--button); }
   .ecoa-nav a:hover { color: var(--green); background: var(--soft); }

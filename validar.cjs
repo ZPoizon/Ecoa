@@ -69,7 +69,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['inicio.js', 'inicio.css', 'rotas.js', 'design-system.css', 'index.html', 'sobre.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
+  for (const arquivo of ['agir.js', 'agir.css', 'inicio.js', 'inicio.css', 'rotas.js', 'design-system.css', 'index.html', 'sobre.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -371,35 +371,36 @@ function validarCartoesGuias() {
 validarCartoesGuias();
 
 function validarIsolamentoTema() {
-  const {runInNewContext} = require('node:vm');
-  const {readFileSync} = require('node:fs');
-  const elemento = (dataset = {}) => ({dataset,eventos:{},textContent:'',
-    addEventListener(nome,cb){this.eventos[nome]=cb;},replaceChildren(){},append(){},setAttribute(){},focus(){}});
-  // O atributo data-tema também existe no HTML para controlar a aparência.
-  const raiz = elemento({tema:'claro'});
-  const atalho = elemento({tema:'6,14'});
-  const elementos = new Map();
-  const el = id => {if (!elementos.has(id)) elementos.set(id,elemento());return elementos.get(id);};
-  let buscas=0, resets=0;
-  const campos=[{value:'6',checked:false},{value:'14',checked:false},{value:'1',checked:true}];
-  const doc={querySelector:el,addEventListener(){},createElement:elemento,
-    querySelectorAll:seletor => {
-      // Reproduz a correspondência do seletor no HTML raiz versus botões da seção Explorar.
-      return seletor.includes('#explorar button') ? [atalho] : [raiz,atalho];
-    }};
-  runInNewContext(readFileSync('dist/plano.js','utf8'),{
-    atualizarProgressoPlano(){},document:doc,localStorage:{getItem:()=>null,setItem(){}},acoes,encontradas:[],indice:0,
-    form:{reset(){resets++;},elements:{},querySelectorAll:()=>campos},buscar(){buscas++;}
-  });
-  // Um clique no tema borbulha até o HTML e não deve disparar o buscador.
-  raiz.eventos.click?.();
-  assert.equal(buscas,0);
-  assert.equal(resets,0);
-  atalho.eventos.click();
-  assert.equal(buscas,1);
-  assert.equal(resets,1);
-  assert.deepEqual(campos.map(c=>c.checked),[true,true,false]);
-  console.log('OK Regressão: clique no tema não aciona busca; atalhos de ODS continuam funcionando');
+  const {iniciarAgir}=require('./dist/agir');
+  const elemento=(dataset={})=>({dataset,eventos:{},attrs:{},value:'',hidden:true,
+    addEventListener(n,fn){this.eventos[n]=fn;},setAttribute(n,v){this.attrs[n]=v;}});
+  const els=new Map(),el=id=>{if(!els.has(id))els.set(id,elemento());return els.get(id);};
+  const form=el('#filtros'),campos=form.elements={tempo:elemento(),unidade:elemento(),custo:elemento(),local:elemento()};
+  campos.unidade.value='min';
+  const tempo=elemento({tempo:'15'}),hora=elemento({tempo:'1',unidade:'h'}),assunto=elemento({assunto:'6,14'}),raiz=elemento({tema:'claro'});
+  const ods=['1','6','14'].map(value=>({value,checked:value==='1'}));
+  form.querySelectorAll=s=>s==='button[data-tempo]'?[tempo,hora]:s==='button[data-assunto]'?[assunto]:s==='input[name="ods"]'?ods:[];
+  let valido=true,buscas=0,atualizacoes=0;const fila=[];
+  form.reportValidity=()=>valido;
+  form.reset=()=>{form.eventos.reset();Object.values(campos).forEach(c=>c.value='');campos.unidade.value='min';ods.forEach(c=>c.checked=false);};
+  const ui=iniciarAgir({querySelector:el},()=>buscas++,()=>atualizacoes++,{queueMicrotask:fn=>fila.push(fn)});
+  raiz.eventos.click?.();assert.equal(buscas,0);
+  tempo.eventos.click();el('#so-gratis').eventos.click();el('#agir-na-rua').eventos.click();assunto.eventos.click();
+  assert.equal(campos.tempo.value,'15');assert.equal(campos.custo.value,'0');assert.equal(campos.local.value,'Na rua');
+  assert.deepEqual(ods.map(c=>c.checked),[true,true,true]);assert.equal(buscas,4);
+  assert.equal(assunto.attrs['aria-pressed'],'true');
+  assunto.eventos.click();assert.deepEqual(ods.map(c=>c.checked),[true,false,false]);
+  assert.equal(el('#agir-filtros-resumo').textContent,'1 objetivo selecionado');
+  hora.eventos.click();assert.equal(campos.unidade.value,'h');assert.equal(campos.tempo.value,'1');
+  campos.tempo.value='60';campos.unidade.value='min';form.eventos.input();assert.equal(hora.attrs['aria-pressed'],'true');
+  hora.eventos.click();assert.equal(campos.tempo.value,'');
+  el('#so-gratis').eventos.click();assert.equal(campos.custo.value,'');assert.equal(campos.local.value,'Na rua');
+  const antes=buscas;valido=false;tempo.eventos.click();assert.equal(buscas,antes);valido=true;
+  ui.resultado(true);assert.equal(el('#agir-vazio').hidden,false);
+  el('#agir-recomecar').eventos.click();fila.forEach(fn=>fn());assert.equal(buscas,antes+1);
+  assert.equal(el('#agir-vazio').hidden,true);assert.equal(el('#agir-filtros-resumo').textContent,'Todos os 17 objetivos');
+  assert.equal(el('#so-gratis').attrs['aria-pressed'],'false');assert.ok(atualizacoes>0);
+  console.log('OK Agir: filtros combinados, tema isolado, alternância, horas, edição manual, validação e recuperação vazia');
 }
 validarIsolamentoTema();
 
@@ -927,7 +928,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v20'/);
+  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v23'/);
   assert.match(fs.readFileSync('dist/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('dist/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1011,3 +1012,26 @@ async function validarInicioFase2(){
   console.log('OK Início: CTAs/rotas, resumo vazio, singular/plural, progresso, plano legado sem gravação, salvar/concluir/remover/importar e atualização de outra aba (DOM simulado)');
 }
 validarInicioFase2().catch(e=>{console.error(e);process.exitCode=1;});
+
+
+function validarIndicadorAtividades() {
+  const {resumirAtividadesEcoa, iniciarAtividadesEcoa}=require('./dist/atividades');
+  const {novoDesafio,concluirDiaDesafio}=require('./dist/desafio');
+  const hoje='2026-11-12', desafio=novoDesafio(6,hoje);
+  assert.equal(resumirAtividadesEcoa(0,null,hoje).visivel,false);
+  assert.equal(resumirAtividadesEcoa(1,null,hoje).texto,'1 ação pendente');
+  assert.equal(resumirAtividadesEcoa(2,desafio,hoje).texto,'2 ações pendentes e desafio de hoje disponível');
+  assert.equal(resumirAtividadesEcoa(0,concluirDiaDesafio(desafio,hoje,true),hoje).visivel,false);
+  assert.equal(resumirAtividadesEcoa(0,desafio,'2026-11-11').visivel,false);
+  assert.equal(resumirAtividadesEcoa(0,desafio,'2026-11-19').visivel,false);
+  assert.equal(resumirAtividadesEcoa(0,{},hoje).visivel,false);
+  let estado={pendentes:1,desafio:null,hoje};
+  const texto={textContent:''},badge={hidden:true,parentElement:{title:''},querySelector:()=>texto};
+  const ui=iniciarAtividadesEcoa({querySelectorAll:()=>[badge]},()=>estado);
+  assert.equal(badge.hidden,false);assert.match(texto.textContent,/1 ação pendente/);
+  estado={pendentes:0,desafio:null,hoje};ui.atualizar();
+  assert.equal(badge.hidden,true);assert.equal(texto.textContent,'');
+  assert.equal(badge.parentElement.title,'Meu espaço');
+  console.log('OK Indicador: plano pendente, desafio de hoje, conclusão, dias futuros/encerrados, dados inválidos e rótulo acessível');
+}
+validarIndicadorAtividades();

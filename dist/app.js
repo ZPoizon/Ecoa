@@ -222,18 +222,9 @@ aplicarAjuste.addEventListener('click', () => {
   buscar();
 });
 
-form.querySelectorAll('button[data-tempo]').forEach(botao => {
-  botao.addEventListener('click', () => {
-    form.elements.tempo.value = botao.dataset.tempo;
-    form.elements.unidade.value = botao.dataset.unidade || 'min';
-  });
-});
-document.querySelector('#so-gratis').addEventListener('click', () => {
-  form.elements.custo.value = '0';
-});
-
 function mostrar() {
   if(typeof window!=='undefined')window.EcoaRouter?.abrirBusca();
+  if(typeof window!=='undefined')window.EcoaAgir?.resultado(false);
   const acao = encontradas[indice];
   titulo.textContent = acao.titulo;
   const materiais = acao.titulo === 'Experimente comprar a granel'
@@ -271,6 +262,8 @@ function mostrar() {
 
 function buscar() {
   if(typeof window!=='undefined')window.EcoaRouter?.abrirBusca();
+  atualizarSelecao();
+  if(typeof window!=='undefined')window.EcoaAgir?.atualizar();
   const dados = new FormData(form);
   const selecionados = dados.getAll('ods').map(Number);
   const filtros = { ...Object.fromEntries(dados), ods: selecionados };
@@ -282,6 +275,7 @@ function buscar() {
     return;
   }
   resultado.hidden = true;
+  if(typeof window!=='undefined')window.EcoaAgir?.resultado(true);
   status.textContent = 'Nenhuma ação combina com esses filtros.';
   const alternativas = filtrarAcoes(acoes, { ...filtros, tempo: '' });
   if (alternativas.length && filtros.tempo !== '') {

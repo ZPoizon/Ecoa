@@ -42,9 +42,10 @@ function iniciarRotasEcoa(doc,janela,adaptadores={}) {
       $(id).setAttribute('aria-selected',String(selecionada));$(id).tabIndex=selecionada?0:-1;
     }
     doc.querySelectorAll('[data-voltar]').forEach(el=>{el.hidden=!rota.sub;});
-    // Na fase 1 a mesma grade/artigo é reutilizada; a edição editorial fica para a fase 4.
+    // Os guias completos aparecem somente em suas subtelas.
     $('quiz').hidden=!!rota.ods;
     $('cartoes-guias').hidden=!!rota.ods;$('escolha-guia').hidden=!!rota.ods;
+    $('conteudo-guia').hidden=!rota.ods;$('buscar-guia').hidden=!rota.ods;
     doc.querySelector('.guia-navegacao').hidden=!rota.ods;
     if(rota.ods){
       adaptadores.abrirGuia?.(rota.ods);
@@ -59,9 +60,13 @@ function iniciarRotasEcoa(doc,janela,adaptadores={}) {
     if(alvo){if(rota.sub!=='configuracoes')alvo.tabIndex=-1;alvo.focus({preventScroll:true});}
     janela.scrollTo({top:0,left:0,behavior:'instant'});
     if(rota.tela==='meu-espaco'&&rota.sub)alvo?.scrollIntoView({block:'start',behavior:'instant'});
-    if(rota.alvo&&rota.alvo!=='inicio')$(rota.alvo)?.scrollIntoView({block:'start',behavior:'instant'});
+    if(rota.alvo&&rota.alvo!=='inicio'){const destino=$(rota.alvo);abrirDetalhes(destino);destino?.scrollIntoView({block:'start',behavior:'instant'});}
     doc.dispatchEvent(new janela.CustomEvent('ecoa-rota',{detail:rota}));
     return rota;
+  }
+  function abrirDetalhes(alvo){
+    let detalhe=alvo?.closest?.('details');
+    while(detalhe){detalhe.open=true;detalhe=detalhe.parentElement?.closest('details');}
   }
   function navegar(hash){
     const rota=resolverRotaEcoa(hash);
@@ -83,7 +88,7 @@ function iniciarRotasEcoa(doc,janela,adaptadores={}) {
     // Também suporta âncoras legadas internas não cadastradas explicitamente.
     if(!hash.startsWith('#/')&&!hash.startsWith('#acao=')&&!Object.hasOwn(atalhosEcoa,hash.slice(1))){
       const alvo=$(hash.slice(1)),tela=alvo?.closest('[data-tela]');
-      if(tela){evento.preventDefault();navegar('#/'+tela.dataset.tela);alvo.scrollIntoView();}return;
+      if(tela){evento.preventDefault();navegar('#/'+tela.dataset.tela);abrirDetalhes(alvo);alvo.scrollIntoView();}return;
     }
     evento.preventDefault();navegar(hash);
   });
