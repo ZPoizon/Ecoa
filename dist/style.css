@@ -1,11 +1,3 @@
-:root {
-  color-scheme: light;
-  --text: #202c26;
-  --muted: #47574e;
-  --green: #245341;
-  --paper: #f7f7f2;
-  --line: #d6ddd4;
-}
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--paper); color: var(--text); font: 1rem/1.55 system-ui, sans-serif; }
 .wrap { width: min(68rem, calc(100% - 2 * clamp(.875rem, 4vw, 2rem))); margin-inline: auto; }

@@ -19,7 +19,7 @@ function renderizarDesafio() {
   if(!desafioAtual) {resumoDesafio.textContent='Escolha um objetivo e comece hoje.';return;}
   const hoje=dataLocalDesafio();
   const estado=estadoDesafio(desafioAtual,hoje);
-  resumoDesafio.textContent=`ODS ${desafioAtual.ods} · ${objetivos[desafioAtual.ods-1]}. ${estado.concluidas} de 7 dias concluídos. Sequência atual: ${estado.sequencia} dias.` +
+  resumoDesafio.textContent=`ODS ${desafioAtual.ods} · ${objetivos[desafioAtual.ods-1]}. ${estado.concluidas} de 7 dias concluídos. Sequência atual: ${estado.sequencia} ${estado.sequencia === 1 ? 'dia' : 'dias'}.` +
     (estado.encerrado?' Este desafio terminou. Você pode começar outro.':estado.dia<0?' A data do aparelho é anterior ao início do desafio. Confira o relógio.':'');
   roteiroDesafio(desafioAtual.ods,acoes,praticasOds).forEach((acao,i)=>{
     const linha=document.createElement('li');

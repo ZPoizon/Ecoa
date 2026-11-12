@@ -1,39 +1,4 @@
-/* Paletas de leitura: cores oficiais dos ícones ODS permanecem intactas. */
-:root {
-  --surface: #ffffff;
-  --soft: #eef3ed;
-  --tag: #dce8da;
-  --field: #f8faf7;
-  --button: #245341;
-  --button-text: #ffffff;
-  --control: #63776a;
-  --focus: #a64b16;
-}
-:root[data-tema="escuro"] {
-  color-scheme: dark;
-  --text: #f1f5f0;
-  --muted: #c3cec5;
-  --green: #b8e5c1;
-  --paper: #111c17;
-  --surface: #1b2b23;
-  --soft: #24392d;
-  --tag: #314b3c;
-  --field: #17261e;
-  --line: #647b6b;
-  --button: #b8e5c1;
-  --button-text: #14271b;
-  --control: #94aa9c;
-  --focus: #ffd166;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-tema]) {
-    color-scheme: dark;
-    --text: #f1f5f0; --muted: #c3cec5; --green: #b8e5c1;
-    --paper: #111c17; --surface: #1b2b23; --soft: #24392d;
-    --tag: #314b3c; --field: #17261e; --line: #647b6b;
-    --button: #b8e5c1; --button-text: #14271b; --control: #94aa9c; --focus: #ffd166;
-  }
-}
+/* Regras de acessibilidade; tokens em design-system.css. */
 header, .finder, .guia-artigo, .guia-passos li { background: var(--surface); }
 button { background: var(--button); color: var(--button-text); border-color: var(--button); }
 select, .secondary, .atalhos button, .compartilhar textarea { background: var(--surface); color: var(--text); border-color: var(--control); }

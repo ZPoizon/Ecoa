@@ -84,6 +84,7 @@ function guardarPlano() {
 salvarAcao.addEventListener('click', () => {
   const chave = chaveAcao(encontradas[indice]);
   if (plano.has(chave)) {
+    if(typeof window!=='undefined')window.EcoaRouter?.navegar('#/meu-espaco');
     document.querySelector('#plano-titulo').focus();
     return;
   }

@@ -1,15 +1,15 @@
 function dadosCompartilhamento(acao, endereco) {
   const url = new URL(endereco);
   url.search = '';
-  url.hash = 'acao=' + encodeURIComponent(acao.ods + ':' + acao.titulo);
+  url.hash = '/agir?acao=' + encodeURIComponent(acao.ods + ':' + acao.titulo);
   const text = `${acao.titulo}\nODS ${acao.ods} · ${acao.tempo} min · ${acao.custo ? 'Até R$ ' + acao.custo : 'Sem gastar'} · ${acao.local}\n\n${acao.passos.map((passo, i) => `${i + 1}. ${passo}`).join('\n')}\n\nAção sugerida pelo projeto Ecoa — Pequenas ações, 17 objetivos. Projeto independente e educativo, não oficial da ONU.`;
   return { title: acao.titulo, text, url: url.href };
 }
 
 function acaoDoLink(hash, catalogo) {
-  if (!hash.startsWith('#acao=')) return undefined;
+  if (!hash.startsWith('#acao=') && !hash.startsWith('#/agir?')) return undefined;
   try {
-    const chave = decodeURIComponent(hash.slice(6));
+    const chave = hash.startsWith('#acao=') ? decodeURIComponent(hash.slice(6)) : new URLSearchParams(hash.split('?')[1]).get('acao');
     return catalogo.find(acao => acao.ods + ':' + acao.titulo === chave);
   } catch { return undefined; }
 }

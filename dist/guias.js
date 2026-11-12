@@ -38,6 +38,7 @@ objetivos.forEach((nome, indice) => {
   legenda.textContent = nome;
   botao.append(icone, legenda);
   botao.addEventListener('click', () => {
+    if(typeof window!=='undefined'&&window.EcoaRouter){window.EcoaRouter.navegar('#/aprender/ods-'+(indice+1));return;}
     seletorGuia.value = indice + 1;
     preencherGuia();
     document.querySelector('#guia-nome').focus();

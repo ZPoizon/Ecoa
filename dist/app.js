@@ -233,6 +233,7 @@ document.querySelector('#so-gratis').addEventListener('click', () => {
 });
 
 function mostrar() {
+  if(typeof window!=='undefined')window.EcoaRouter?.abrirBusca();
   const acao = encontradas[indice];
   titulo.textContent = acao.titulo;
   const materiais = acao.titulo === 'Experimente comprar a granel'
@@ -269,6 +270,7 @@ function mostrar() {
 }
 
 function buscar() {
+  if(typeof window!=='undefined')window.EcoaRouter?.abrirBusca();
   const dados = new FormData(form);
   const selecionados = dados.getAll('ods').map(Number);
   const filtros = { ...Object.fromEntries(dados), ods: selecionados };

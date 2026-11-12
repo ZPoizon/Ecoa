@@ -305,3 +305,32 @@ Página estática `dist/sobre.html`, acessível pelo rodapé, com proposta do Ec
 Página inicial e Sobre têm canonical e `og:url` específicos, título/descrição, imagem PNG existente do logo (512×512), dimensões, texto alternativo e Twitter Card summary. Não foi adicionada biblioteca nem alterada a URL/repositório. Links de ações usam fragmentos: sua prévia usa os metadados gerais da página inicial, pois robôs não executam a seleção da ação. A hospedagem mantém o acesso atual; restrições de acesso e cache dos aplicativos podem impedir ou atrasar prévias. Não há garantia de exibição por WhatsApp/redes sociais.
 
 Cache PWA v18 inclui Sobre, inclusive navegação offline com parâmetros na URL. Testes verificam metadados únicos, canonical, dimensões declaradas, 17 links oficiais, âncoras, IDs e presença dos controles de leitura, além das regressões anteriores. Build Worker e sintaxe verificados. Conferência visual no celular, leitor de tela e prévia real em redes sociais continuam pendentes. Fontes institucionais principais consultadas em 11/11/2026.
+
+## Redesign — Fase 1: navegação e design system
+
+A navegação principal agora mostra uma tela por vez, mantendo os elementos existentes no DOM (formulários, resultados, seleções e eventos não são recriados):
+
+| Rota | Conteúdo reaproveitado |
+| --- | --- |
+| `#/inicio` | Apresentação atual do Ecoa |
+| `#/agir` | Busca, resultado, atalhos/assuntos, salvar, compartilhar e conteúdos da ONU |
+| `#/agir/calcular` | Segunda aba de Agir: seis opções de cálculo e links para ações |
+| `#/aprender` | Quiz e guias dos 17 ODS |
+| `#/aprender/ods-6` | Guia selecionado, Voltar e ODS anterior/próximo (1 a 17, circular) |
+| `#/na-cidade` | Mapa, lista, cadastro, filtros, sugestões de endereço/CEP e cópias dos pontos |
+| `#/meu-espaco` | Plano, progresso/conquistas, lembretes, PDF, cópias e desafio |
+| `#/meu-espaco/desafio` | Acesso direto ao desafio existente |
+| `#/meu-espaco/conquistas` | Acesso direto aos selos existentes |
+| `#/meu-espaco/configuracoes` | Acesso às preferências de leitura existentes |
+
+O roteador `dist/rotas.js` mantém Voltar/Avançar do navegador, título, foco e links antigos (`#busca`, `#buscar`, `#explorar`, `#guias`, `#quiz`, `#desafio`, `#meu-plano`, `#estimativa`, `#na-minha-cidade`). Links antigos `#acao=...` continuam funcionando; novos compartilhamentos usam `#/agir?acao=...`. Rotas desconhecidas voltam ao Início. As abas Buscar/Calcular aceitam setas, Home e End. O mapa recalcula suas dimensões ao retornar à tela. Menu superior no desktop e barra inferior no celular compartilham os mesmos cinco links, com ícones SVG, `aria-current`, safe-area e badge preparado (oculto até a fase 6).
+
+`dist/design-system.css` concentra tokens de cores claras/escuras, feedback, âmbar, estados desativados, sobreposição, tipografia, espaçamento, raios e sombras. Os nomes CSS antigos apontam para esses tokens para preservar os componentes. Títulos usam Georgia e corpo usa fontes do sistema; sem CDN/fonte nova. Números usam `lining-nums`; estatísticas também usam `tabular-nums`. Cores oficiais dos ODS não foram alteradas. Componentes incluem botões, chips, abas, cartões, avisos, estados vazios e estilos de modal.
+
+**Dados preservados:** `oqdpf-plano-v1`, `oqdpf-acessibilidade-v1`, `ecoa-desafio-v1`, `ecoa-pontos-v1` e `ecoa-lembretes-v1` continuam iguais. O roteador não acessa localStorage. Formato de backup legado `oqdpf`, versão 1, mantido; sem migração. Cache PWA incrementado para **v19**, incluindo roteador e design system. Feche todas as abas do Ecoa e reabra para ativar uma atualização que esteja aguardando.
+
+Testes: `node validar.cjs` cobre as regressões anteriores, rotas/aliases, cinco telas, abas/teclado, foco/títulos, histórico, 17 guias, compartilhamento legado/novo, manutenção dos nós e desafio previamente salvo sem regravação. Plano e pontos previamente salvos continuam cobertos pelos testes de carregamento. Backup inválido e estados vazios permanecem testados. Correção pontual de plural: “Sequência atual: 1 dia”.
+
+Contraste WCAG calculado dos valores efetivos dos tokens: mínimo **4,98:1** nas combinações de texto testadas; controles/foco **>=3:1**. Feedback claro: sucesso 6,83, erro 7,34, aviso 7,26, informação 7,65, âmbar 6,04; escuro: 8,25 / 8,28 / 9,36 / 8,48 / 9,36. Estados desativados também >=4,5:1. Isso não certifica toda a página renderizada.
+
+Limites de validação: prévia gerenciada indisponível porque o Worker não tem `scripts.dev` nem `static.directory`; não foi substituída a infraestrutura de preview. Inspeção real em 360 px, leitor de tela, instalação/atualização em dispositivo, APIs externas e Lighthouse continuam pendentes. Meta Lighthouse 90+, sem nota medida. Conteúdo/editorial, unificação de atalhos, abas de Meu espaço e reorganização de backups permanecem nas próximas fases aprovadas; esta fase estabelece a base sem removê-los.

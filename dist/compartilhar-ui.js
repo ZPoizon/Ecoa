@@ -45,7 +45,8 @@ async function executarCompartilhamento(copiar = false) {
 }
 
 function abrirAcaoCompartilhada() {
-  if (!location.hash.startsWith('#acao=')) return;
+  if(window.EcoaRouter)return; // O roteador passa a cuidar de links novos e legados.
+  if (!location.hash.startsWith('#acao=') && !location.hash.startsWith('#/agir?')) return;
   const acao = acaoDoLink(location.hash, acoes);
   if (!acao) {
     status.textContent = 'Esta ação não foi encontrada. Use a busca para escolher outra sugestão.';

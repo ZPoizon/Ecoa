@@ -91,6 +91,7 @@ function iniciarQuiz(documento, perguntas, calcular, nomes, abrirGuia, buscarAco
 if (typeof module !== 'undefined') module.exports = {iniciarQuiz};
 else iniciarQuiz(document, perguntasQuiz, calcularResultadoQuiz, objetivos,
   ods => {
+    if(window.EcoaRouter){window.EcoaRouter.navegar('#/aprender/ods-'+ods);return;}
     seletorGuia.value = ods;
     preencherGuia();
     document.querySelector('#guia-nome').focus();

@@ -88,6 +88,7 @@ async function iniciarCidade(doc,ambiente,api) {
     finally{carregando=false;$('cidade-carregar').disabled=false;}
   });
   try{const salvo=ambiente.localStorage.getItem(chaveCidade);if(salvo)pontos=lerJsonCidade(salvo);}catch{leituraFalhou=true;$('cidade-exportar').disabled=true;aviso('Não foi possível ler os pontos salvos. Nenhum dado foi apagado; novos cadastros estão bloqueados para evitar sobrescrever esses dados.');}
+  doc.addEventListener?.('ecoa-rota',e=>{if(e.detail.tela==='na-cidade'&&mapa)mapa.invalidateSize?.({animate:false});});
   desenhar();
 }
 function carregarLeafletCidade(doc,ambiente) {
