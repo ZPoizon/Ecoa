@@ -1,0 +1,43 @@
+/* Fase 2: layout fluido, sem alturas fixas e sem recursos externos. */
+.inicio-hero { position:relative; isolation:isolate; overflow:hidden; background:var(--soft); border-bottom:1px solid var(--line); }
+.inicio-apresentacao { position:relative; padding-block:clamp(2.5rem,7vw,5rem); text-align:center; display:flex; flex-direction:column; align-items:center; }
+.inicio-apresentacao h1 { max-width:18ch; font-size:clamp(2.25rem,7vw,5.5rem); line-height:1.08; letter-spacing:-.045em; margin:var(--space-2) 0 var(--space-6); color:var(--text); }
+.inicio-apresentacao h1 em { color:var(--green); }
+.inicio-apresentacao .eyebrow { max-width:100%; }
+.inicio-pergunta { max-width:40ch; color:var(--muted); font-size:clamp(1rem,2.2vw,1.25rem); margin:0 0 var(--space-6); }
+.inicio-cta { max-width:100%; min-height:52px; padding-inline:var(--space-6); text-align:center; }
+.inicio-nota { margin-top:var(--space-3); font-size:var(--text-sm); color:var(--muted); }
+/* Ondas estáticas da marca; animação prevista para a fase 7. */
+.inicio-ondas { position:absolute; z-index:-1; inset:0; overflow:hidden; pointer-events:none; color:var(--green); opacity:.07; }
+.inicio-ondas span,.inicio-ondas i { position:absolute; top:50%; left:50%; aspect-ratio:1; border:1px solid currentColor; border-radius:50%; transform:translate(-50%,-50%); }
+.inicio-ondas span:nth-child(1) { width:22rem; }
+.inicio-ondas span:nth-child(2) { width:40rem; }
+.inicio-ondas span:nth-child(3) { width:58rem; }
+.inicio-ondas i { width:var(--space-2); background:currentColor; }
+.inicio-conteudo { padding-block:clamp(2rem,5vw,4rem); }
+.inicio-caminhos h2 { margin-bottom:var(--space-6); }
+.inicio-portas { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr)); gap:var(--space-4); }
+.inicio-porta { min-width:0; display:flex; flex-direction:column; align-items:flex-start; padding:clamp(1.25rem,3vw,2rem); border:1px solid var(--line); border-radius:var(--radius-md); background:var(--surface); color:var(--text); text-decoration:none; box-shadow:var(--shadow-card); }
+.inicio-porta svg { width:2rem; height:2rem; flex:none; color:var(--green); margin-bottom:var(--space-4); }
+.inicio-porta h3 { font-size:var(--text-h3); line-height:1.3; margin:0 0 var(--space-3); }
+.inicio-porta p { color:var(--muted); margin:0 0 var(--space-6); }
+.inicio-destino { margin-top:auto; color:var(--green); font-weight:650; border-bottom:1px solid currentColor; }
+.inicio-progresso { margin-top:var(--space-8); padding:clamp(1.25rem,3vw,2rem); border:1px solid var(--line); border-radius:var(--radius-md); background:var(--soft); }
+.inicio-progresso-cabecalho { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--space-4); }
+.inicio-progresso-cabecalho > div { flex:1 1 20rem; min-width:0; }
+.inicio-progresso h2 { margin-bottom:var(--space-2); }
+#inicio-progresso-texto { color:var(--muted); margin-bottom:0; }
+.inicio-estatisticas { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,9rem),1fr)); gap:var(--space-4); margin-block:var(--space-6); }
+.inicio-estatisticas div { min-width:0; }
+.inicio-estatisticas dt { color:var(--muted); }
+.inicio-estatisticas dd { margin:var(--space-1) 0 0; color:var(--green); font:500 2.5rem/1.2 var(--font-title); font-variant-numeric:lining-nums tabular-nums; }
+#inicio-barra { display:block; width:100%; height:.75rem; accent-color:var(--green); border:1px solid var(--line); border-radius:var(--radius-pill); overflow:hidden; background:var(--surface); }
+#inicio-barra::-webkit-progress-bar { background:var(--surface); }
+#inicio-barra::-webkit-progress-value { background:var(--green); }
+#inicio-barra::-moz-progress-bar { background:var(--green); }
+@media (hover:hover) { .inicio-porta:hover { border-color:var(--green); box-shadow:inset 0 0 0 1px var(--green); } }
+@media (max-width:30rem) {
+  .inicio-cta,.inicio-progresso .ecoa-button { width:100%; }
+  .inicio-apresentacao h1 { letter-spacing:-.03em; }
+}
+@media (forced-colors:active) { .inicio-ondas { display:none; } }

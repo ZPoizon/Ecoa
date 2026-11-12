@@ -69,7 +69,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['rotas.js', 'design-system.css', 'index.html', 'sobre.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
+  for (const arquivo of ['inicio.js', 'inicio.css', 'rotas.js', 'design-system.css', 'index.html', 'sobre.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -927,7 +927,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v19'/);
+  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v20'/);
   assert.match(fs.readFileSync('dist/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('dist/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -953,3 +953,61 @@ function validarDesafioSalvoFase1(){
   console.log('OK Persistência: desafio anterior reaparece com sete dias, ODS e conclusão preservados, sem regravação; singular de dia');
 }
 validarDesafioSalvoFase1();
+
+async function validarInicioFase2(){
+  const {renderizarResumoInicio,iniciarInicio}=require('./dist/inicio');
+  const {calcularProgressoPlano}=require('./dist/progresso');
+  const fs=require('node:fs'),{runInNewContext}=require('node:vm');
+  const elementos=new Map(),eventos={};
+  const criar=()=>({children:[],eventos:{},style:{},dataset:{},hidden:false,textContent:'',value:'',
+    append(...xs){this.children.push(...xs);},replaceChildren(...xs){this.children=xs;},
+    setAttribute(k,v){this[k]=v;},addEventListener(k,f){this.eventos[k]=f;},focus(){}});
+  const el=id=>{if(!elementos.has(id))elementos.set(id,criar());return elementos.get(id);};
+  const doc={getElementById:id=>el('#'+id),querySelector:el,querySelectorAll:()=>[],createElement:criar,
+    addEventListener(k,f){(eventos[k]??=[]).push(f);}};
+  const chave=a=>a.ods+':'+a.titulo;
+  let mapa=new Map(),leituras=0;
+  const ui=iniciarInicio(doc,()=>{leituras++;return calcularProgressoPlano(mapa,acoes);});
+  assert.equal(el('#inicio-progresso').hidden,true);
+  assert.equal(el('#inicio-barra').value,0);assert.equal(el('#inicio-barra').max,1);
+  mapa=new Map([[chave(acoes[0]),false]]);ui.atualizar();
+  assert.equal(el('#inicio-progresso').hidden,false);assert.equal(el('#inicio-pendentes').textContent,'1');
+  assert.match(el('#inicio-progresso-texto').textContent,/0 de 1 ação concluída/);
+  mapa.set(chave(acoes[0]),true);ui.atualizar();
+  assert.equal(el('#inicio-barra').value,1);assert.match(el('#inicio-progresso-texto').textContent,/^1 ação concluída\./);
+  mapa.set(chave(acoes[1]),true);ui.atualizar();
+  assert.equal(el('#inicio-ods').textContent,'2');assert.match(el('#inicio-progresso-texto').textContent,/^2 ações concluídas\./);
+  const antes=leituras;eventos['ecoa-rota'][0]({detail:{tela:'agir'}});assert.equal(leituras,antes);
+  mapa.clear();eventos['ecoa-rota'][0]({detail:{tela:'inicio'}});assert.equal(leituras,antes+1);assert.equal(el('#inicio-progresso').hidden,true);
+  assert.equal(el('#inicio-progresso-texto').textContent,'');assert.equal(el('#inicio-barra').value,0);
+  renderizarResumoInicio(doc,calcularProgressoPlano(new Map([[chave(acoes[0]),true],['desconhecido',true]]),acoes));
+  assert.equal(el('#inicio-concluidas').textContent,'1');
+  // Integração: restaura a chave antiga e usa os próprios eventos de Meu plano.
+  let escritas=0,armazenado=JSON.stringify({[chave(acoes[0])]:true});
+  const eventosJanela={};
+  const ctx={document:doc,acoes,objetivos,encontradas:[acoes[1]],indice:0,
+    localStorage:{getItem(){return armazenado;},setItem(k,v){assert.equal(k,'oqdpf-plano-v1');armazenado=v;escritas++;}},
+    window:{addEventListener(k,f){eventosJanela[k]=f;}},...require('./dist/plano-json')};
+  runInNewContext(['progresso.js','plano.js','inicio.js'].map(f=>fs.readFileSync('dist/'+f,'utf8')).join('\n'),ctx);
+  assert.equal(escritas,0);assert.equal(el('#inicio-concluidas').textContent,'1');
+  el('#salvar-acao').eventos.click();assert.equal(el('#inicio-pendentes').textContent,'1');assert.equal(el('#inicio-barra').max,2);
+  const caixa=el('#plano-lista').children[1].children[0].children[0];caixa.checked=true;caixa.eventos.change();
+  assert.equal(el('#inicio-concluidas').textContent,'2');assert.equal(el('#inicio-pendentes').textContent,'0');
+  el('#plano-lista').children[1].children[1].eventos.click();assert.equal(el('#inicio-concluidas').textContent,'1');
+  const backup=require('./dist/plano-json').exportarPlanoJson(new Map([[chave(acoes[2]),false]]),acoes);
+  el('#arquivo-plano').files=[{name:'antigo.json',size:backup.length,text:async()=>backup}];
+  await el('#arquivo-plano').eventos.change();assert.equal(el('#inicio-pendentes').textContent,'1');assert.equal(el('#inicio-concluidas').textContent,'1');
+  const escritasAntes=escritas;
+  eventosJanela.storage({key:'oqdpf-plano-v1',newValue:'{}'});
+  assert.equal(el('#inicio-progresso').hidden,true);assert.equal(escritas,escritasAntes);
+  const html=fs.readFileSync('dist/index.html','utf8');
+  const home=html.slice(html.indexOf('<section id="inicio"'),html.indexOf('<section class="wrap tela"'));
+  for(const [texto,rota] of [['Encontrar uma ação','#/agir'],['Quero uma ação agora','#/agir'],['Quero entender os ODS','#/aprender'],['Quero me desafiar','#/meu-espaco/desafio']]){
+    assert.ok([...home.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)].some(m=>m[1]===rota&&m[2].includes(texto)),texto);
+  }
+  assert.match(home,/aria-labelledby="tela-inicio-titulo"/);
+  assert.match(home,/<label[^>]*for="inicio-barra"/);
+  assert.ok(!home.includes('<form'));assert.ok(!home.includes('<img'));
+  console.log('OK Início: CTAs/rotas, resumo vazio, singular/plural, progresso, plano legado sem gravação, salvar/concluir/remover/importar e atualização de outra aba (DOM simulado)');
+}
+validarInicioFase2().catch(e=>{console.error(e);process.exitCode=1;});

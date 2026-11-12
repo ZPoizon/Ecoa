@@ -53,6 +53,8 @@ function renderizarProgressoPlano(documento, dados, nomes) {
   });
 }
 function atualizarProgressoPlano(planoAtual) {
-  renderizarProgressoPlano(document,calcularProgressoPlano(planoAtual,acoes),objetivos);
+  const dados=calcularProgressoPlano(planoAtual,acoes);
+  renderizarProgressoPlano(document,dados,objetivos);
+  if(typeof window!=='undefined')window.ecoaInicio?.atualizar(dados);
 }
 if(typeof module!=='undefined') module.exports={calcularProgressoPlano,renderizarProgressoPlano,atualizarProgressoPlano};
