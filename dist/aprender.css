@@ -1,0 +1,30 @@
+/* Tela Aprender: identidade compartilhada e leitura confortável nos dois temas. */
+#tela-aprender #quiz { margin-block:var(--space-6); border-top:4px solid var(--green); background:var(--surface); }
+#tela-aprender #guias { padding:clamp(1rem,3vw,2rem); background:var(--surface); }
+#tela-aprender .aprender-busca { display:flex; flex-wrap:wrap; gap:var(--space-3); margin-block:var(--space-3); }
+#buscar-ods-guia { flex:1 1 16rem; min-width:0; min-height:48px; }
+#guias-contagem { color:var(--muted); font-variant-numeric:lining-nums; }
+#tela-aprender #cartoes-guias { grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr)); gap:var(--space-4); }
+#tela-aprender .guia-escolha { text-decoration:none; min-width:0; transition:box-shadow 160ms ease; }
+#tela-aprender .guia-escolha span { font-size:1rem; font-weight:600; padding:var(--space-3); }
+#tela-aprender .guia-escolha:hover { box-shadow:0 0 0 2px var(--green); }
+#tela-aprender .guia-escolha[hidden] { display:none; }
+#tela-aprender .guia-escolha:focus-visible { outline:3px solid var(--focus); outline-offset:4px; }
+#tela-aprender .guia-artigo { padding:0; border:0; background:var(--surface); }
+#tela-aprender .guia-capa { align-items:center; margin-block:var(--space-6); }
+#tela-aprender .guia-capa h3 { font-size:var(--text-h2); }
+#tela-aprender .guia-blocos { grid-template-columns:minmax(0,1fr); max-width:75ch; gap:var(--space-6); }
+#tela-aprender .guia-blocos h4,#tela-aprender .guia-pratica h4 { font-size:1.3rem; }
+#tela-aprender .guia-pratica { margin-block:var(--space-6); background:var(--soft); border:1px solid var(--line); padding:clamp(1rem,3vw,2rem); }
+#tela-aprender .guia-passos { gap:var(--space-4); }
+#tela-aprender .guia-passos li { background:var(--surface); padding:var(--space-4); }
+#tela-aprender .guia-navegacao { display:flex; flex-wrap:wrap; justify-content:space-between; gap:var(--space-3); }
+#tela-aprender .guia-navegacao[hidden] { display:none; }
+#tela-aprender .ods-fontes { display:flex; flex-wrap:wrap; gap:var(--space-4); }
+@media(max-width:40rem) {
+ #tela-aprender .guia-capa { flex-direction:column; align-items:flex-start; }
+ #tela-aprender .guia-capa img { width:9rem; }
+ #tela-aprender .guia-passos { grid-template-columns:minmax(0,1fr); }
+ #tela-aprender #buscar-guia { width:100%; }
+}
+@media(prefers-reduced-motion:reduce) { #tela-aprender .guia-escolha { transition:none; } }

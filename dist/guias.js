@@ -23,12 +23,11 @@ const conteudoGuia = document.querySelector('#conteudo-guia');
 
 objetivos.forEach((nome, indice) => {
   seletorGuia.add(new Option(`ODS ${indice + 1} — ${nome}`, indice + 1));
-  const botao = document.createElement('button');
-  botao.type = 'button';
+  const botao = document.createElement('a');
+  botao.href = '#/aprender/ods-' + (indice + 1);
   botao.className = 'guia-escolha';
   botao.dataset.ods = indice + 1;
   botao.setAttribute('aria-label', `ODS ${indice + 1} — ${nome}`);
-  botao.setAttribute('aria-controls', 'conteudo-guia');
   const icone = document.createElement('img');
   icone.src = `ods/${indice + 1}.webp`;
   icone.alt = '';
@@ -37,7 +36,9 @@ objetivos.forEach((nome, indice) => {
   const legenda = document.createElement('span');
   legenda.textContent = nome;
   botao.append(icone, legenda);
-  botao.addEventListener('click', () => {
+  botao.addEventListener('click', evento => {
+    if(evento && (evento.ctrlKey||evento.metaKey||evento.shiftKey||evento.altKey||evento.button>0))return;
+    evento?.preventDefault();
     if(typeof window!=='undefined'&&window.EcoaRouter){window.EcoaRouter.navegar('#/aprender/ods-'+(indice+1));return;}
     seletorGuia.value = indice + 1;
     preencherGuia();
@@ -64,7 +65,8 @@ function preencherGuia() {
   modelo.querySelector('[data-guia="dados"]').href = `https://sdgs.un.org/goals/goal${numero}`;
   conteudoGuia.replaceChildren(modelo);
   document.querySelectorAll('.guia-escolha').forEach(botao => {
-    botao.setAttribute('aria-pressed', String(Number(botao.dataset.ods) === numero));
+    if(Number(botao.dataset.ods) === numero)botao.setAttribute('aria-current','page');
+    else botao.removeAttribute('aria-current');
   });
 }
 

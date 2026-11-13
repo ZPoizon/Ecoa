@@ -371,3 +371,12 @@ Limites: os viewports são simulações de layout no Chrome, não testes em apar
 - Layout usa grade flexível, controles com pelo menos 48px e empilhamento em telas estreitas. Nenhuma chave ou formato de armazenamento foi alterado. Cache offline v23 inclui agir.js e agir.css.
 - Validação: node validar.cjs e build Worker. Testes novos cobrem filtros combinados, alternância, horas/minutos, edição manual, isolamento do tema, validação e recuperação vazia.
 - Limite: a prévia gerenciada exibiu a versão anterior mesmo após reinício; não foi possível confirmar visualmente esta fase em dispositivos diferentes. Lighthouse e APIs externas ao vivo não medidos nesta fase.
+
+## Redesign — Fase 4: Aprender
+
+- Busca local por nome, palavras ou número exato do ODS, sem diferenciar acentos e caixa; contagem acessível, estado vazio e limpeza com retorno do foco.
+- Cartões maiores com links próprios, abertura por teclado e possibilidade de abrir em outra aba; filtros preservados ao voltar. Guias mantêm história, metas, exemplo didático, prática e links oficiais. Metas resumidas e ações do projeto têm rótulos distintos.
+- Quiz em destaque, metodologia recolhível e resultado ligado aos guias e ações. Nenhuma alteração nas chaves ou dados de armazenamento. Cache offline v24 inclui aprender.js e aprender.css.
+- Testes: node validar.cjs (incluindo busca, acentos, números, estados vazios, limpeza, foco e regressões de roteamento/quiz/persistência), sintaxe e build Worker.
+- Chrome na prévia: busca AGUA, abertura do ODS 6 por Enter e foco no título; larguras de iframe 320, 360, 768 e 1024px sem overflow horizontal; guia ODS 6 também sem overflow em 320px. Verificação visual em tema escuro.
+- Não verificado nesta fase: Lighthouse, leitor de tela real, aparelhos físicos e revisão visual completa no tema claro. Fontes e textos oficiais existentes foram preservados, sem nova verificação externa.

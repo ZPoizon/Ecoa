@@ -69,7 +69,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['agir.js', 'agir.css', 'inicio.js', 'inicio.css', 'rotas.js', 'design-system.css', 'index.html', 'sobre.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
+  for (const arquivo of ['aprender.js', 'aprender.css', 'agir.js', 'agir.css', 'inicio.js', 'inicio.css', 'rotas.js', 'design-system.css', 'index.html', 'sobre.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -342,7 +342,7 @@ function validarCartoesGuias() {
   const {runInNewContext} = require('node:vm');
   const {readFileSync} = require('node:fs');
   const elemento = () => ({dataset:{},children:[],eventos:{},value:'',
-    setAttribute(k,v){this[k]=v;},append(...itens){this.children.push(...itens);},
+    setAttribute(k,v){this[k]=v;},removeAttribute(k){delete this[k];},append(...itens){this.children.push(...itens);},
     replaceChildren(...itens){this.children=itens;},addEventListener(k,v){this.eventos[k]=v;},
     focus(){this.focado=true;},add(opcao){if (!this.value) this.value=opcao.value;}});
   const elementos = new Map();
@@ -356,11 +356,11 @@ function validarCartoesGuias() {
   runInNewContext(readFileSync('dist/guias.js','utf8'),ctx);
   const cartoes=el('#cartoes-guias').children;
   assert.equal(cartoes.length,17);
-  assert.equal(cartoes[0]['aria-pressed'],'true');
+  assert.equal(cartoes[0]['aria-current'],'page');
   cartoes[5].eventos.click();
   assert.equal(el('#seletor-guia').value,6);
-  assert.equal(cartoes[5]['aria-pressed'],'true');
-  assert.equal(cartoes[0]['aria-pressed'],'false');
+  assert.equal(cartoes[5]['aria-current'],'page');
+  assert.equal(cartoes[0]['aria-current'],undefined);
   assert.equal(el('#guia-nome').focado,true);
   assert.equal(el('img').src,'ods/6.webp');
   el('#buscar-guia').eventos.click();
@@ -928,7 +928,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v23'/);
+  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v24'/);
   assert.match(fs.readFileSync('dist/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('dist/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1035,3 +1035,26 @@ function validarIndicadorAtividades() {
   console.log('OK Indicador: plano pendente, desafio de hoje, conclusão, dias futuros/encerrados, dados inválidos e rótulo acessível');
 }
 validarIndicadorAtividades();
+
+function validarBuscaGuias() {
+ const {normalizarBuscaGuia,encontrarGuias,iniciarBuscaGuias}=require('./dist/aprender');
+ assert.equal(normalizarBuscaGuia(' ÁGUA '),'agua');
+ assert.deepEqual(encontrarGuias(objetivos,'ODS 6'),[6]);
+ assert.deepEqual(encontrarGuias(objetivos,'1'),[1]);
+ assert.deepEqual(encontrarGuias(objetivos,'EDUCACAO'),[4]);
+ assert.deepEqual(encontrarGuias(objetivos,'água'),[6,14]);
+ assert.equal(encontrarGuias(objetivos,'').length,17);
+ assert.deepEqual(encontrarGuias(objetivos,'ODS 18'),[]);
+ assert.deepEqual(encontrarGuias(objetivos,'<img onerror=alert(1)>'),[]);
+ const els=new Map(),el=id=>{if(!els.has(id))els.set(id,{value:'',eventos:{},addEventListener(n,fn){this.eventos[n]=fn;},focus(){this.focado=true;}});return els.get(id);};
+ const cards=objetivos.map((_,i)=>({dataset:{ods:String(i+1)},hidden:false}));
+ const ui=iniciarBuscaGuias({getElementById:el,querySelectorAll:()=>cards},objetivos);
+ const campo=el('buscar-ods-guia');campo.value='ODS 6';campo.eventos.input();
+ assert.equal(cards.filter(c=>!c.hidden).length,1);assert.equal(cards[5].hidden,false);
+ assert.equal(el('guias-contagem').textContent,'1 objetivo encontrado');
+ campo.value='inexistente';ui.atualizar();assert.equal(el('guias-vazio').hidden,false);
+ el('guias-mostrar-todos').eventos.click();assert.equal(campo.value,'');assert.equal(campo.focado,true);assert.equal(cards.filter(c=>!c.hidden).length,17);
+ campo.value='água';ui.atualizar();el('limpar-busca-guias').eventos.click();assert.equal(el('guias-vazio').hidden,true);
+ console.log('OK Aprender: busca sem acentos/caixa, número exato, termos, vazio, limpeza, foco e cartões preservados');
+}
+validarBuscaGuias();
