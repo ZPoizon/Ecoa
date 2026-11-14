@@ -380,3 +380,11 @@ Limites: os viewports são simulações de layout no Chrome, não testes em apar
 - Testes: node validar.cjs (incluindo busca, acentos, números, estados vazios, limpeza, foco e regressões de roteamento/quiz/persistência), sintaxe e build Worker.
 - Chrome na prévia: busca AGUA, abertura do ODS 6 por Enter e foco no título; larguras de iframe 320, 360, 768 e 1024px sem overflow horizontal; guia ODS 6 também sem overflow em 320px. Verificação visual em tema escuro.
 - Não verificado nesta fase: Lighthouse, leitor de tela real, aparelhos físicos e revisão visual completa no tema claro. Fontes e textos oficiais existentes foram preservados, sem nova verificação externa.
+
+## Redesign — Fase 5: Na cidade
+
+Mapa em destaque (mínimo de 24rem no celular), busca de endereço/CEP preservada, cadastro em painel expansível com foco e botão para fechar. Lista separada com filtro por cidade/categoria, contagem singular/plural e estados vazios com ação de cadastrar ou limpar filtros. Cópias dos pontos continuam compatíveis, com rótulos simples; a centralização em Configurações fica para a Fase 6. Serviços técnicos e privacidade detalhados permanecem em Sobre e fontes; atribuição obrigatória do mapa foi mantida.
+
+Nenhuma chave de armazenamento ou formato de arquivo foi alterado. Cache offline v25 inclui cidade-layout.css. Nenhuma biblioteca adicionada.
+
+Validação: node validar.cjs, sintaxe, build Worker e diff sem erros. Novas verificações de painel, foco, contagem, estados vazios e limpar filtros, além das regressões de persistência/importação/mapa/endereço. Chrome: abertura do cadastro com foco, mapa externo abriu, larguras de iframe 320/360/768/1024px sem overflow com cadastro aberto; tema claro inspecionado. Não verificados: Lighthouse, aparelhos físicos, leitor de tela real, tema escuro visualmente e novas consultas ao vivo de autocomplete/CEP (cobertas por API simulada).

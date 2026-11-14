@@ -1,3 +1,4 @@
+function resumoPontosCidade(total){return total===1?'1 ponto na sua lista.':`${total} pontos na sua lista.`;}
 async function iniciarCidade(doc,ambiente,api) {
   const {categoriasCidade,chaveCidade,validarPontosCidade,lerJsonCidade,unirPontosCidade,filtrarPontosCidade,salvarPontosCidade}=api;
   const $=id=>doc.getElementById(id);
@@ -8,13 +9,17 @@ async function iniciarCidade(doc,ambiente,api) {
   function desenhar() {
     const visiveis=filtrarPontosCidade(pontos,$('cidade-filtro').value,$('cidade-categoria').value);
     $('cidade-lista').replaceChildren();
-    $('cidade-total').textContent=visiveis.length?`${visiveis.length} local(is) na sua lista. Confirme condições e horários na fonte antes de sair.`:pontos.length?'Nenhum local corresponde aos filtros. Tente outra cidade ou categoria.':'Ainda não há pontos cadastrados. Adicione um local que você conhece ou importe um JSON. Isso não significa que sua cidade não tenha iniciativas.';
+    $('cidade-total').textContent=resumoPontosCidade(visiveis.length);
+    $('cidade-vazio').hidden=visiveis.length>0;
+    $('cidade-vazio-titulo').textContent=pontos.length?'Nenhum ponto com esses filtros':'Sua lista começa aqui';
+    $('cidade-vazio-texto').textContent=pontos.length?'Tente outra cidade ou tipo de iniciativa.':'Cadastre um local que você conhece; uma lista vazia não significa que sua cidade não tenha iniciativas.';
+    $('cidade-vazio-acao').textContent=pontos.length?'Limpar filtros':'Adicionar meu primeiro ponto';
     if(camada)camada.clearLayers();
     visiveis.forEach(p=>{
       const item=criar('li'),titulo=criar('h3',p.nome);
       item.append(criar('p',categoriasCidade[p.categoria]),titulo,criar('p',p.cidade+' · '+p.endereco),criar('p',p.detalhes),criar('p','Informado localmente · Fonte consultada em '+p.consultadoEm.split('-').reverse().join('/')));
       const botoes=criar('div');botoes.className='buttons';
-      botoes.append(link('Consultar fonte',p.fonte),link('Abrir no OpenStreetMap',`https://www.openstreetmap.org/?mlat=${p.latitude}&mlon=${p.longitude}#map=17/${p.latitude}/${p.longitude}`));
+      botoes.append(link('Consultar fonte',p.fonte),link('Ver localização',`https://www.openstreetmap.org/?mlat=${p.latitude}&mlon=${p.longitude}#map=17/${p.latitude}/${p.longitude}`));
       const remover=criar('button','Remover da minha lista');remover.type='button';remover.className='secondary';remover.setAttribute('aria-label','Remover '+p.nome+' da minha lista');
       remover.addEventListener('click',()=>{
         if(!ambiente.confirm('Remover '+p.nome+' da sua lista local?'))return;
@@ -27,7 +32,7 @@ async function iniciarCidade(doc,ambiente,api) {
     if(mapa){if(visiveis.length)mapa.fitBounds(visiveis.map(p=>[p.latitude,p.longitude]),{padding:[24,24],maxZoom:15,animate:false});else mapa.setView([-14.2,-51.9],4);}
   }
   function guardar(novos){if(leituraFalhou)throw Error('O armazenamento contém dados que não puderam ser lidos. Nenhum cadastro foi sobrescrito.');pontos=salvarPontosCidade(ambiente.localStorage,unirPontosCidade(pontos,novos));desenhar();}
-  function baixar(){const url=ambiente.URL.createObjectURL(new Blob([JSON.stringify({versao:1,pontos},null,2)],{type:'application/json'}));const a=criar('a');a.href=url;a.download='ecoa-pontos-locais.json';doc.body.append(a);a.click();a.remove();ambiente.setTimeout(()=>ambiente.URL.revokeObjectURL(url),1000);aviso('JSON preparado com todos os seus pontos, inclusive os ocultos pelos filtros.');}
+  function baixar(){const url=ambiente.URL.createObjectURL(new Blob([JSON.stringify({versao:1,pontos},null,2)],{type:'application/json'}));const a=criar('a');a.href=url;a.download='ecoa-pontos-locais.json';doc.body.append(a);a.click();a.remove();ambiente.setTimeout(()=>ambiente.URL.revokeObjectURL(url),1000);aviso('Cópia preparada com todos os seus pontos, inclusive os ocultos pelos filtros.');}
   function posicionarEndereco(item) {
     if(!Number.isFinite(item.latitude)||!Number.isFinite(item.longitude)){enderecoSelecionado=null;aviso('Endereço encontrado pelo CEP, mas sem posição confirmada. Preencha as coordenadas manualmente para cadastrar.');return false;}
     enderecoSelecionado=item;
@@ -48,6 +53,15 @@ async function iniciarCidade(doc,ambiente,api) {
     $('ponto-cidade').value=e.detail.cidadeUF;posicionarEndereco(e.detail);
   });
   $('ponto-cidade').addEventListener('endereco-selecionado',e=>posicionarEndereco(e.detail));
+  const painel=$('cidade-cadastro');
+  function abrirCadastro(){painel.open=true;$('cidade-adicionar').setAttribute('aria-expanded','true');$('ponto-nome').focus();}
+  $('cidade-adicionar').addEventListener('click',abrirCadastro);
+  painel.addEventListener('toggle',()=>{$('cidade-adicionar').setAttribute('aria-expanded',String(painel.open));});
+  $('cidade-fechar-cadastro').addEventListener('click',()=>{painel.open=false;$('cidade-adicionar').setAttribute('aria-expanded','false');$('cidade-adicionar').focus();});
+  $('cidade-vazio-acao').addEventListener('click',()=>{
+    if(!pontos.length){abrirCadastro();return;}
+    $('cidade-filtro').value='';$('cidade-categoria').value='';desenhar();$('cidade-filtro').focus();
+  });
   $('cidade-exportar').addEventListener('click',baixar);
   $('cidade-filtro').addEventListener('input',desenhar);$('cidade-categoria').addEventListener('change',desenhar);
   $('cidade-form').addEventListener('submit',e=>{
@@ -56,8 +70,8 @@ async function iniciarCidade(doc,ambiente,api) {
       const p={id:ambiente.crypto.randomUUID()};
       for(const campo of ['nome','cidade','categoria','endereco','detalhes','latitude','longitude','fonte','consultadoEm'])p[campo]=$('ponto-'+campo).value;
       for(const campo of ['latitude','longitude']){if(!p[campo].trim())throw Error('Preencha latitude e longitude.');p[campo]=Number(p[campo].replace(',','.'));}
-      guardar(validarPontosCidade({versao:1,pontos:[p]}));$('cidade-form').reset();aviso('Ponto salvo neste navegador. Use Baixar JSON para guardar uma cópia.');
-    }catch(e){aviso(e.message);}
+      guardar(validarPontosCidade({versao:1,pontos:[p]}));$('cidade-form').reset();aviso('Ponto salvo neste navegador. Salve uma cópia dos seus pontos para guardar em outro aparelho.');
+    }catch(e){const detalhes=$('cidade-form').querySelector?.('.cidade-coordenadas');if(detalhes)detalhes.open=true;aviso(e.message);}
     $('cidade-status').focus();
   });
   $('cidade-importar').addEventListener('change',async e=>{
@@ -83,7 +97,7 @@ async function iniciarCidade(doc,ambiente,api) {
         }
       };
       if(mapa.on){mapa.on('moveend',atualizarVies);atualizarVies();}
-      $('cidade-carregar').hidden=true;aviso('Mapa aberto. Os mesmos locais estão na lista abaixo.');
+      $('cidade-carregar').hidden=true;$('cidade-mapa-abertura').hidden=true;aviso('Mapa aberto. Os mesmos locais estão na lista abaixo.');
     }catch{if(mapa){mapa.remove();mapa=null;camada=null;}$('cidade-mapa').hidden=true;aviso('Não foi possível carregar o mapa. A lista e os cadastros continuam funcionando. Você pode tentar novamente.');}
     finally{carregando=false;$('cidade-carregar').disabled=false;}
   });
@@ -104,5 +118,5 @@ function carregarLeafletCidade(doc,ambiente) {
     el.onload=()=>{ambiente.clearTimeout(timer);resolve();};el.onerror=()=>{ambiente.clearTimeout(timer);el.remove();reject(Error('Falha na rede'));};doc.head.append(el);
   }))).then(resultados=>{if(resultados.some(r=>r.status==='rejected'))throw Error('Falha ao carregar Leaflet');ambiente.__ecoaLeafletPronto=true;});
 }
-if(typeof module!=='undefined')module.exports={iniciarCidade,carregarLeafletCidade};
+if(typeof module!=='undefined')module.exports={iniciarCidade,carregarLeafletCidade,resumoPontosCidade};
 else iniciarCidade(document,window,{categoriasCidade,chaveCidade,validarPontosCidade,lerJsonCidade,unirPontosCidade,filtrarPontosCidade,salvarPontosCidade});

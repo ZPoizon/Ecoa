@@ -2,7 +2,7 @@
 const categoriasCidade = {coleta:'Coleta seletiva',horta:'Horta comunitária',doacao:'Doações'};
 const chaveCidade = 'ecoa-pontos-v1';
 function validarPontosCidade(dados) {
-  if(!dados || dados.versao!==1 || !Array.isArray(dados.pontos) || dados.pontos.length>200) throw Error('Use um JSON versão 1 com a lista pontos (até 200 locais).');
+  if(!dados || dados.versao!==1 || !Array.isArray(dados.pontos) || dados.pontos.length>200) throw Error('Escolha uma cópia de pontos salva pelo Ecoa, com até 200 locais.');
   const ids=new Set();
   return dados.pontos.map((p,i)=>{
     const erro=mensagem=>{throw Error(`Ponto ${i+1}: ${mensagem}`);};
@@ -25,7 +25,7 @@ function validarPontosCidade(dados) {
 }
 function lerJsonCidade(texto) {
   if(typeof texto!=='string'||new TextEncoder().encode(texto).length>500000)throw Error('O arquivo deve ter no máximo 500 KB.');
-  let dados;try{dados=JSON.parse(texto.replace(/^\uFEFF/,''));}catch{throw Error('Não foi possível ler o JSON. Confira o formato do arquivo.');}
+  let dados;try{dados=JSON.parse(texto.replace(/^\uFEFF/,''));}catch{throw Error('Não foi possível ler a cópia. Escolha um arquivo salvo pelo Ecoa.');}
   return validarPontosCidade(dados);
 }
 function unirPontosCidade(atuais,novos) {

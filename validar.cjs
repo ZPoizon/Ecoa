@@ -69,7 +69,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['aprender.js', 'aprender.css', 'agir.js', 'agir.css', 'inicio.js', 'inicio.css', 'rotas.js', 'design-system.css', 'index.html', 'sobre.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
+  for (const arquivo of ['cidade-layout.css', 'aprender.js', 'aprender.css', 'agir.js', 'agir.css', 'inicio.js', 'inicio.css', 'rotas.js', 'design-system.css', 'index.html', 'sobre.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -672,7 +672,7 @@ async function validarCidade() {
   assert.deepEqual(c.validarPontosCidade(envelope([])),[]);
   for(const dados of [null,{},envelope(Array(201).fill(p)),{versao:2,pontos:[]},envelope([p,p])])assert.throws(()=>c.validarPontosCidade(dados));
   for(const [campo,valor] of [['latitude',91],['latitude','-23'],['longitude',NaN],['longitude',-181],['nome',''],['detalhes','a'.repeat(601)],['categoria','__proto__'],['fonte','javascript:alert(1)'],['fonte','https://user:pass@example.org'],['consultadoEm','2026-02-30'],['consultadoEm','2999-01-01']])assert.throws(()=>c.validarPontosCidade(envelope([{...p,[campo]:valor}])));
-  assert.throws(()=>c.lerJsonCidade('{'),/JSON/);assert.throws(()=>c.lerJsonCidade('a'.repeat(500001)),/500 KB/);
+  assert.throws(()=>c.lerJsonCidade('{'),/cópia/);assert.throws(()=>c.lerJsonCidade('a'.repeat(500001)),/500 KB/);
   assert.equal(c.unirPontosCidade([p],[{...p,nome:'não sobrescrever'}])[0].nome,p.nome);
   assert.equal(c.unirPontosCidade([p],[{...p,id:'segundo'}]).length,2);
   assert.equal(c.filtrarPontosCidade([p],'sao paulo','coleta').length,1);
@@ -681,7 +681,10 @@ async function validarCidade() {
   c.salvarPontosCidade(storage,[p]);assert.equal(c.lerJsonCidade(storage.valor)[0].id,p.id);
   assert.throws(()=>c.salvarPontosCidade({setItem(){throw Error();}},[p]),/Não foi possível salvar/);
   const ui=require('./dist/cidade-ui');
-  const {iniciarCidade,carregarLeafletCidade}=ui;
+  const {iniciarCidade,carregarLeafletCidade,resumoPontosCidade}=ui;
+  assert.equal(resumoPontosCidade(1),'1 ponto na sua lista.');
+  assert.equal(resumoPontosCidade(2),'2 pontos na sua lista.');
+  assert.equal(resumoPontosCidade(0),'0 pontos na sua lista.');
   const elementos=new Map();
   const criar=()=>({value:'',textContent:'',children:[],eventos:{},setAttribute(k,v){this[k]=v;},append(...v){this.children.push(...v);},replaceChildren(...v){this.children=v;},addEventListener(k,v){this.eventos[k]=v;},focus(){this.focado=true;},reset(){},remove(){},click(){this.clicado=true;}});
   const el=id=>{if(!elementos.has(id))elementos.set(id,criar());return elementos.get(id);};
@@ -690,14 +693,21 @@ async function validarCidade() {
   const pontosAntesDaLeitura=storage.valor;
   await iniciarCidade(doc,ambiente,c);
   assert.equal(storage.valor,pontosAntesDaLeitura);
+  el('cidade-adicionar').eventos.click();assert.equal(el('cidade-cadastro').open,true);assert.equal(el('ponto-nome').focado,true);
+  el('cidade-fechar-cadastro').eventos.click();assert.equal(el('cidade-cadastro').open,false);assert.equal(el('cidade-adicionar')['aria-expanded'],'false');
+  el('cidade-cadastro').open=true;el('cidade-cadastro').eventos.toggle();assert.equal(el('cidade-adicionar')['aria-expanded'],'true');
+
   assert.equal(el('cidade-lista').children.length,1);
   el('cidade-filtro').value='outra';el('cidade-filtro').eventos.input();assert.equal(el('cidade-lista').children.length,0);
-  el('cidade-filtro').value='';el('cidade-filtro').eventos.input();
+  assert.equal(el('cidade-vazio').hidden,false);assert.equal(el('cidade-vazio-acao').textContent,'Limpar filtros');
+  el('cidade-vazio-acao').eventos.click();assert.equal(el('cidade-filtro').value,'');assert.equal(el('cidade-vazio').hidden,true);
+
   el('cidade-lista').children[0].children.at(-1).children.at(-1).eventos.click();assert.equal(c.lerJsonCidade(storage.valor).length,0);
+  assert.equal(el('cidade-vazio-acao').textContent,'Adicionar meu primeiro ponto');el('cidade-vazio-acao').eventos.click();assert.equal(el('cidade-cadastro').open,true);
   for(const campo of Object.keys(p).filter(k=>k!=='id'))el('ponto-'+campo).value=String(p[campo]);
   el('cidade-form').eventos.submit({preventDefault(){}});assert.equal(c.lerJsonCidade(storage.valor).length,1);
   const anterior=storage.valor;
-  await el('cidade-importar').eventos.change({target:{files:[{name:'ruim.json',size:2,text:async()=>'{'}],value:'x'}});assert.equal(storage.valor,anterior);assert.match(el('cidade-status').textContent,/JSON/);
+  await el('cidade-importar').eventos.change({target:{files:[{name:'ruim.json',size:2,text:async()=>'{'}],value:'x'}});assert.equal(storage.valor,anterior);assert.match(el('cidade-status').textContent,/cópia/);
   await el('cidade-importar').eventos.change({target:{files:[{name:'bom.json',size:500,text:async()=>JSON.stringify(envelope([p]))}],value:'x'}});assert.equal(c.lerJsonCidade(storage.valor).length,2);
   el('cidade-exportar').eventos.click();assert.equal(doc.body.children.at(-1).download,'ecoa-pontos-locais.json');
   await el('cidade-carregar').eventos.click();assert.equal(el('cidade-carregar').disabled,false);assert.match(el('cidade-status').textContent,/Não foi possível carregar o mapa/);
@@ -928,7 +938,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v24'/);
+  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v25'/);
   assert.match(fs.readFileSync('dist/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('dist/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');

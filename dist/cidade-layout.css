@@ -1,0 +1,25 @@
+/* Mapa e lista compartilham os tokens; nenhuma alteração nos dados locais. */
+#tela-na-cidade .cidade { padding:clamp(1rem,3vw,2rem); }
+.cidade-cabecalho { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-4); }
+.cidade-cabecalho > div { flex:1 1 20rem; }
+#cidade-busca-endereco { margin-block:var(--space-6); }
+.cidade-busca-linha { display:flex; flex-wrap:wrap; align-items:start; gap:var(--space-3); }
+.cidade-busca-linha > input,.cidade-busca-linha > .endereco-autocomplete { flex:1 1 18rem; min-width:0; }
+#cidade-mapa-abertura { min-height:20rem; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:var(--space-6); background:var(--soft); border:1px solid var(--line); border-radius:var(--radius-md); text-align:center; }
+#cidade-mapa-abertura[hidden] { display:none; }
+#tela-na-cidade #cidade-mapa { height:clamp(24rem,60svh,40rem); width:100%; }
+#cidade-cadastro { margin-block:var(--space-6); padding:var(--space-4); background:var(--surface); border:1px solid var(--line); }
+#cidade-cadastro .cidade-coordenadas { grid-column:1 / -1; }
+#cidade-cadastro .cidade-coordenadas label { display:block; margin-block:var(--space-3); }
+#cidade-lista-titulo { margin-top:var(--space-6); }
+#tela-na-cidade input,#tela-na-cidade select,#tela-na-cidade button { min-height:48px; }
+#tela-na-cidade .cidade-campos { grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr)); }
+#tela-na-cidade .cidade-lista .buttons { display:flex; flex-wrap:wrap; gap:var(--space-3); }
+#tela-na-cidade .cidade-lista .buttons a { padding-block:var(--space-3); }
+#cidade-status:empty { display:none; }
+@media(max-width:40rem){
+ #tela-na-cidade #cidade-mapa { height:60svh; min-height:24rem; }
+ .cidade-busca-linha { display:block; }
+ .cidade-busca-linha button { margin-top:var(--space-3); width:100%; }
+ #cidade-adicionar { width:100%; }
+}
