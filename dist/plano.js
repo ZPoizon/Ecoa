@@ -6,6 +6,9 @@ const planoAviso = document.querySelector('#plano-aviso');
 const baixarPlano = document.querySelector('#baixar-plano');
 const avisoExportacao = document.querySelector('#plano-exportacao');
 let exportandoPlano = false;
+function atualizarAjudaPdf(){
+  document.querySelector('#plano-pdf-ajuda').textContent=exportandoPlano?'Aguarde enquanto preparamos seu PDF.':plano.size?'Baixe um PDF com as ações do seu plano.':'Salve uma ação no plano para gerar o PDF.';
+}
 const exportarJson = document.querySelector('#exportar-json');
 const importarJson = document.querySelector('#importar-json');
 const arquivoPlano = document.querySelector('#arquivo-plano');
@@ -34,6 +37,7 @@ function atualizarPlano() {
   planoLista.replaceChildren();
   exportarJson.disabled = plano.size === 0;
   baixarPlano.disabled = exportandoPlano || plano.size === 0;
+  atualizarAjudaPdf();
   const concluidas = [...plano.values()].filter(Boolean).length;
   planoResumo.textContent = plano.size
     ? `${concluidas} de ${plano.size} ações concluídas. Seu plano fica neste navegador.`
@@ -102,6 +106,7 @@ baixarPlano.addEventListener('click', async () => {
   if (!itens.length) return;
   exportandoPlano = true;
   baixarPlano.disabled = true;
+  atualizarAjudaPdf();
   avisoExportacao.textContent = 'Preparando o PDF…';
   try {
     const biblioteca = await import('./vendor/pdf-lib.min.js');
@@ -120,6 +125,7 @@ baixarPlano.addEventListener('click', async () => {
   } finally {
     exportandoPlano = false;
     baixarPlano.disabled = plano.size === 0;
+    atualizarAjudaPdf();
   }
 });
 
@@ -135,7 +141,7 @@ exportarJson.addEventListener('click', () => {
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    statusJson.textContent = 'Cópia JSON pronta. Confira os downloads do navegador.';
+    statusJson.textContent = 'Cópia do plano pronta. Confira os downloads do navegador.';
   } catch {
     statusJson.textContent = 'Não foi possível baixar a cópia. Tente novamente.';
   }

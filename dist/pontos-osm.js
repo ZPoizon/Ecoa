@@ -74,7 +74,8 @@ function criarClienteOSM({fetcher=fetch,storage,agora=Date.now,esperar=esperarOS
         const r=await fetcher(servidores[inicio%servidores.length],{method:'POST',body:new URLSearchParams({data:query}),signal:controle.signal,credentials:'omit',cache:'no-store'});
         if(r.status===429||r.status===504){const raw=r.headers?.get('Retry-After');const retry=/^\d+$/.test(raw||'')?Number(raw)*1000:Math.max(0,Date.parse(raw)-agora())||0;liberar=agora()+Math.max(retry,30000*2**Math.min(falhas++,3));throw Error('Servidor ocupado. Tente novamente em instantes.');}
         if(!r.ok)throw Error('Não foi possível buscar pontos.');
-        const pontos=converterPontosOSM(await r.json(),categoria);
+        let dados;try{dados=await r.json();}catch{throw Error('Não foi possível ler os pontos recebidos. Tente novamente.');}
+        const pontos=converterPontosOSM(dados,categoria);
         if(signal?.aborted)throw abortadoOSM();
         cache.delete(key);cache.set(key,{em:agora(),pontos});while(cache.size>20)cache.delete(cache.keys().next().value);
         try{storage?.setItem(chave,JSON.stringify([...cache]));}catch{}

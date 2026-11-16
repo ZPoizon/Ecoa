@@ -9,10 +9,15 @@ function iniciarLembretes(doc,ambiente,catalogo,obterPlano,api) {
       let dados=ler(),plano=obterPlano();const limpos=api.reconciliarLembretes(dados,plano);
       if(limpos.itens.length!==dados.itens.length)dados=gravar(limpos);
       const seletor=$('lembrete-acao'),escolhida=seletor.value;seletor.replaceChildren();
-      catalogo.filter(a=>plano.get(a.ods+':'+a.titulo)===false).forEach(a=>{const o=criar('option',a.titulo);o.value=a.ods+':'+a.titulo;seletor.append(o);});
-      if([...seletor.children].some(o=>o.value===escolhida))seletor.value=escolhida;
-      $('lembrete-salvar').disabled=!seletor.children.length;
-      $('lembrete-vazio').hidden=!!seletor.children.length;
+      const pendentes=catalogo.filter(a=>plano.get(a.ods+':'+a.titulo)===false);
+      const guia=criar('option',pendentes.length?'Escolha uma ação do seu plano':'Nenhuma ação pendente no plano');guia.value='';guia.disabled=true;seletor.append(guia);
+      pendentes.forEach(a=>{const o=criar('option',a.titulo);o.value=a.ods+':'+a.titulo;seletor.append(o);});
+      seletor.value=pendentes.some(a=>a.ods+':'+a.titulo===escolhida)?escolhida:'';
+      const vazio=!pendentes.length;
+      seletor.disabled=vazio;$('lembrete-quando').disabled=vazio;$('lembrete-salvar').disabled=vazio;
+      $('lembrete-form').setAttribute('aria-disabled',String(vazio));
+      $('lembrete-salvar-ajuda').textContent=vazio?'Salve uma ação pendente no plano para criar um lembrete.':'Escolha uma ação e uma data futura para salvar o lembrete.';
+      $('lembrete-vazio').hidden=true;
       $('lembrete-permissao').textContent=dados.notificacoes?(ambiente.Notification?.permission==='granted'?'Notificações ativadas neste navegador.':'Notificações bloqueadas ou indisponíveis. Os avisos na página continuam funcionando.'):'Notificações desativadas. Os avisos aparecem somente na página.';
       $('lembrete-ativar').hidden=dados.notificacoes&&ambiente.Notification?.permission==='granted';$('lembrete-desativar').hidden=!dados.notificacoes;
       $('lembrete-lista').replaceChildren();
@@ -27,7 +32,7 @@ function iniciarLembretes(doc,ambiente,catalogo,obterPlano,api) {
         li.append(cancelar,calendario);$('lembrete-lista').append(li);
       }
       bloqueado=false;
-    }catch(e){bloqueado=true;$('lembrete-salvar').disabled=true;aviso(e.message||'Não foi possível ler os lembretes. Nenhum dado foi apagado.');}
+    }catch(e){bloqueado=true;$('lembrete-salvar').disabled=true;$('lembrete-acao').disabled=true;$('lembrete-quando').disabled=true;$('lembrete-form').setAttribute('aria-disabled','true');$('lembrete-salvar-ajuda').textContent='Não foi possível ler os lembretes salvos; recarregue a página para tentar novamente.';aviso(e.message||'Não foi possível ler os lembretes. Nenhum dado foi apagado.');}
   }
   $('lembrete-form').addEventListener('submit',e=>{e.preventDefault();if(bloqueado)return;try{gravar(api.agendarLembrete(ler(),$('lembrete-acao').value,api.horarioLembrete($('lembrete-quando').value),obterPlano()));atualizar();aviso('Lembrete salvo. Mantenha o Ecoa aberto para o aviso ou importe no calendário.');}catch(e){aviso(e.message);}$('lembrete-status').focus();});
   $('lembrete-ativar').addEventListener('click',async()=>{

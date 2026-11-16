@@ -7,7 +7,7 @@ function validarLembretes(dados,catalogo) {
     vistos.add(x.chave);return {chave:x.chave,quando:x.quando,avisado:x.avisado};
   });return {versao:1,notificacoes:dados.notificacoes,itens};
 }
-function lerLembretes(storage,catalogo){const texto=storage.getItem(chaveLembretes);return texto?validarLembretes(JSON.parse(texto),catalogo):{versao:1,notificacoes:false,itens:[]};}
+function lerLembretes(storage,catalogo){try{const texto=storage.getItem(chaveLembretes);return texto?validarLembretes(JSON.parse(texto),catalogo):{versao:1,notificacoes:false,itens:[]};}catch{throw Error('Não foi possível ler os lembretes salvos. Nenhum dado foi apagado.');}}
 function salvarLembretes(storage,dados,catalogo){const seguros=validarLembretes(dados,catalogo);try{storage.setItem(chaveLembretes,JSON.stringify(seguros));}catch{throw Error('Não foi possível salvar os lembretes neste navegador.');}return seguros;}
 function horarioLembrete(texto,agora=Date.now()) {
   if(typeof texto!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(texto))throw Error('Escolha data e horário.');

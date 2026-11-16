@@ -12,8 +12,9 @@ async function iniciarCidade(doc,ambiente,api) {
     $('cidade-total').textContent=resumoPontosCidade(visiveis.length);
     $('cidade-vazio').hidden=visiveis.length>0;
     $('cidade-vazio-titulo').textContent=pontos.length?'Nenhum ponto com esses filtros':'Sua lista começa aqui';
-    $('cidade-vazio-texto').textContent=pontos.length?'Tente outra cidade ou tipo de iniciativa.':'Cadastre um local que você conhece; uma lista vazia não significa que sua cidade não tenha iniciativas.';
-    $('cidade-vazio-acao').textContent=pontos.length?'Limpar filtros':'Adicionar meu primeiro ponto';
+    $('cidade-vazio-texto').textContent=pontos.length?'Tente outra cidade ou tipo de iniciativa.':'Use “Adicionar um ponto” para guardar um lugar que você conhece.';
+    $('cidade-vazio-acao').textContent='Limpar filtros';
+    $('cidade-vazio-acao').hidden=!pontos.length;
     if(camada)camada.clearLayers();
     visiveis.forEach(p=>{
       const item=criar('li'),titulo=criar('h3',p.nome);
@@ -54,12 +55,10 @@ async function iniciarCidade(doc,ambiente,api) {
   });
   $('ponto-cidade').addEventListener('endereco-selecionado',e=>posicionarEndereco(e.detail));
   const painel=$('cidade-cadastro');
-  function abrirCadastro(){painel.open=true;$('cidade-adicionar').setAttribute('aria-expanded','true');$('ponto-nome').focus();}
+  function abrirCadastro(){painel.hidden=false;$('cidade-adicionar').setAttribute('aria-expanded','true');$('ponto-nome').focus();}
   $('cidade-adicionar').addEventListener('click',abrirCadastro);
-  painel.addEventListener('toggle',()=>{$('cidade-adicionar').setAttribute('aria-expanded',String(painel.open));});
-  $('cidade-fechar-cadastro').addEventListener('click',()=>{painel.open=false;$('cidade-adicionar').setAttribute('aria-expanded','false');$('cidade-adicionar').focus();});
+  $('cidade-fechar-cadastro').addEventListener('click',()=>{painel.hidden=true;$('cidade-adicionar').setAttribute('aria-expanded','false');$('cidade-adicionar').focus();});
   $('cidade-vazio-acao').addEventListener('click',()=>{
-    if(!pontos.length){abrirCadastro();return;}
     $('cidade-filtro').value='';$('cidade-categoria').value='';desenhar();$('cidade-filtro').focus();
   });
   $('cidade-exportar').addEventListener('click',baixar);
@@ -76,7 +75,7 @@ async function iniciarCidade(doc,ambiente,api) {
   });
   $('cidade-importar').addEventListener('change',async e=>{
     const arquivo=e.target.files[0];if(!arquivo)return;
-    try{if(!/\.json$/i.test(arquivo.name)||arquivo.size>500000)throw Error('Escolha um arquivo .json de até 500 KB.');
+    try{if(!/\.json$/i.test(arquivo.name)||arquivo.size>500000)throw Error('Escolha uma cópia dos pontos salva pelo Ecoa, de até 500 KB.');
       const novos=lerJsonCidade(await arquivo.text());guardar(novos);aviso('Importação concluída. Identificadores já existentes foram preservados.');
     }catch(e){aviso(e.message||'Não foi possível abrir o arquivo.');}finally{e.target.value='';$('cidade-status').focus();}
   });

@@ -158,7 +158,7 @@ async function validarBackupPlano() {
   assert.deepEqual([...atual.values()], [true,false]);
   console.log('OK JSON: persistência antes da atualização e preservação após erro');
   assert.equal(await lerArquivoPlanoJson({name:'PLANO.JSON',size:10,text:async()=>texto}),texto);
-  await assert.rejects(lerArquivoPlanoJson({name:'plano.txt',size:10}), /extensão/);
+  await assert.rejects(lerArquivoPlanoJson({name:'plano.txt',size:10}), /cópia do plano/);
   await assert.rejects(lerArquivoPlanoJson({name:'plano.json',size:102401}), /100 KB/);
   await assert.rejects(lerArquivoPlanoJson({name:'plano.json',size:10,text:async()=>{throw Error();}}), /ler o arquivo/);
   console.log('OK JSON: leitura, extensão, limite e erro de acesso ao arquivo');
@@ -577,11 +577,13 @@ async function validarProgresso() {
     localStorage:{getItem:()=>null,setItem:(k,v)=>{salvo=v;}},
     ...require('./dist/plano-json')};
   runInNewContext(readFileSync('dist/progresso.js','utf8')+'\n'+readFileSync('dist/plano.js','utf8'),ctx);
-  el('#salvar-acao').eventos.click();assert.equal(el('#progresso-pendentes').textContent,'1');
+  assert.equal(el('#baixar-plano').disabled,true);assert.match(el('#plano-pdf-ajuda').textContent,/Salve uma ação/);
+  el('#salvar-acao').eventos.click();assert.equal(el('#progresso-pendentes').textContent,'1');assert.equal(el('#baixar-plano').disabled,false);assert.match(el('#plano-pdf-ajuda').textContent,/Baixe um PDF/);
   const caixa=el('#plano-lista').children[0].children[0].children[0];caixa.checked=true;caixa.eventos.change();
   assert.equal(el('#progresso-concluidas').textContent,'1');assert.equal(el('#progresso-ods').textContent,'1');
   caixa.checked=false;caixa.eventos.change();assert.equal(el('#progresso-concluidas').textContent,'0');
   el('#plano-lista').children[0].children[1].eventos.click();assert.equal(el('#progresso-pendentes').textContent,'0');
+  assert.equal(el('#baixar-plano').disabled,true);assert.match(el('#plano-pdf-ajuda').textContent,/Salve uma ação/);
   const backup=require('./dist/plano-json').exportarPlanoJson(completo,acoes);
   el('#arquivo-plano').files=[{name:'ecoa.json',size:backup.length,text:async()=>backup}];
   await el('#arquivo-plano').eventos.change();
@@ -694,9 +696,9 @@ async function validarCidade() {
   const pontosAntesDaLeitura=storage.valor;
   await iniciarCidade(doc,ambiente,c);
   assert.equal(storage.valor,pontosAntesDaLeitura);
-  el('cidade-adicionar').eventos.click();assert.equal(el('cidade-cadastro').open,true);assert.equal(el('ponto-nome').focado,true);
-  el('cidade-fechar-cadastro').eventos.click();assert.equal(el('cidade-cadastro').open,false);assert.equal(el('cidade-adicionar')['aria-expanded'],'false');
-  el('cidade-cadastro').open=true;el('cidade-cadastro').eventos.toggle();assert.equal(el('cidade-adicionar')['aria-expanded'],'true');
+  el('cidade-adicionar').eventos.click();assert.equal(el('cidade-cadastro').hidden,false);assert.equal(el('ponto-nome').focado,true);
+  el('cidade-fechar-cadastro').eventos.click();assert.equal(el('cidade-cadastro').hidden,true);assert.equal(el('cidade-adicionar')['aria-expanded'],'false');
+  el('cidade-adicionar').eventos.click();assert.equal(el('cidade-adicionar')['aria-expanded'],'true');
 
   assert.equal(el('cidade-lista').children.length,1);
   el('cidade-filtro').value='outra';el('cidade-filtro').eventos.input();assert.equal(el('cidade-lista').children.length,0);
@@ -704,7 +706,7 @@ async function validarCidade() {
   el('cidade-vazio-acao').eventos.click();assert.equal(el('cidade-filtro').value,'');assert.equal(el('cidade-vazio').hidden,true);
 
   el('cidade-lista').children[0].children.at(-1).children.at(-1).eventos.click();assert.equal(c.lerJsonCidade(storage.valor).length,0);
-  assert.equal(el('cidade-vazio-acao').textContent,'Adicionar meu primeiro ponto');el('cidade-vazio-acao').eventos.click();assert.equal(el('cidade-cadastro').open,true);
+  assert.equal(el('cidade-vazio-acao').hidden,true);el('cidade-adicionar').eventos.click();assert.equal(el('cidade-cadastro').hidden,false);
   for(const campo of Object.keys(p).filter(k=>k!=='id'))el('ponto-'+campo).value=String(p[campo]);
   el('cidade-form').eventos.submit({preventDefault(){}});assert.equal(c.lerJsonCidade(storage.valor).length,1);
   const anterior=storage.valor;
@@ -841,14 +843,16 @@ async function validarLembretesEtapa10(){
   const api={...a,permitirNotificacoes:async()=>{solicitacoes++;env.Notification.permission='granted';return 'granted';},notificarLembrete:async()=>{envios++;return true;}};
   const ui=require('./dist/lembretes-ui').iniciarLembretes(doc,env,acoes,()=>p,api);
   assert.equal(solicitacoes,0);assert.equal(el('lembrete-salvar').disabled,false);
+  assert.equal(el('lembrete-acao').children[0].value,'');assert.match(el('lembrete-acao').children[0].textContent,/Escolha uma ação/);assert.equal(el('lembrete-quando').disabled,false);
   await el('lembrete-ativar').eventos.click();assert.equal(solicitacoes,1);assert.equal(a.lerLembretes(storage,acoes).notificacoes,true);
   el('lembrete-acao').value=chave;el('lembrete-quando').value='2030-01-01T12:00';el('lembrete-form').eventos.submit({preventDefault(){}});
   assert.equal(a.lerLembretes(storage,acoes).itens.length,1);
   let salvo=a.lerLembretes(storage,acoes);salvo.itens[0].quando=Date.now()-1;a.salvarLembretes(storage,salvo,acoes);
   await ui.verificar();await ui.verificar();assert.equal(envios,1);assert.match(el('lembrete-status').textContent,/Hora de agir/);
   el('lembrete-desativar').eventos.click();assert.equal(a.lerLembretes(storage,acoes).notificacoes,false);
-  p.set(chave,true);ui.atualizar();assert.equal(a.lerLembretes(storage,acoes).itens.length,0);assert.equal(el('lembrete-salvar').disabled,true);
-  storage.v='{inválido';ui.atualizar();assert.equal(storage.v,'{inválido');assert.equal(el('lembrete-salvar').disabled,true);
+  p.set(chave,true);ui.atualizar();assert.equal(el('lembrete-acao').disabled,true);assert.equal(el('lembrete-quando').disabled,true);assert.match(el('lembrete-salvar-ajuda').textContent,/ação pendente/);assert.equal(a.lerLembretes(storage,acoes).itens.length,0);assert.equal(el('lembrete-salvar').disabled,true);
+  p.set(chave,false);ui.atualizar();assert.equal(el('lembrete-salvar').disabled,false);assert.equal(el('lembrete-acao').disabled,false);
+  storage.v='{inválido';ui.atualizar();assert.doesNotMatch(el('lembrete-status').textContent,/json/i);assert.match(el('lembrete-salvar-ajuda').textContent,/Não foi possível ler/);assert.equal(storage.v,'{inválido');assert.equal(el('lembrete-salvar').disabled,true);
   console.log('OK Lembretes: datas, persistência, substituição, conclusão/remoção, permissão só por clique, recusa, disparo único, falha, calendário seguro e interface simulada');
 }
 validarLembretesEtapa10().catch(e=>{console.error(e);process.exitCode=1;});
@@ -939,7 +943,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v27'/);
+  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v28'/);
   assert.match(fs.readFileSync('dist/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('dist/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1123,3 +1127,23 @@ async function validarPontosAutomaticos() {
  console.log('OK Pontos OSM: consultas por categoria, limite, cache de sessão/TTL, 429/504 e mirrors, debounce 600ms, cancelamento, resposta tardia/vazia, mesclagem, datas, offline e localização opt-in');
 }
 validarPontosAutomaticos().catch(e=>{console.error(e);process.exitCode=1;});
+
+function validarRefinamentoA(){
+ const fs=require('node:fs');
+ for(const arquivo of ['dist/index.html','dist/sobre.html']){
+  const html=fs.readFileSync(arquivo,'utf8');
+  const visivel=html.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<[^>]*>/g,'');
+  assert.doesNotMatch(visivel,/json/i);
+ }
+ const h=fs.readFileSync('dist/index.html','utf8');
+ assert.equal((h.match(/<button[^>]*>Adicionar um ponto<\/button>/g)||[]).length,1);
+ assert.match(h,/id="cidade-cadastro"[^>]*hidden/);
+ assert.match(h,/id="baixar-plano"[^>]*aria-describedby="plano-pdf-ajuda"/);
+ assert.match(h,/id="lembrete-salvar"[^>]*aria-describedby="lembrete-salvar-ajuda"/);
+ assert.match(h,/id="lembrete-data-ajuda"/);
+ for(const texto of ['{','{}',JSON.stringify({projeto:'oqdpf',versao:1,acoes:[{chave:'x',concluida:'sim'}]})]){
+  try{require('./dist/plano-json').validarPlanoJson(texto,acoes);assert.fail('Deveria rejeitar');}catch(e){assert.doesNotMatch(e.message,/json|true ou false/i);}
+ }
+ console.log('OK Fase A: cópias sem jargão, entrada única para adicionar ponto, textos-guia e motivos acessíveis');
+}
+validarRefinamentoA();

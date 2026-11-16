@@ -178,3 +178,11 @@ dialog::backdrop { background: var(--color-overlay); }
   .tela { padding-top: var(--space-6); }
 }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* Fase A: campos consistentes, sem alterar checkboxes e seletores de ODS. */
+body input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]),body select,body textarea { box-sizing:border-box; max-width:100%; min-width:0; min-height:48px; border:1px solid var(--color-border); border-radius:var(--radius-md); padding:.7rem .9rem; background:var(--color-surface); color:var(--color-text); font:inherit; }
+body input::placeholder,body textarea::placeholder { color:var(--color-text-muted); opacity:1; }
+body input:disabled,body select:disabled,body textarea:disabled { background:var(--color-disabled-bg); color:var(--color-disabled); opacity:1; cursor:not-allowed; }
+#cidade-cadastro[hidden],#cidade-vazio-acao[hidden] { display:none!important; }
+#lembrete-form .hint { display:block; font-weight:400; line-height:1.5; }
+#plano-pdf-ajuda,#lembrete-salvar-ajuda { margin-top:.6rem; }
