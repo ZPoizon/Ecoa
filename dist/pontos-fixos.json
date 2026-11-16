@@ -1,0 +1,34 @@
+[
+  {
+    "id": "exemplo-substituir-1",
+    "exemplo": true,
+    "nome": "EXEMPLO FICTÍCIO — substitua este local",
+    "categoria": "reciclagem",
+    "endereco": "Substitua pelo endereço público",
+    "cidade": "Substitua",
+    "UF": "SP",
+    "latitude": 0,
+    "longitude": 0,
+    "horario": "Substitua",
+    "aceita": "Substitua",
+    "telefone": "",
+    "fonte": "https://example.org",
+    "dataVerificacao": "2026-01-01"
+  },
+  {
+    "id": "exemplo-substituir-2",
+    "exemplo": true,
+    "nome": "EXEMPLO FICTÍCIO — substitua este local",
+    "categoria": "verde",
+    "endereco": "Substitua pelo endereço público",
+    "cidade": "Substitua",
+    "UF": "SP",
+    "latitude": 0,
+    "longitude": 0,
+    "horario": "Substitua",
+    "aceita": "Substitua",
+    "telefone": "",
+    "fonte": "https://example.org",
+    "dataVerificacao": "2026-01-01"
+  }
+]

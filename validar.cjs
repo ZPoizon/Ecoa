@@ -69,7 +69,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['cidade-layout.css', 'aprender.js', 'aprender.css', 'agir.js', 'agir.css', 'inicio.js', 'inicio.css', 'rotas.js', 'design-system.css', 'index.html', 'sobre.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
+  for (const arquivo of ['pontos-osm.js', 'pontos-osm-ui.js', 'pontos-osm.css', 'pontos-fixos.json', 'cidade-layout.css', 'aprender.js', 'aprender.css', 'agir.js', 'agir.css', 'inicio.js', 'inicio.css', 'rotas.js', 'design-system.css', 'index.html', 'sobre.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -94,6 +94,7 @@ async function validarPwa() {
   assert.equal(await requisitar(origem + 'sobre.html?via=link', 'navigate'), origem + 'sobre.html');
   assert.equal(requisitar(origem + 'api/onu?ods=6'), undefined);
   assert.equal(requisitar('https://brasil.un.org/pt-br/sdgs'), undefined);
+  for(const host of ['overpass-api.de','overpass.private.coffee'])for(const method of ['GET','POST'])assert.equal(requisitar('https://'+host+'/api/interpreter','cors',method),undefined);
   assert.equal(requisitar('https://photon.komoot.io/api/?q=rua&lang=pt'), undefined);
   assert.equal(requisitar(origem + 'index.html', 'cors', 'POST'), undefined);
   assert.deepEqual(rede, []);
@@ -938,7 +939,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v25'/);
+  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v27'/);
   assert.match(fs.readFileSync('dist/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('dist/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1068,3 +1069,57 @@ function validarBuscaGuias() {
  console.log('OK Aprender: busca sem acentos/caixa, número exato, termos, vazio, limpeza, foco e cartões preservados');
 }
 validarBuscaGuias();
+
+async function validarPontosAutomaticos() {
+ const api=require('./dist/pontos-osm');
+ const {linksSugestaoOSM,iniciarPontosOSM}=require('./dist/pontos-osm-ui');
+ const b=[-23.56,-46.65,-23.55,-46.64];
+ for(const [cat,d] of Object.entries(api.categoriasOSM)){
+   const q=api.montarConsultaOSM(cat,b);for(const [k,v] of d.tags)assert.ok(q.includes(`["${k}"="${v}"]`));
+   assert.match(q,/out center tags 200;/);assert.match(q,/Ecoa/);assert.ok(q.includes(b.join(',')));
+ }
+ assert.throws(()=>api.montarConsultaOSM('injetado',b));assert.throws(()=>api.montarConsultaOSM('agua',[-90,-180,90,180]));
+ const dados={elements:[{type:'node',id:1,lat:-23.555,lon:-46.645,tags:{name:'<img src=x onerror=alert(1)>','addr:street':'Rua A'}},{type:'way',id:2,center:{lat:-23.5551,lon:-46.645},tags:{name:'Praça Água'}},{type:'relation',id:3,center:{lat:-23.555,lon:-46.645},tags:{name:'Praça Agua'}}]};
+ const ps=api.converterPontosOSM(dados,'verde');assert.equal(ps.length,3);assert.equal(ps[0].nome,dados.elements[0].tags.name);
+ assert.deepEqual(api.converterPontosOSM({elements:[]},'agua'),[]);assert.throws(()=>api.converterPontosOSM({remark:'timeout',elements:[]},'agua'));
+ const fixo={...ps[1],id:'curado',origem:'fixo',dataVerificacao:'2026-01-01'};
+ assert.equal(api.validarFixosOSM([fixo,{...fixo,exemplo:true},{...fixo,dataVerificacao:'2026-99-99'}]).length,1);
+ assert.equal(api.mesclarPontosOSM([fixo],ps).length,2);assert.equal(api.mesclarPontosOSM([fixo],ps)[0].id,'curado');
+ assert.equal(api.mesclarPontosOSM([],Array.from({length:210},(_,i)=>({...ps[0],id:String(i),nome:String(i),latitude:i/1000}))).length,200);
+ let chamadas=0,mem='',tempo=1000;const storage={getItem:()=>mem,setItem:(k,v)=>{mem=v;}};
+ const resposta=()=>({ok:true,json:async()=>dados});const cliente=api.criarClienteOSM({fetcher:async()=>{chamadas++;return resposta();},storage,agora:()=>tempo});
+ await cliente.consultar('verde',b);await cliente.consultar('verde',b);assert.equal(chamadas,1);
+ await api.criarClienteOSM({fetcher:()=>{throw Error('não deve chamar');},storage,agora:()=>tempo}).consultar('verde',b);
+ tempo+=900001;await cliente.consultar('verde',b);assert.equal(chamadas,2);
+ const abort=new AbortController();abort.abort();await assert.rejects(cliente.consultar('verde',b,{signal:abort.signal}),{name:'AbortError'});
+ for(const status of [429,504]){
+   const urls=[],esperas=[];let now=1000;
+   const c=api.criarClienteOSM({servidores:['a','b'],agora:()=>now,esperar:async ms=>{esperas.push(ms);now+=ms;},fetcher:async url=>{urls.push(url);return urls.length===1?{ok:false,status,headers:{get:()=> '45'}}:resposta();}});
+   await c.consultar('verde',b);assert.deepEqual(urls,['a','b']);assert.deepEqual(esperas,[45000]);
+ }
+ const erro=api.criarClienteOSM({servidores:['a','b'],esperar:async()=>{},fetcher:async()=>{throw Error('Sem rede');}});await assert.rejects(erro.consultar('agua',b),/Sem rede/);
+ let tempoDebounce=0,id=0,tarefas=new Map(),resolvers=[],sinais=[],resultados=[],estados=[];
+ const relogio={setTimeout(fn,ms){const k=++id;tarefas.set(k,{fn,em:tempoDebounce+ms});return k;},clearTimeout(k){tarefas.delete(k);}};
+ const avancar=async ms=>{tempoDebounce+=ms;for(const [k,t] of [...tarefas])if(t.em<=tempoDebounce){tarefas.delete(k);t.fn();}await Promise.resolve();await Promise.resolve();};
+ const busca=api.criarBuscaOSM({relogio,consultar:(c,b,{signal})=>{sinais.push(signal);return new Promise(r=>resolvers.push(r));},receber:p=>resultados.push(p),estado:t=>estados.push(t)});
+ busca.agendar('',b,15);await avancar(1000);assert.equal(sinais.length,0);
+ busca.agendar('agua',b,12);assert.match(estados.at(-1),/Aproxime/);
+ busca.agendar('agua',b,15);await avancar(599);assert.equal(sinais.length,0);busca.agendar('verde',b,15);await avancar(600);assert.equal(sinais.length,1);
+ busca.agendar('agua',b,15);assert.ok(sinais[0].aborted);await avancar(600);resolvers[0](ps);await avancar(0);assert.notDeepEqual(resultados.at(-1),ps);resolvers[1]([]);await avancar(0);assert.deepEqual(resultados.at(-1),[]);assert.match(estados.at(-1),/Nenhum/);
+ assert.equal(linksSugestaoOSM('Olá').email,'');assert.match(linksSugestaoOSM('Olá','teste@example.org','5511999999999').whatsapp,/wa.me\/5511999999999/);
+ // DOM simulado: conteúdo externo só pode entrar como texto; preservação local, offline e localização opt-in.
+ const criar=()=>({children:[],eventos:{},dataset:{},value:'',hidden:false,textContent:'',append(...x){this.children.push(...x);},prepend(...x){this.children.unshift(...x);},replaceChildren(...x){this.children=x;},setAttribute(k,v){this[k]=v;},removeAttribute(k){delete this[k];},addEventListener(k,f){this.eventos[k]=f;},focus(){},scrollIntoView(){},select(){},click(){this.eventos.click?.();},set innerHTML(v){throw Error('HTML externo não permitido');}});
+ const els=new Map(),el=id=>{if(!els.has(id))els.set(id,criar());return els.get(id);};
+ const chips=Object.keys(api.categoriasOSM).map(c=>{const e=criar();e.dataset.categoriaOsm=c;return e;});const eventos={};let localizacoes=0,consultas=0;
+ const ambiente={fetch:async()=>({ok:true,json:async()=>[fixo]}),sessionStorage:storage,localStorage:{setItem(){throw Error('Não pode alterar Meus lugares');}},navigator:{onLine:false,geolocation:{getCurrentPosition(ok,erro){localizacoes++;erro();}}},addEventListener:(k,f)=>eventos[k]=f};
+ let receberUI;
+ const ui=iniciarPontosOSM({getElementById:el,createElement:criar,querySelectorAll:()=>chips,addEventListener:(k,f)=>eventos[k]=f},ambiente,{...api,criarClienteOSM:()=>({consultar:async()=>{consultas++;return ps;}}),criarBuscaOSM:({receber})=>{receberUI=receber;return {cancelar(){},agendar(){}}}});
+ await avancar(0);await avancar(0);chips[3].click();assert.equal(consultas,0);assert.equal(el('osm-lista').children.length,1);assert.match(el('osm-status').textContent,/offline/);assert.equal(localizacoes,0);
+ el('osm-perto').click();assert.equal(localizacoes,1);assert.equal(el('osm-perto').disabled,false);
+ const texto=JSON.stringify(el('osm-lista').children);assert.match(texto,/Verificado pelo Ecoa/);assert.match(texto,/Verificado em 01\/01\/2026/);
+ ambiente.navigator.onLine=true;receberUI(ps);assert.equal(el('osm-lista').children.length,2);assert.ok(JSON.stringify(el('osm-lista').children).includes('<img src=x onerror=alert(1)>'));
+ ambiente.navigator.onLine=false;eventos.offline();assert.equal(el('osm-lista').children.length,1);
+ el('osm-sug-form').eventos.submit({preventDefault(){}});assert.match(el('osm-contato-aviso').textContent,/não foi enviada/);assert.equal(el('osm-enviar-email').hidden,true);
+ console.log('OK Pontos OSM: consultas por categoria, limite, cache de sessão/TTL, 429/504 e mirrors, debounce 600ms, cancelamento, resposta tardia/vazia, mesclagem, datas, offline e localização opt-in');
+}
+validarPontosAutomaticos().catch(e=>{console.error(e);process.exitCode=1;});

@@ -388,3 +388,39 @@ Mapa em destaque (mínimo de 24rem no celular), busca de endereço/CEP preservad
 Nenhuma chave de armazenamento ou formato de arquivo foi alterado. Cache offline v25 inclui cidade-layout.css. Nenhuma biblioteca adicionada.
 
 Validação: node validar.cjs, sintaxe, build Worker e diff sem erros. Novas verificações de painel, foco, contagem, estados vazios e limpar filtros, além das regressões de persistência/importação/mapa/endereço. Chrome: abertura do cadastro com foco, mapa externo abriu, larguras de iframe 320/360/768/1024px sem overflow com cadastro aberto; tema claro inspecionado. Não verificados: Lighthouse, aparelhos físicos, leitor de tela real, tema escuro visualmente e novas consultas ao vivo de autocomplete/CEP (cobertas por API simulada).
+
+## Pontos automáticos — Na cidade
+
+`pontos-osm.js` isola consultas e provedores; `pontos-osm-ui.js` integra mapa/lista sem alterar `ecoa-pontos-v1` ou o formato de Meus lugares. Nenhuma biblioteca nova. Uma categoria precisa ser escolhida; movimento consulta após 600 ms, zoom mínimo 13 e área com amplitude até 0,3° por eixo. A bbox é expandida para uma grade de 0,01° para reuso; resultados são filtrados à área efetivamente visível. Limite 200, sem paginação. Nós e centros de vias/relações representam os locais; centros podem ficar fora da área e são omitidos.
+
+| Categoria | Tags OSM |
+|---|---|
+| Reciclagem | amenity=recycling |
+| Doação | shop=charity |
+| Água potável | amenity=drinking_water |
+| Hortas e áreas verdes | leisure=garden, leisure=park, landuse=allotments |
+| Outros | amenity=public_bookcase, amenity=community_centre |
+
+Tags conferidas na [documentação OSM](https://wiki.openstreetmap.org/wiki/Map_features). Doação representa lojas beneficentes, não garantia de recebimento. Jardins/hortas podem ser privados; confirmar acesso. Outros reúne bibliotecas de rua e centros comunitários, não certifica serviços sociais. Informações OSM não são fontes de fatos sobre ODS; as fontes oficiais dos guias permanecem intactas.
+
+Provedores: overpass-api.de e overpass.private.coffee, com fallback. AbortController cancela requisições anteriores e timeout de 30 s; resultados atrasados são descartados. 429/504 respeitam Retry-After (segundos ou data) e backoff mínimo 30 s, exponencial até 240 s. Erros de rede aguardam 1,5 s antes do mirror. Não contornar limites consultando mirrors imediatamente. Cache de até 20 áreas/categorias por 15 min em memória e sessionStorage (`ecoa-osm-cache-v1`), independente do localStorage. Comentário da consulta identifica Ecoa; navegador controla User-Agent. Referência: [uso da Overpass](https://wiki.openstreetmap.org/wiki/Overpass_API). Serviços públicos não garantem disponibilidade.
+
+### Adicionar pontos curados
+
+Edite `dist/pontos-fixos.json`: os dois registros são **EXEMPLOS FICTÍCIOS**, com `exemplo: true`, e ficam excluídos dos resultados. Substitua por dados que você conferiu e só então remova a flag ou use `false`. Não publique coordenadas/endereço de exemplo como se reais fossem.
+
+Campos: `id` único; `nome`; `categoria` (`reciclagem`, `doacao`, `agua`, `verde`, `outros`); `endereco`; `cidade`; `UF`; `latitude` e `longitude` numéricas; `horario`; `aceita`; `telefone`; `fonte` HTTPS; `dataVerificacao` em AAAA-MM-DD válida, sem data futura. Endereço/horário/o que aceita também aceitam as chaves acentuadas `endereço`, `horário`, `o que aceita`. Confirme nome, condições, fonte e posição. Não inclua telefones ou endereços pessoais privados. A interface mostra “Verificado em dd/mm/aaaa”; não existe verificação automática. Dados inválidos são omitidos.
+
+Fixos têm prioridade na mesclagem: mesmo identificador ou nome semelhante (acentos/caixa ignorados, ao menos 80% dos termos iguais) a menos de 30 m evita duplicação. Sem nome no OSM, só o identificador deduplica. Meus lugares fica separado e não é mesclado/apagado. Não há pontos curados reais inicialmente: offline pode mostrar lista vazia até você adicionar os seus.
+
+### Sugestões e correções
+
+Configure `CONTATO_PONTOS_EMAIL` e/ou `CONTATO_PONTOS_WHATSAPP` no topo de `dist/pontos-osm-ui.js`. WhatsApp: só dígitos, país+DDD+número. Enquanto vazios, enviar fica indisponível, com aviso claro e opção de copiar. Formulário prepara links mailto/WhatsApp; usuário revisa e confirma no aplicativo. Nenhum backend ou envio automático. Correções preenchem referência do local no mesmo formulário.
+
+### Privacidade, offline e testes
+
+“Perto de mim” solicita localização somente após clique e não persiste as coordenadas recebidas. A área arredondada de consultas entra no cache de sessão. Offline a lista pública exibe só fixos disponíveis no cache PWA; Meus lugares continua acessível. Tiles, geocodificação e Overpass exigem internet. Cache PWA v27 inclui arquivos novos e pontos-fixos.json, nunca respostas Overpass. Atribuição © OpenStreetMap contributors e [licença ODbL](https://www.openstreetmap.org/copyright) no mapa, na lista e em Sobre.
+
+`node validar.cjs` testa consultas, zoom, debounce, cancelamento, respostas tardias/vazias, cache/TTL/sessão, 429/504/mirrors, mesclagem, datas e exemplos, UI offline, localização opt-in e contatos, além das regressões do projeto. Resultados de serviços ao vivo variam; ausência de pontos não significa ausência de iniciativas.
+
+Verificação desta entrega: `node validar.cjs` e build Worker; Chrome com viewports de iframe 320/360/768/1024 px sem overflow horizontal, tema escuro, seleção por teclado e formulário sem envio. Busca de endereço real localizou Parque Ibirapuera; Overpass esgotou o tempo de resposta e exibiu recuperação. Não foi confirmado carregamento de pontos reais nesta sessão. Leitor de tela, aparelho físico, permissão GPS real e envio ao contato não foram testados. O contato permanece vazio até o responsável configurá-lo. A Fase 6 de Meu espaço não integra esta entrega do mapa.
