@@ -432,3 +432,12 @@ Rótulos e mensagens usam “cópia do plano/pontos”, preservando nomes de arq
 “Adicionar um ponto” é o único botão para abrir o cadastro local, com foco no primeiro campo; Fechar retorna foco ao botão. O vazio orienta a usar esse botão; limpar filtros só aparece quando há lugares salvos. Sugerir um ponto continua separado por ter finalidade diferente (contato externo, sem salvar localmente). Cache PWA v28.
 
 Validação: node validar.cjs, sintaxe e build Worker; testes de textos sem jargão, motivos do PDF, entrada única do cadastro, lembretes sem/com pendências, falha de armazenamento e regressões de cópias/pontos. Chrome: campos bloqueados sem pendências, texto-guia, PDF com plano existente, abertura do cadastro/foco e campos arredondados no tema escuro. Plano concluído e desafio anteriores continuaram visíveis sem limpar o armazenamento. Não repetidos nesta fase: aparelhos físicos, leitor de tela, auditoria Lighthouse ou serviços externos ao vivo. Fases B–D não implementadas nesta entrega.
+
+
+## Refinamento UX — Fase B
+
+Meu espaço usa abas com rotas próprias para plano, desafio, conquistas e configurações. Setas, Home e End navegam pelas abas. Os componentes originais são preservados, sem mudar chaves ou conteúdo do localStorage.
+
+Aprender mostra quiz compacto antes dos 17 guias; limpar busca aparece somente com texto. Na cidade carrega o mapa ao entrar na tela, com nova tentativa em caso de falha; localização continua opcional e pontos públicos só são consultados após escolher categoria. O cabeçalho contém Aa para leitura, com fechamento por Escape e clique fora. Agir possui botão fixo ligado ao formulário existente, acima da navegação inferior.
+
+Validação: `node validar.cjs` cobre abas exclusivas, rotas, teclado, aliases de backup, limpeza condicional, carregamento do mapa por rota e controles de leitura, além das regressões existentes. Na prévia foram conferidos plano e desafio previamente salvos, busca fixa, mapa automático e larguras de 320, 360, 768 e 1024 px. Não foram realizados Lighthouse, teste em aparelho físico ou nova instalação offline nesta fase.

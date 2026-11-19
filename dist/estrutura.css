@@ -1,0 +1,25 @@
+/* Fase B: organização usando os tokens existentes. */
+.espaco-abas{width:100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-block:var(--space-6)}
+.espaco-abas button{white-space:normal;overflow-wrap:anywhere;font-size:1rem}
+#tela-meu-espaco>[role=tabpanel][hidden]{display:none!important}
+#espaco-conquistas,#espaco-configuracoes{padding:clamp(1rem,3vw,2rem);margin-block:var(--space-6);background:var(--surface);border-radius:var(--radius-md)}
+#tela-aprender #quiz{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-3) var(--space-6);padding:var(--space-6);align-items:center;margin-block:var(--space-4);border:1px solid var(--line);border-left:4px solid var(--green)}
+#quiz .quiz-banner-texto h2{font-size:var(--text-h3);margin:0 0 var(--space-2)}
+#quiz .quiz-banner-texto p{margin:0}
+#quiz #quiz-inicio{margin:0}#quiz-form,#quiz-resultado,#quiz .quiz-metodo{grid-column:1/-1}
+#quiz .quiz-metodo{margin:0;font-size:1rem}#quiz[hidden],#quiz [hidden],#limpar-busca-guias[hidden]{display:none!important}
+#tela-aprender #guias{margin-top:var(--space-4)}
+header .nav{grid-template-columns:auto minmax(0,1fr) auto auto}
+header .leitura-cabecalho{position:relative;margin:0;padding:0;border:0;background:transparent}
+header .leitura-cabecalho>summary{list-style:none;display:grid;place-items:center;min-width:48px;min-height:48px;padding:.5rem!important;border:1px solid var(--line);border-radius:var(--radius-pill);color:var(--green);background:var(--surface);font-size:1.2rem;cursor:pointer}
+header .leitura-cabecalho>summary::-webkit-details-marker{display:none}
+header .leitura-cabecalho[open]>summary{background:var(--soft);outline:2px solid var(--green)}
+header .leitura-cabecalho .leitura-controles{position:fixed;z-index:1002;right:1rem;top:6rem;display:grid;gap:.75rem;box-sizing:border-box;width:min(26rem,calc(100vw - 2rem));max-height:calc(100dvh - 8rem);overflow:auto;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:var(--radius-md);padding:1.25rem;box-shadow:var(--shadow-overlay)}
+.leitura-cabecalho .buttons{display:flex;flex-wrap:wrap;gap:.5rem}
+.agir-barra-fixa{position:fixed;z-index:80;bottom:1rem;right:max(1rem,calc((100vw - 1200px)/2));padding:.5rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-overlay);max-width:calc(100% - 2rem)}
+.agir-barra-fixa button{width:100%;white-space:normal}#tela-agir{padding-bottom:8rem}#tela-agir [id]{scroll-margin-bottom:12rem}
+#tela-na-cidade #cidade-mapa-abertura{min-height:16rem;justify-content:center}#cidade-mapa-abertura [hidden]{display:none!important}
+@media(max-width:64rem){header .nav{grid-template-columns:minmax(0,1fr) auto auto}header .nav .tema-toggle{grid-column:3;grid-row:1}header .leitura-cabecalho{grid-column:2;grid-row:1}.agir-barra-fixa{left:1rem;right:1rem;bottom:calc(var(--ecoa-nav-altura,6rem) + .5rem)}#tela-agir{padding-bottom:calc(var(--ecoa-nav-altura,6rem) + 8rem)}#tela-agir [id]{scroll-margin-bottom:calc(var(--ecoa-nav-altura,6rem) + 7rem)}}
+@media(max-width:40rem){.espaco-abas{grid-template-columns:repeat(2,minmax(0,1fr))}#tela-aprender #quiz{grid-template-columns:minmax(0,1fr);padding:1rem}#quiz #quiz-comecar{width:100%}}
+
+@media(max-width:40rem){header .nav{gap:.5rem}header .brand{white-space:nowrap;gap:.35rem;font-size:1.15rem}header .brand img{width:32px;height:32px}header .leitura-cabecalho>summary{box-sizing:border-box;width:48px;height:48px;min-width:48px;padding:0!important;font-size:1rem}.agir-barra-fixa button{padding:.65rem .75rem;font-size:1rem}}

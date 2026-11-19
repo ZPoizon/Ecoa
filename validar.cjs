@@ -69,7 +69,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['pontos-osm.js', 'pontos-osm-ui.js', 'pontos-osm.css', 'pontos-fixos.json', 'cidade-layout.css', 'aprender.js', 'aprender.css', 'agir.js', 'agir.css', 'inicio.js', 'inicio.css', 'rotas.js', 'design-system.css', 'index.html', 'sobre.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
+  for (const arquivo of ['estrutura.js','estrutura.css','pontos-osm.js', 'pontos-osm-ui.js', 'pontos-osm.css', 'pontos-fixos.json', 'cidade-layout.css', 'aprender.js', 'aprender.css', 'agir.js', 'agir.css', 'inicio.js', 'inicio.css', 'rotas.js', 'design-system.css', 'index.html', 'sobre.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -691,11 +691,12 @@ async function validarCidade() {
   const elementos=new Map();
   const criar=()=>({value:'',textContent:'',children:[],eventos:{},setAttribute(k,v){this[k]=v;},append(...v){this.children.push(...v);},replaceChildren(...v){this.children=v;},addEventListener(k,v){this.eventos[k]=v;},focus(){this.focado=true;},reset(){},remove(){},click(){this.clicado=true;}});
   const el=id=>{if(!elementos.has(id))elementos.set(id,criar());return elementos.get(id);};
-  const doc={getElementById:el,createElement:criar,head:criar(),body:criar()};
+  const eventosCidade={};const doc={getElementById:el,createElement:criar,head:criar(),body:criar(),addEventListener(k,f){eventosCidade[k]=f;}};
   const ambiente={localStorage:storage,crypto:{randomUUID:()=> 'novo'},confirm:()=>true,URL:{createObjectURL:()=> 'blob:teste',revokeObjectURL(){}},setTimeout:fn=>{fn();return 1;},clearTimeout(){}};
+  let aberturas=0;el('cidade-carregar').click=()=>{aberturas++;};
   const pontosAntesDaLeitura=storage.valor;
   await iniciarCidade(doc,ambiente,c);
-  assert.equal(storage.valor,pontosAntesDaLeitura);
+  assert.equal(storage.valor,pontosAntesDaLeitura);assert.equal(aberturas,0);eventosCidade['ecoa-rota']({detail:{tela:'inicio'}});assert.equal(aberturas,0);eventosCidade['ecoa-rota']({detail:{tela:'na-cidade'}});assert.equal(aberturas,1);
   el('cidade-adicionar').eventos.click();assert.equal(el('cidade-cadastro').hidden,false);assert.equal(el('ponto-nome').focado,true);
   el('cidade-fechar-cadastro').eventos.click();assert.equal(el('cidade-cadastro').hidden,true);assert.equal(el('cidade-adicionar')['aria-expanded'],'false');
   el('cidade-adicionar').eventos.click();assert.equal(el('cidade-adicionar')['aria-expanded'],'true');
@@ -930,8 +931,19 @@ function validarRotasFase1() {
   // Voltar e Avançar reais usam popstate; hashchange extra não duplica renderização.
   janela.location.hash=historico[--pos];eventos.popstate();assert.equal(doc.title,'Na cidade | Ecoa');const antes=rolagens;eventos.hashchange();assert.equal(rolagens,antes);
   janela.location.hash=historico[++pos];eventos.popstate();assert.equal(foco,'desafio-titulo');
-  router.navegar('#/meu-espaco/configuracoes');assert.equal(el('.leitura').open,true);
-  router.navegar('#/meu-espaco/conquistas');assert.equal(foco,'progresso-selos-titulo');
+  router.navegar('#/meu-espaco/configuracoes');assert.equal(el('espaco-configuracoes').hidden,false);assert.equal(foco,'configuracoes-titulo');
+  router.navegar('#/meu-espaco/conquistas');assert.equal(foco,'conquistas-titulo');
+  const paineis=['meu-plano','desafio','espaco-conquistas','espaco-configuracoes'];
+  for(const [i,sub] of ['','desafio','conquistas','configuracoes'].entries()){
+   router.navegar('#/meu-espaco'+(sub?'/'+sub:''));
+   assert.deepEqual(paineis.map(id=>el(id).hidden),paineis.map((_,j)=>i!==j));
+   const nome=sub||'plano';assert.equal(el('espaco-tab-'+nome).attrs['aria-selected'],'true');
+   el('espaco-tab-'+nome).dataset.rota='#/meu-espaco'+(sub?'/'+sub:'');
+  }
+  el('espaco-abas').eventos.keydown({key:'ArrowRight',target:el('espaco-tab-configuracoes'),preventDefault(){}});
+  assert.equal(janela.location.hash,'#/meu-espaco');assert.equal(foco,'espaco-tab-plano');
+  el('espaco-abas').eventos.keydown({key:'End',target:el('espaco-tab-plano'),preventDefault(){}});assert.equal(foco,'espaco-tab-configuracoes');
+  router.navegar('#importar-json');assert.equal(el('espaco-configuracoes').hidden,false);
   router.abrirBusca();assert.equal(janela.location.hash,'#/agir');
   router.navegar('#acao='+encodeURIComponent('6:ação antiga'));assert.equal(acao,'6:ação antiga');assert.equal(telas[1].hidden,false);
   router.navegar('#/desconhecida');assert.equal(doc.title,'Início | Ecoa');estado();
@@ -943,7 +955,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v28'/);
+  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v31'/);
   assert.match(fs.readFileSync('dist/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('dist/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1064,11 +1076,11 @@ function validarBuscaGuias() {
  const els=new Map(),el=id=>{if(!els.has(id))els.set(id,{value:'',eventos:{},addEventListener(n,fn){this.eventos[n]=fn;},focus(){this.focado=true;}});return els.get(id);};
  const cards=objetivos.map((_,i)=>({dataset:{ods:String(i+1)},hidden:false}));
  const ui=iniciarBuscaGuias({getElementById:el,querySelectorAll:()=>cards},objetivos);
- const campo=el('buscar-ods-guia');campo.value='ODS 6';campo.eventos.input();
- assert.equal(cards.filter(c=>!c.hidden).length,1);assert.equal(cards[5].hidden,false);
+ const campo=el('buscar-ods-guia');assert.equal(el('limpar-busca-guias').hidden,true);campo.value='ODS 6';campo.eventos.input();
+ assert.equal(el('limpar-busca-guias').hidden,false);assert.equal(cards.filter(c=>!c.hidden).length,1);assert.equal(cards[5].hidden,false);
  assert.equal(el('guias-contagem').textContent,'1 objetivo encontrado');
  campo.value='inexistente';ui.atualizar();assert.equal(el('guias-vazio').hidden,false);
- el('guias-mostrar-todos').eventos.click();assert.equal(campo.value,'');assert.equal(campo.focado,true);assert.equal(cards.filter(c=>!c.hidden).length,17);
+ el('guias-mostrar-todos').eventos.click();assert.equal(campo.value,'');assert.equal(el('limpar-busca-guias').hidden,true);assert.equal(campo.focado,true);assert.equal(cards.filter(c=>!c.hidden).length,17);
  campo.value='água';ui.atualizar();el('limpar-busca-guias').eventos.click();assert.equal(el('guias-vazio').hidden,true);
  console.log('OK Aprender: busca sem acentos/caixa, número exato, termos, vazio, limpeza, foco e cartões preservados');
 }
@@ -1147,3 +1159,25 @@ function validarRefinamentoA(){
  console.log('OK Fase A: cópias sem jargão, entrada única para adicionar ponto, textos-guia e motivos acessíveis');
 }
 validarRefinamentoA();
+
+function validarEstruturaB(){
+ const fs=require('node:fs');const html=fs.readFileSync('dist/index.html','utf8');
+ assert.match(html,/<button type="submit" form="filtros">Encontrar uma ação/);
+ assert.match(html,/id="espaco-abas" role="tablist"/);
+ for(const nome of ['plano','desafio','conquistas','configuracoes'])assert.match(html,new RegExp('id="espaco-tab-'+nome+'" role="tab"'));
+ assert.equal((html.match(/id="leitura-painel"/g)||[]).length,1);
+ assert.ok(html.indexOf('id="leitura-painel"')<html.indexOf('</header>'));
+ assert.ok(html.indexOf('id="quiz"')<html.indexOf('id="cartoes-guias"'));
+ let focou=false,valor,observer;const eventos={},cliques={};
+ const gatilho={focus(){focou=true;}},painel={open:true,querySelector:()=>gatilho,contains:e=>e==='dentro',addEventListener(k,f){eventos[k]=f;}};
+ const doc={getElementById:()=>painel,querySelector:()=>({getBoundingClientRect:()=>({height:100.5})}),addEventListener(k,f){cliques[k]=f;},documentElement:{style:{setProperty(k,v){valor=v;}}}};
+ const janela={ResizeObserver:class{constructor(f){observer=f;}observe(){}}};
+ require('./dist/estrutura').iniciarEstruturaEcoa(doc,janela);assert.equal(valor,'101px');observer();
+ cliques.click({target:'dentro'});assert.equal(painel.open,true);
+ eventos.keydown({key:'Escape',preventDefault(){}});assert.equal(painel.open,false);assert.equal(focou,true);
+ painel.open=true;cliques.click({target:'fora'});assert.equal(painel.open,false);
+ painel.open=true;cliques['ecoa-rota']({detail:{alvo:'preferencia-tema'}});assert.equal(painel.open,true);
+ cliques['ecoa-rota']({detail:{}});assert.equal(painel.open,false);
+ console.log('OK Fase B: abas e formulários preservados, Aa no cabeçalho/Escape/clique fora, barra adaptada à navegação, mapa só ao entrar e busca condicional');
+}
+validarEstruturaB();

@@ -6,7 +6,7 @@ const atalhosEcoa = {
   estimativa:'#/agir/calcular',quiz:'#/aprender',guias:'#/aprender','cartoes-guias':'#/aprender',
   'na-minha-cidade':'#/na-cidade','cidade-lista':'#/na-cidade','cidade-form':'#/na-cidade',
   desafio:'#/meu-espaco/desafio','meu-plano':'#/meu-espaco','plano-titulo':'#/meu-espaco',
-  conquistas:'#/meu-espaco/conquistas','progresso-selos':'#/meu-espaco/conquistas',
+  'exportar-json':'#/meu-espaco/configuracoes','importar-json':'#/meu-espaco/configuracoes','progresso-titulo':'#/meu-espaco/conquistas','progresso-grafico':'#/meu-espaco/conquistas',conquistas:'#/meu-espaco/conquistas','progresso-selos':'#/meu-espaco/conquistas',
   'preferencia-tema':'#/meu-espaco/configuracoes',lembretes:'#/meu-espaco'
 };
 function resolverRotaEcoa(hash) {
@@ -22,7 +22,14 @@ function resolverRotaEcoa(hash) {
   const parametros=new URLSearchParams(consulta);
   const acao=tela==='agir'&&!sub?parametros.get('acao'):null;
   const canonico='#/'+tela+(sub?'/'+sub:'')+(acao!==null?'?acao='+encodeURIComponent(acao):'');
-  return {tela,hash:canonico,titulo:(ods?'ODS '+ods:sub==='calcular'?'Calcular impacto':telasEcoa[tela])+' | Ecoa',ods,sub:sub||null,acao,alvo};
+  return {tela,hash:canonico,titulo:(ods?'ODS '+ods:sub==='calcular'?'Calcular impacto':tela==='meu-espaco'&&sub?({desafio:'Desafio de 7 dias',conquistas:'Conquistas',configuracoes:'Configurações'}[sub]):telasEcoa[tela])+' | Ecoa',ods,sub:sub||null,acao,alvo};
+}
+function atualizarAbasEspaco(doc,sub){
+ const selecionada=['desafio','conquistas','configuracoes'].includes(sub)?sub:'plano';
+ for(const [nome,id] of [['plano','meu-plano'],['desafio','desafio'],['conquistas','espaco-conquistas'],['configuracoes','espaco-configuracoes']]){
+  const ativo=nome===selecionada,tab=doc.getElementById('espaco-tab-'+nome);
+  doc.getElementById(id).hidden=!ativo;tab.setAttribute('aria-selected',String(ativo));tab.tabIndex=ativo?0:-1;
+ }
 }
 function iniciarRotasEcoa(doc,janela,adaptadores={}) {
   const $=id=>doc.getElementById(id);
@@ -36,6 +43,7 @@ function iniciarRotasEcoa(doc,janela,adaptadores={}) {
     doc.querySelectorAll('[data-nav]').forEach(el=>{
       if(el.dataset.nav===rota.tela)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');
     });
+    atualizarAbasEspaco(doc,rota.sub);
     const calcular=rota.sub==='calcular';
     $('painel-buscar').hidden=calcular;$('painel-calcular').hidden=!calcular;
     for(const [id,selecionada] of [['aba-buscar',!calcular],['aba-calcular',calcular]]){
@@ -56,11 +64,11 @@ function iniciarRotasEcoa(doc,janela,adaptadores={}) {
     if(rota.acao!==null)adaptadores.abrirAcao?.(rota.acao);
     doc.title=rota.titulo;
     const alvo=rota.ods?$('guia-nome'):rota.sub==='desafio'?$('desafio-titulo'):
-      rota.sub==='conquistas'?$('progresso-selos-titulo'):rota.sub==='configuracoes'?$('preferencia-tema'):$('tela-'+rota.tela+'-titulo');
-    if(rota.sub==='configuracoes')doc.querySelector('.leitura').open=true;
-    if(alvo){if(rota.sub!=='configuracoes')alvo.tabIndex=-1;alvo.focus({preventScroll:true});}
+      rota.sub==='conquistas'?$('conquistas-titulo'):rota.sub==='configuracoes'?$('configuracoes-titulo'):$('tela-'+rota.tela+'-titulo');
+    if(rota.alvo==='preferencia-tema')doc.querySelector('.leitura').open=true;
+    if(alvo){alvo.tabIndex=-1;alvo.focus({preventScroll:true});}
     janela.scrollTo({top:0,left:0,behavior:'instant'});
-    if(rota.tela==='meu-espaco'&&rota.sub)alvo?.scrollIntoView({block:'start',behavior:'instant'});
+
     if(rota.alvo&&rota.alvo!=='inicio'){const destino=$(rota.alvo);abrirDetalhes(destino);destino?.scrollIntoView({block:'start',behavior:'instant'});}
     doc.dispatchEvent(new janela.CustomEvent('ecoa-rota',{detail:rota}));
     return rota;
@@ -99,12 +107,18 @@ function iniciarRotasEcoa(doc,janela,adaptadores={}) {
     evento.preventDefault();const proxima=evento.key==='Home'?tabs[0]:evento.key==='End'?tabs[1]:tabs[1-i];
     navegar(proxima.dataset.rota);proxima.focus();
   });
+  $('espaco-abas').addEventListener('keydown',evento=>{
+    const tabs=['plano','desafio','conquistas','configuracoes'].map(n=>$('espaco-tab-'+n));
+    const i=tabs.indexOf(evento.target);if(i<0||!['ArrowLeft','ArrowRight','Home','End'].includes(evento.key))return;
+    evento.preventDefault();const indice=evento.key==='Home'?0:evento.key==='End'?tabs.length-1:(i+(evento.key==='ArrowLeft'?-1:1)+tabs.length)%tabs.length;
+    navegar(tabs[indice].dataset.rota);tabs[indice].focus();
+  });
   janela.addEventListener('hashchange',()=>aplicar(janela.location.hash));
   janela.addEventListener('popstate',()=>aplicar(janela.location.hash));
   aplicar(janela.location.hash,true);
   return {navegar,abrirBusca,aplicar};
 }
-if(typeof module!=='undefined')module.exports={resolverRotaEcoa,iniciarRotasEcoa,atalhosEcoa};
+if(typeof module!=='undefined')module.exports={resolverRotaEcoa,iniciarRotasEcoa,atalhosEcoa,atualizarAbasEspaco};
 else {
   // Todos os módulos defer já foram inicializados; os nós e seus eventos permanecem vivos.
   window.EcoaRouter=iniciarRotasEcoa(document,window,{

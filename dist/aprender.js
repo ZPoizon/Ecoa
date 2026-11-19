@@ -13,6 +13,7 @@ function iniciarBuscaGuias(doc,nomes) {
   const cartoes=[...doc.querySelectorAll('#cartoes-guias .guia-escolha')];
   function atualizar(){
     const numeros=encontrarGuias(nomes,campo.value);
+    $('limpar-busca-guias').hidden=campo.value.length===0;
     cartoes.forEach(card=>card.hidden=!numeros.includes(Number(card.dataset.ods)));
     $('guias-contagem').textContent=numeros.length===1?'1 objetivo encontrado':`${numeros.length} objetivos encontrados`;
     $('guias-vazio').hidden=numeros.length!==0;

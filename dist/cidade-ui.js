@@ -80,7 +80,7 @@ async function iniciarCidade(doc,ambiente,api) {
     }catch(e){aviso(e.message||'Não foi possível abrir o arquivo.');}finally{e.target.value='';$('cidade-status').focus();}
   });
   $('cidade-carregar').addEventListener('click',async()=>{
-    if(mapa||carregando)return;carregando=true;$('cidade-carregar').disabled=true;aviso('Carregando mapa…');
+    if(mapa||carregando)return;carregando=true;$('cidade-carregar').hidden=true;$('cidade-carregar').disabled=true;aviso('Carregando mapa…');
     try{
       await carregarLeafletCidade(doc,ambiente);
       $('cidade-mapa').hidden=false;
@@ -98,11 +98,11 @@ async function iniciarCidade(doc,ambiente,api) {
       if(mapa.on){mapa.on('moveend',atualizarVies);atualizarVies();}
       ambiente.ecoaPontosMapa?.conectar(mapa);
       $('cidade-carregar').hidden=true;$('cidade-mapa-abertura').hidden=true;aviso('Mapa aberto. Os mesmos locais estão na lista abaixo.');
-    }catch{if(mapa){mapa.remove();mapa=null;camada=null;visaoInicial=false;}$('cidade-mapa').hidden=true;aviso('Não foi possível carregar o mapa. A lista e os cadastros continuam funcionando. Você pode tentar novamente.');}
+    }catch{$('cidade-carregar').hidden=false;if(mapa){mapa.remove();mapa=null;camada=null;visaoInicial=false;}$('cidade-mapa').hidden=true;aviso('Não foi possível carregar o mapa. A lista e os cadastros continuam funcionando. Você pode tentar novamente.');}
     finally{carregando=false;$('cidade-carregar').disabled=false;}
   });
   try{const salvo=ambiente.localStorage.getItem(chaveCidade);if(salvo)pontos=lerJsonCidade(salvo);}catch{leituraFalhou=true;$('cidade-exportar').disabled=true;aviso('Não foi possível ler os pontos salvos. Nenhum dado foi apagado; novos cadastros estão bloqueados para evitar sobrescrever esses dados.');}
-  doc.addEventListener?.('ecoa-rota',e=>{if(e.detail.tela==='na-cidade'&&mapa)mapa.invalidateSize?.({animate:false});});
+  doc.addEventListener?.('ecoa-rota',e=>{if(e.detail.tela==='na-cidade'){if(mapa)mapa.invalidateSize?.({animate:false});else $('cidade-carregar').click();}});
   desenhar();
 }
 function carregarLeafletCidade(doc,ambiente) {
