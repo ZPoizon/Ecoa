@@ -36,7 +36,9 @@ function renderizarProgressoPlano(documento, dados, nomes) {
     nome.className='progresso-rotulo';
     nome.textContent=`ODS ${item.ods} · ${nomes[item.ods-1]}`;
     const quantidade=documento.createElement('span');
-    quantidade.textContent=`${item.concluidas} de ${item.salvas} ações concluídas`;
+    quantidade.textContent=`${item.concluidas} de ${item.salvas} ${item.salvas===1?'ação concluída':'ações concluídas'}`;
+    const icone=documento.createElement('img');icone.src=`ods/${item.ods}.webp`;icone.alt='';icone.width=44;icone.height=44;icone.className='progresso-ods-icone';
+    nome.append(icone);
     const trilho=documento.createElement('span');
     trilho.className='progresso-trilho';trilho.setAttribute('aria-hidden','true');
     const barra=documento.createElement('span');barra.style.width=(item.concluidas/maximo*100)+'%';
@@ -45,11 +47,15 @@ function renderizarProgressoPlano(documento, dados, nomes) {
   const selos=documento.querySelector('#progresso-selos');selos.replaceChildren();
   dados.selos.forEach(selo=>{
     const item=documento.createElement('li');item.className='selo'+(selo.conquistado?' conquistado':'');
-    const estado=documento.createElement('span');estado.className='selo-estado';estado.textContent=selo.conquistado?'✓ Conquistado':'A caminho';
+    const estado=documento.createElement('span');estado.className='selo-estado';estado.textContent=selo.conquistado?'Conquistado':'A caminho';
+    const icone=documento.createElement('span');icone.className='selo-icone';icone.setAttribute('aria-hidden','true');
+    icone.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(selo.conquistado?'<path d="m5 12 4 4 10-10"/>':'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 15v2"/>')+'</svg>';
+    estado.append(icone);
     const nome=documento.createElement('h4');nome.textContent=selo.nome;
     const descricao=documento.createElement('p');descricao.textContent=selo.descricao;
     const contagem=documento.createElement('p');contagem.className='hint';contagem.textContent=`${Math.min(selo.valor,selo.meta)} de ${selo.meta}`;
-    item.append(estado,nome,descricao,contagem);selos.append(item);
+    const barra=documento.createElement('progress');barra.className='selo-progresso';barra.setAttribute('max',String(selo.meta));barra.setAttribute('value',String(Math.min(selo.valor,selo.meta)));barra.setAttribute('aria-label',selo.nome);barra.textContent=contagem.textContent;
+    item.append(estado,nome,descricao,contagem,barra);selos.append(item);
   });
 }
 function atualizarProgressoPlano(planoAtual) {

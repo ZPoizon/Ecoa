@@ -441,3 +441,10 @@ Meu espaço usa abas com rotas próprias para plano, desafio, conquistas e confi
 Aprender mostra quiz compacto antes dos 17 guias; limpar busca aparece somente com texto. Na cidade carrega o mapa ao entrar na tela, com nova tentativa em caso de falha; localização continua opcional e pontos públicos só são consultados após escolher categoria. O cabeçalho contém Aa para leitura, com fechamento por Escape e clique fora. Agir possui botão fixo ligado ao formulário existente, acima da navegação inferior.
 
 Validação: `node validar.cjs` cobre abas exclusivas, rotas, teclado, aliases de backup, limpeza condicional, carregamento do mapa por rota e controles de leitura, além das regressões existentes. Na prévia foram conferidos plano e desafio previamente salvos, busca fixa, mapa automático e larguras de 320, 360, 768 e 1024 px. Não foram realizados Lighthouse, teste em aparelho físico ou nova instalação offline nesta fase.
+
+
+## Refinamento UX — Fase C
+
+Cartões do Início compactos com toda a área clicável; estatísticas em três colunas; conquistas com cadeado/check em SVG, progresso nativo acessível e acento âmbar dos tokens existentes. Ícones oficiais já presentes no projeto identificam os ODS no gráfico. Explicações de lembretes, desafio e conquistas ficam em detalhes recolhíveis; tema com ícone e nome acessível. Sem novas dependências ou mudanças no localStorage. Cache incrementado para v32.
+
+Testes: `node validar.cjs` inclui progresso vazio, parcial, completo e recalculado, rótulos das barras, ícones e singular. Verificação no navegador em 320, 360, 768 px e desktop, temas claro/escuro, cartão clicável e detalhes por teclado. Não executados Lighthouse, leitor de tela real, aparelho físico ou reinstalação offline.

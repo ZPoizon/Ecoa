@@ -568,7 +568,25 @@ async function validarProgresso() {
   const doc={querySelector:el,createElement:elemento,querySelectorAll:()=>[],addEventListener(){}};
   renderizarProgressoPlano(doc,vazio,objetivos);
   assert.equal(el('#progresso-vazio').hidden,false);assert.equal(el('#progresso-grafico').children.length,0);
+  for(const selo of el('#progresso-selos').children){
+    assert.equal(selo.children[4].value,'0');
+    assert.match(selo.children[0].children[0].innerHTML,/<rect/);
+    assert.equal(selo.children[4]['aria-label'],selo.children[1].textContent);
+  }
   renderizarProgressoPlano(doc,dados,objetivos);
+  for(const selo of el('#progresso-selos').children){
+    assert.equal(selo.children[4].value,selo.children[4].max);
+    assert.doesNotMatch(selo.children[0].children[0].innerHTML,/<rect/);
+  }
+  renderizarProgressoPlano(doc,calcularProgressoPlano(new Map([[chave(acoes[0]),true]]),acoes),objetivos);
+  assert.equal(el('#progresso-selos').children[1].children[4].value,'1');
+  assert.equal(el('#progresso-selos').children[1].children[4].max,'5');
+  assert.match(el('#progresso-grafico').children[0].children[1].textContent,/1 de 1 ação concluída/);
+  assert.equal(el('#progresso-grafico').children[0].children[0].children[0].src,'ods/1.webp');
+  renderizarProgressoPlano(doc,vazio,objetivos);
+  assert.equal(el('#progresso-selos').children[1].children[4].value,'0');
+  renderizarProgressoPlano(doc,dados,objetivos);
+  console.log('OK Fase C: cadeados, progresso zero/parcial/completo/recalculado, rótulos, ícones ODS e singular');
   assert.equal(el('#progresso-vazio').hidden,true);assert.equal(el('#progresso-grafico').children.length,17);
   assert.equal(el('#progresso-grafico').children[11].children[2].children[0].style.width,'100%');
   assert.equal(el('#progresso-selos').children.length,4);
@@ -955,7 +973,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v31'/);
+  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v32'/);
   assert.match(fs.readFileSync('dist/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('dist/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
