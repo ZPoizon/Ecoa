@@ -1,6 +1,6 @@
 // Incremente a versão ao atualizar arquivos armazenados para uso offline.
 const prefixo = 'oqdpf:' + self.registration.scope + ':';
-const versao = prefixo + 'v33';
+const versao = prefixo + 'v34';
 const arquivos = [
   'rotina.js', 'rotina.css', 'refino-visual.css', 'estrutura.js', 'estrutura.css',
   'pontos-osm.js', 'pontos-osm-ui.js', 'pontos-osm.css', 'pontos-fixos.json', 'cidade-layout.css', 'aprender.js', 'aprender.css', 'agir.js', 'agir.css', 'atividades.js', 'inicio.js', 'inicio.css', 'rotas.js', 'design-system.css', 'acessibilidade.js', 'acessibilidade.css', 'index.html', 'sobre.html', 'style.css', 'manifest.json', 'pwa.js', 'acoes.js', 'app.js',

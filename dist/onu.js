@@ -48,7 +48,7 @@ document.addEventListener('tema-ods', async ({ detail: temas }) => {
   renderizarOnu({}, temas);
   statusOnu.textContent = 'Consultando publicações oficiais…';
   try {
-    const resposta = await fetch('api/onu?ods=' + temas.join(','), { signal: consulta.signal });
+    const resposta = await fetch('/api/onu?ods=' + temas.join(','), { signal: consulta.signal });
     if (!resposta.ok) throw new Error('Consulta indisponível');
     const dados = await resposta.json();
     if (consulta.signal.aborted) return;

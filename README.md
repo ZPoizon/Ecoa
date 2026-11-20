@@ -70,7 +70,7 @@ A estrutura descrita do projeto utiliza:
 - **JSON** — representação de dados;
 - **localStorage** — persistência local de ações salvas;
 - **Node.js** — execução dos testes automatizados;
-- **Worker** — suporte à consulta de conteúdos externos;
+- **Vercel Functions** — consulta complementar de conteúdos da ONU Brasil;
 - **Git e GitHub** — versionamento e colaboração.
 
 > Outras tecnologias e recursos, como PWA, gráficos, mapas e quiz, podem ser documentados aqui após a confirmação de sua implementação na versão atual do repositório.
@@ -89,11 +89,14 @@ Conforme a organização inicialmente descrita:
 │   ├── guias.js      # Guias educativos dos 17 ODS
 │   ├── plano.js      # Atalhos e plano pessoal
 │   └── onu.js        # Integração com conteúdos da ONU Brasil
-├── worker/           # Serviço de consulta externa
+├── api/onu.js        # Função serverless da consulta à ONU Brasil
+├── vercel.json       # Saída estática e configuração da função
+├── server.cjs        # Servidor local para testar a interface e a API
+├── package.json      # Comandos de desenvolvimento, build e testes
 └── validar.cjs       # Testes automatizados
 ```
 
-A estrutura pode variar conforme a evolução do repositório.
+O diretório `worker/` contém a implementação anterior para outra plataforma e não é utilizado pelo deploy da Vercel.
 
 ## 🚀 Como executar
 
@@ -101,7 +104,30 @@ A estrutura pode variar conforme a evolução do repositório.
 2. Para testar a interface, sirva a pasta `dist/` utilizando um servidor HTTP local, como a extensão **Live Server** do VS Code.
 3. Acesse o endereço local exibido pelo servidor no navegador.
 
-> A consulta automática a conteúdos externos pode depender da configuração e execução do Worker. A interface e o catálogo de ações são independentes dessa consulta.
+> A consulta automática a conteúdos externos pode depender da disponibilidade da função serverless e da ONU Brasil. A interface e o catálogo de ações são independentes dessa consulta.
+
+### Executar localmente
+
+Na raiz do projeto, execute:
+
+```bash
+npm run dev
+```
+
+A interface fica disponível em `http://127.0.0.1:4173`.
+
+### Publicar na Vercel
+
+O projeto pode ser importado diretamente no painel da Vercel a partir do repositório Git:
+
+- Diretório raiz (Root Directory): raiz do repositório (`.`)
+- Plataforma (Framework Preset): Other
+- Comando de build (Build Command): `npm run build`
+- Diretório de saída (Output Directory): `dist`
+
+O arquivo `api/onu.js` fornece a consulta a conteúdos da ONU Brasil como função serverless. Não é necessário publicar o diretório `worker/`, específico da hospedagem anterior. Durante o build, os metadados de compartilhamento são atualizados para o domínio da implantação informado pela Vercel.
+
+A busca de endereços, pontos do OpenStreetMap e mapa dependem dos provedores públicos externos; esses recursos precisam de conexão e podem ter limites ou indisponibilidades próprios. O plano, as preferências e os pontos cadastrados manualmente permanecem no armazenamento local do navegador.
 
 ### Executar os testes
 
@@ -454,6 +480,6 @@ Testes: `node validar.cjs` inclui progresso vazio, parcial, completo e recalcula
 
 Ação do dia derivada da data local e da ordem do catálogo; estável durante o dia, atualizada ao voltar ao Início ou à aba. Abre o passo a passo pela rota de compartilhamento existente. O resumo do plano é apresentado como Continuar de onde parei. O plano vazio tem um convite único para encontrar uma ação, preservando PDF e lembretes com suas mensagens.
 
-O desafio ganhou 17 botões com ícones oficiais, nomes acessíveis, foco e estado selecionado; o seletor original continua sendo a fonte da escolha e o desafio salvo não muda até a confirmação existente. Instalar o Ecoa fica em Meu espaço > Configurações: solicitação nativa somente após clique, instruções alternativas quando indisponível e ocultação quando aberto como aplicativo. Sem novas dependências ou chaves de armazenamento. Cache v33 inclui rotina.js e rotina.css.
+O desafio ganhou 17 botões com ícones oficiais, nomes acessíveis, foco e estado selecionado; o seletor original continua sendo a fonte da escolha e o desafio salvo não muda até a confirmação existente. Instalar o Ecoa fica em Meu espaço > Configurações: solicitação nativa somente após clique, instruções alternativas quando indisponível e ocultação quando aberto como aplicativo. Sem novas dependências ou chaves de armazenamento. Cache v34 inclui a integração com a função da Vercel.
 
 Validação: node validar.cjs cobre data local, troca de dia, links, seleção dos 17 ODS, instalação somente por clique, recusa, erro, modo aplicativo e plano vazio/preenchido. No navegador foram conferidos a ação do dia, o plano existente e a seleção pelo teclado. Instalação real em Android/iOS, Lighthouse e uso em aparelho físico não foram verificados.
