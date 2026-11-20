@@ -35,6 +35,7 @@ function atualizarPlano() {
   if(typeof window!=='undefined')window.ecoaLembretes?.atualizar();
   atualizarProgressoPlano(plano);
   planoLista.replaceChildren();
+  const vazio=document.querySelector('#plano-vazio');if(vazio)vazio.hidden=plano.size>0;
   exportarJson.disabled = plano.size === 0;
   baixarPlano.disabled = exportandoPlano || plano.size === 0;
   atualizarAjudaPdf();

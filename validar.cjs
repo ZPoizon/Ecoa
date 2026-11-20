@@ -595,13 +595,13 @@ async function validarProgresso() {
     localStorage:{getItem:()=>null,setItem:(k,v)=>{salvo=v;}},
     ...require('./dist/plano-json')};
   runInNewContext(readFileSync('dist/progresso.js','utf8')+'\n'+readFileSync('dist/plano.js','utf8'),ctx);
-  assert.equal(el('#baixar-plano').disabled,true);assert.match(el('#plano-pdf-ajuda').textContent,/Salve uma ação/);
-  el('#salvar-acao').eventos.click();assert.equal(el('#progresso-pendentes').textContent,'1');assert.equal(el('#baixar-plano').disabled,false);assert.match(el('#plano-pdf-ajuda').textContent,/Baixe um PDF/);
+  assert.equal(el('#baixar-plano').disabled,true);assert.equal(el('#plano-vazio').hidden,false);assert.match(el('#plano-pdf-ajuda').textContent,/Salve uma ação/);
+  el('#salvar-acao').eventos.click();assert.equal(el('#plano-vazio').hidden,true);assert.equal(el('#progresso-pendentes').textContent,'1');assert.equal(el('#baixar-plano').disabled,false);assert.match(el('#plano-pdf-ajuda').textContent,/Baixe um PDF/);
   const caixa=el('#plano-lista').children[0].children[0].children[0];caixa.checked=true;caixa.eventos.change();
   assert.equal(el('#progresso-concluidas').textContent,'1');assert.equal(el('#progresso-ods').textContent,'1');
   caixa.checked=false;caixa.eventos.change();assert.equal(el('#progresso-concluidas').textContent,'0');
   el('#plano-lista').children[0].children[1].eventos.click();assert.equal(el('#progresso-pendentes').textContent,'0');
-  assert.equal(el('#baixar-plano').disabled,true);assert.match(el('#plano-pdf-ajuda').textContent,/Salve uma ação/);
+  assert.equal(el('#baixar-plano').disabled,true);assert.equal(el('#plano-vazio').hidden,false);assert.match(el('#plano-pdf-ajuda').textContent,/Salve uma ação/);
   const backup=require('./dist/plano-json').exportarPlanoJson(completo,acoes);
   el('#arquivo-plano').files=[{name:'ecoa.json',size:backup.length,text:async()=>backup}];
   await el('#arquivo-plano').eventos.change();
@@ -973,7 +973,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v32'/);
+  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v33'/);
   assert.match(fs.readFileSync('dist/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('dist/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1199,3 +1199,33 @@ function validarEstruturaB(){
  console.log('OK Fase B: abas e formulários preservados, Aa no cabeçalho/Escape/clique fora, barra adaptada à navegação, mapa só ao entrar e busca condicional');
 }
 validarEstruturaB();
+
+async function validarRotinaD(){
+ const {escolherAcaoDoDia,iniciarAcaoDiaria,iniciarGradeDesafio,iniciarInstalacaoEcoa}=require('./dist/rotina');
+ const data=new Date(2026,10,19,1),fim=new Date(2026,10,19,23,59);
+ assert.equal(escolherAcaoDoDia(acoes,data),escolherAcaoDoDia(acoes,fim));
+ assert.notEqual(escolherAcaoDoDia(acoes,data),escolherAcaoDoDia(acoes,new Date(2026,10,20)));
+ assert.equal(escolherAcaoDoDia([],data),null);assert.equal(escolherAcaoDoDia(acoes,new Date('x')),null);
+ const criar=()=>({children:[],eventos:{},hidden:false,value:'1',textContent:'',setAttribute(k,v){this[k]=v;},append(...v){this.children.push(...v);},addEventListener(k,f){this.eventos[k]=f;}});
+ const els=new Map(),el=id=>{if(!els.has(id))els.set(id,criar());return els.get(id);};
+ const eventos={},doc={getElementById:el,createElement:criar,addEventListener(k,f){eventos[k]=f;}};
+ let hoje=data;iniciarAcaoDiaria(doc,acoes,()=>hoje);const primeiro=el('acao-dia-link').href;
+ assert.equal(require('./dist/compartilhar').acaoDoLink(primeiro,acoes),escolherAcaoDoDia(acoes,data));
+ hoje=new Date(2026,10,20);eventos.visibilitychange();assert.notEqual(el('acao-dia-link').href,primeiro);
+ iniciarGradeDesafio(doc,objetivos);assert.equal(el('desafio-grade').children.length,17);
+ const botoes=el('desafio-grade').children;botoes[5].eventos.click();assert.equal(el('desafio-ods').value,'6');
+ assert.equal(botoes.filter(b=>b['aria-pressed']==='true').length,1);assert.equal(botoes[5]['aria-pressed'],'true');
+ assert.equal(botoes[5].children[0].src,'ods/6.webp');assert.match(botoes[5]['aria-label'],/ODS 6/);
+ const eventosJanela={},modo={matches:false,addEventListener(k,f){this.change=f;}};
+ iniciarInstalacaoEcoa(doc,{navigator:{},matchMedia:()=>modo,addEventListener(k,f){eventosJanela[k]=f;}});
+ await el('instalar-ecoa').eventos.click();assert.match(el('instalacao-ajuda').textContent,/Safari/);
+ let prompts=0;eventosJanela.beforeinstallprompt({preventDefault(){},async prompt(){prompts++;},userChoice:Promise.resolve({outcome:'dismissed'})});
+ assert.equal(prompts,0);await el('instalar-ecoa').eventos.click();assert.equal(prompts,1);assert.match(el('instalacao-ajuda').textContent,/Tudo bem/);
+ await el('instalar-ecoa').eventos.click();assert.equal(prompts,1);
+ eventosJanela.beforeinstallprompt({preventDefault(){},async prompt(){throw Error('falha');}});
+ await el('instalar-ecoa').eventos.click();assert.equal(el('instalar-ecoa').disabled,false);assert.match(el('instalacao-ajuda').textContent,/Não foi possível/);
+ eventosJanela.appinstalled();assert.equal(el('instalar-ecoa').hidden,true);
+ modo.matches=true;modo.change();assert.match(el('instalacao-ajuda').textContent,/como aplicativo/);
+ console.log('OK Fase D: data local, virada do dia, link da ação, grade de 17 ODS, seleção, instalação opt-in, recusa, falha e standalone');
+}
+validarRotinaD().catch(e=>{console.error(e);process.exitCode=1;});

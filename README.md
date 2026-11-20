@@ -448,3 +448,12 @@ Validação: `node validar.cjs` cobre abas exclusivas, rotas, teclado, aliases d
 Cartões do Início compactos com toda a área clicável; estatísticas em três colunas; conquistas com cadeado/check em SVG, progresso nativo acessível e acento âmbar dos tokens existentes. Ícones oficiais já presentes no projeto identificam os ODS no gráfico. Explicações de lembretes, desafio e conquistas ficam em detalhes recolhíveis; tema com ícone e nome acessível. Sem novas dependências ou mudanças no localStorage. Cache incrementado para v32.
 
 Testes: `node validar.cjs` inclui progresso vazio, parcial, completo e recalculado, rótulos das barras, ícones e singular. Verificação no navegador em 320, 360, 768 px e desktop, temas claro/escuro, cartão clicável e detalhes por teclado. Não executados Lighthouse, leitor de tela real, aparelho físico ou reinstalação offline.
+
+
+## Refinamento UX — Fase D
+
+Ação do dia derivada da data local e da ordem do catálogo; estável durante o dia, atualizada ao voltar ao Início ou à aba. Abre o passo a passo pela rota de compartilhamento existente. O resumo do plano é apresentado como Continuar de onde parei. O plano vazio tem um convite único para encontrar uma ação, preservando PDF e lembretes com suas mensagens.
+
+O desafio ganhou 17 botões com ícones oficiais, nomes acessíveis, foco e estado selecionado; o seletor original continua sendo a fonte da escolha e o desafio salvo não muda até a confirmação existente. Instalar o Ecoa fica em Meu espaço > Configurações: solicitação nativa somente após clique, instruções alternativas quando indisponível e ocultação quando aberto como aplicativo. Sem novas dependências ou chaves de armazenamento. Cache v33 inclui rotina.js e rotina.css.
+
+Validação: node validar.cjs cobre data local, troca de dia, links, seleção dos 17 ODS, instalação somente por clique, recusa, erro, modo aplicativo e plano vazio/preenchido. No navegador foram conferidos a ação do dia, o plano existente e a seleção pelo teclado. Instalação real em Android/iOS, Lighthouse e uso em aparelho físico não foram verificados.

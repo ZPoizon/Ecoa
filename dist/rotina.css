@@ -1,0 +1,11 @@
+.acao-diaria{margin-block:1rem 2rem;padding:clamp(1rem,3vw,1.5rem);border-left:4px solid var(--green);background:var(--soft);border-radius:var(--radius-md)}
+.acao-diaria h3{margin-block:.5rem;max-width:45ch}.acao-diaria p{margin-bottom:1rem}
+#desafio-grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:.75rem;margin-block:1rem 1.5rem}
+.desafio-objetivo{position:relative;display:block;min-width:0;padding:0;border:3px solid transparent;border-radius:.6rem;overflow:hidden;background:transparent}
+.desafio-objetivo img{display:block;width:100%;height:auto}.desafio-objetivo[aria-pressed=true]{border-color:var(--text);outline:2px solid var(--green);outline-offset:2px}
+.desafio-marca{position:absolute;right:4px;bottom:4px;border-radius:50%;background:var(--button);color:var(--button-text);width:28px;height:28px;display:none;align-items:center;justify-content:center;font:700 18px/1 system-ui}
+.desafio-objetivo[aria-pressed=true] .desafio-marca{display:flex}
+.desafio-objetivo:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+.instalacao{margin-block:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--line)}
+#plano-vazio{margin-block:1.5rem}
+@media(max-width:25rem){#desafio-grade{grid-template-columns:repeat(2,minmax(0,1fr))}}
