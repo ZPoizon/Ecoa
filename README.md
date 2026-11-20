@@ -120,10 +120,10 @@ A interface fica disponível em `http://127.0.0.1:4173`.
 
 O projeto pode ser importado diretamente no painel da Vercel a partir do repositório Git:
 
-- Root Directory: raiz do repositório (`.`)
-- Framework Preset: Other
-- Build Command: `npm run build`
-- Output Directory: `dist`
+- Diretório raiz (Root Directory): raiz do repositório (`.`)
+- Plataforma (Framework Preset): Other
+- Comando de build (Build Command): `npm run build`
+- Diretório de saída (Output Directory): `dist`
 
 O arquivo `api/onu.js` fornece a consulta a conteúdos da ONU Brasil como função serverless. Não é necessário publicar o diretório `worker/`, específico da hospedagem anterior. Durante o build, os metadados de compartilhamento são atualizados para o domínio da implantação informado pela Vercel.
 
