@@ -1,0 +1,9 @@
+{
+  "name": "ecoa",
+  "private": true,
+  "scripts": {
+    "dev": "node server.cjs",
+    "build": "node build.cjs",
+    "test": "node validar.cjs"
+  }
+}

@@ -17,6 +17,67 @@ const casos = [
 ];
 casos.forEach(([nome, teste]) => { teste(); console.log('OK', nome); });
 
+async function validarApiVercel() {
+  const api = require('./api/onu');
+  const cartao = (categoria, titulo, texto, href = '/pt-br/325862') =>
+    `<div class="pb-10 bg-white shadow-un"><a href="/imagem"><img alt="imagem"></a><div>${categoria}</div><div>18 novembro 2026</div><a href="${href}" class="text-lg"><div class="font-bold">${titulo}</div><div>${texto}</div></a></div>`;
+  const htmlIniciativas = cartao('Faça a sua parte', 'Ação de água', 'Água potável e saneamento');
+  const htmlHistorias = cartao('História', 'História da água', 'Saneamento para todas as pessoas');
+  const htmlComLinkInseguro = cartao('Campaign', 'Link inválido', 'Ação educativa', 'javascript:alert(1)');
+
+  assert.deepEqual(api.extrairCartoes(htmlIniciativas, 'iniciativas').map(({ titulo, url, data }) =>
+    ({ titulo, url, data })), [{
+    titulo: 'Ação de água',
+    url: 'https://brasil.un.org/pt-br/325862',
+    data: '18 novembro 2026'
+  }]);
+  assert.equal(api.extrairCartoes(htmlComLinkInseguro, 'iniciativas').length, 0);
+
+  const originalFetch = global.fetch;
+  global.fetch = async url => ({
+    ok: true,
+    text: async () => url.endsWith('/take-action') ? htmlIniciativas : htmlHistorias
+  });
+  try {
+    let status;
+    let cabecalhos = {};
+    let corpo;
+    const resposta = {
+      status(codigo) { status = codigo; return this; },
+      setHeader(nome, valor) { cabecalhos[nome] = valor; },
+      json(dados) { corpo = dados; },
+      end() { this.encerrada = true; }
+    };
+    await api({ method: 'GET', query: { ods: '6' } }, resposta);
+    assert.equal(status, 200);
+    assert.equal(cabecalhos['Cache-Control'], 'public, s-maxage=120, stale-while-revalidate=300');
+    assert.equal(corpo.iniciativas[0].titulo, 'Ação de água');
+    assert.equal(corpo.historias[0].titulo, 'História da água');
+
+    await api({ method: 'POST', query: {} }, resposta);
+    assert.equal(status, 405);
+    assert.equal(resposta.encerrada, true);
+  } finally {
+    global.fetch = originalFetch;
+  }
+  console.log('OK Vercel: API ONU, cartões atuais, filtros, cache e método HTTP');
+}
+validarApiVercel().catch(erro => { console.error(erro); process.exitCode = 1; });
+
+function validarMetadadosVercel() {
+  const { atualizarMetadadosVercel } = require('./build.cjs');
+  const html = '<link rel="canonical" href="https://antigo.example/"><meta property="og:url" content="https://antigo.example/"><meta property="og:image" content="https://antigo.example/icons/icon-512.png"><meta name="twitter:image" content="https://antigo.example/icons/icon-512.png">';
+  const inicio = atualizarMetadadosVercel(html, 'https://ecoa.vercel.app', 'index.html');
+  assert.ok(inicio.includes('rel="canonical" href="https://ecoa.vercel.app/"'));
+  assert.ok(inicio.includes('property="og:url" content="https://ecoa.vercel.app/"'));
+  assert.ok(inicio.includes('property="og:image" content="https://ecoa.vercel.app/icons/icon-512.png"'));
+  assert.ok(inicio.includes('name="twitter:image" content="https://ecoa.vercel.app/icons/icon-512.png"'));
+  const sobre = atualizarMetadadosVercel(html, 'https://ecoa.vercel.app/', 'sobre.html');
+  assert.ok(sobre.includes('rel="canonical" href="https://ecoa.vercel.app/sobre.html"'));
+  console.log('OK Vercel: metadados ajustados ao domínio e à página implantada');
+}
+validarMetadadosVercel();
+
 async function validarPwa() {
   const { existsSync, readFileSync } = require('node:fs');
   const { runInNewContext } = require('node:vm');
@@ -973,7 +1034,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v33'/);
+  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v34'/);
   assert.match(fs.readFileSync('dist/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('dist/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
