@@ -509,3 +509,7 @@ O desafio ganhou 17 botões com ícones oficiais, nomes acessíveis, foco e esta
 
 Validação: node validar.cjs cobre data local, troca de dia, links, seleção dos 17 ODS, instalação somente por clique, recusa, erro, modo aplicativo e plano vazio/preenchido. No navegador foram conferidos a ação do dia, o plano existente e a seleção pelo teclado. Instalação real em Android/iOS, Lighthouse e uso em aparelho físico não foram verificados.
 
+
+## Polimento — Fase 1
+
+Interface com uma folha modal de filtros (campos originais, Escape nativo, aplicação e validação), ajuda essencial em Saiba mais, notificações em Configurações e calendário como opção principal dos lembretes. PDF e lembretes só aparecem com ações no plano. Nenhuma chave de armazenamento mudou. Cache PWA v36 inclui limpeza.js e limpeza.css. Validação: npm test cobre abertura/fechamento/validação da folha, referências ARIA e estados vazio/preenchido do plano; npm run build gera o pacote. A prévia no navegador remoto não foi acessível nesta rodada; validar toque em aparelhos físicos e importação do calendário no aplicativo de destino.

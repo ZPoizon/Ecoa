@@ -7,6 +7,8 @@ const baixarPlano = document.querySelector('#baixar-plano');
 const avisoExportacao = document.querySelector('#plano-exportacao');
 let exportandoPlano = false;
 function atualizarAjudaPdf(){
+  baixarPlano.hidden=!plano.size;
+  document.querySelector("#plano-pdf-ajuda").hidden=!plano.size;
   document.querySelector('#plano-pdf-ajuda').textContent=exportandoPlano?'Aguarde enquanto preparamos seu PDF.':plano.size?'Baixe um PDF com as ações do seu plano.':'Salve uma ação no plano para gerar o PDF.';
 }
 const exportarJson = document.querySelector('#exportar-json');

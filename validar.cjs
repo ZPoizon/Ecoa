@@ -656,13 +656,13 @@ async function validarProgresso() {
     localStorage:{getItem:()=>null,setItem:(k,v)=>{salvo=v;}},
     ...require('./public/plano-json')};
   runInNewContext(readFileSync('public/progresso.js','utf8')+'\n'+readFileSync('public/plano.js','utf8'),ctx);
-  assert.equal(el('#baixar-plano').disabled,true);assert.equal(el('#plano-vazio').hidden,false);assert.match(el('#plano-pdf-ajuda').textContent,/Salve uma ação/);
-  el('#salvar-acao').eventos.click();assert.equal(el('#plano-vazio').hidden,true);assert.equal(el('#progresso-pendentes').textContent,'1');assert.equal(el('#baixar-plano').disabled,false);assert.match(el('#plano-pdf-ajuda').textContent,/Baixe um PDF/);
+  assert.equal(el('#baixar-plano').disabled,true);assert.equal(el('#baixar-plano').hidden,true);assert.equal(el('#plano-vazio').hidden,false);assert.match(el('#plano-pdf-ajuda').textContent,/Salve uma ação/);
+  el('#salvar-acao').eventos.click();assert.equal(el('#plano-vazio').hidden,true);assert.equal(el('#progresso-pendentes').textContent,'1');assert.equal(el('#baixar-plano').disabled,false);assert.equal(el('#baixar-plano').hidden,false);assert.match(el('#plano-pdf-ajuda').textContent,/Baixe um PDF/);
   const caixa=el('#plano-lista').children[0].children[0].children[0];caixa.checked=true;caixa.eventos.change();
   assert.equal(el('#progresso-concluidas').textContent,'1');assert.equal(el('#progresso-ods').textContent,'1');
   caixa.checked=false;caixa.eventos.change();assert.equal(el('#progresso-concluidas').textContent,'0');
   el('#plano-lista').children[0].children[1].eventos.click();assert.equal(el('#progresso-pendentes').textContent,'0');
-  assert.equal(el('#baixar-plano').disabled,true);assert.equal(el('#plano-vazio').hidden,false);assert.match(el('#plano-pdf-ajuda').textContent,/Salve uma ação/);
+  assert.equal(el('#baixar-plano').disabled,true);assert.equal(el('#baixar-plano').hidden,true);assert.equal(el('#plano-vazio').hidden,false);assert.match(el('#plano-pdf-ajuda').textContent,/Salve uma ação/);
   const backup=require('./public/plano-json').exportarPlanoJson(completo,acoes);
   el('#arquivo-plano').files=[{name:'ecoa.json',size:backup.length,text:async()=>backup}];
   await el('#arquivo-plano').eventos.change();
@@ -922,7 +922,7 @@ async function validarLembretesEtapa10(){
   const env={localStorage:storage,navigator:{},Notification:{permission:'default'},setInterval(){},setTimeout(){},addEventListener(){}};
   const api={...a,permitirNotificacoes:async()=>{solicitacoes++;env.Notification.permission='granted';return 'granted';},notificarLembrete:async()=>{envios++;return true;}};
   const ui=require('./public/lembretes-ui').iniciarLembretes(doc,env,acoes,()=>p,api);
-  assert.equal(solicitacoes,0);assert.equal(el('lembrete-salvar').disabled,false);
+  assert.equal(solicitacoes,0);assert.equal(el('lembretes').hidden,false);assert.equal(el('lembrete-salvar').disabled,false);
   assert.equal(el('lembrete-acao').children[0].value,'');assert.match(el('lembrete-acao').children[0].textContent,/Escolha uma ação/);assert.equal(el('lembrete-quando').disabled,false);
   await el('lembrete-ativar').eventos.click();assert.equal(solicitacoes,1);assert.equal(a.lerLembretes(storage,acoes).notificacoes,true);
   el('lembrete-acao').value=chave;el('lembrete-quando').value='2030-01-01T12:00';el('lembrete-form').eventos.submit({preventDefault(){}});
@@ -932,6 +932,7 @@ async function validarLembretesEtapa10(){
   el('lembrete-desativar').eventos.click();assert.equal(a.lerLembretes(storage,acoes).notificacoes,false);
   p.set(chave,true);ui.atualizar();assert.equal(el('lembrete-acao').disabled,true);assert.equal(el('lembrete-quando').disabled,true);assert.match(el('lembrete-salvar-ajuda').textContent,/ação pendente/);assert.equal(a.lerLembretes(storage,acoes).itens.length,0);assert.equal(el('lembrete-salvar').disabled,true);
   p.set(chave,false);ui.atualizar();assert.equal(el('lembrete-salvar').disabled,false);assert.equal(el('lembrete-acao').disabled,false);
+  p.clear();ui.atualizar();assert.equal(el('lembretes').hidden,true);
   storage.v='{inválido';ui.atualizar();assert.doesNotMatch(el('lembrete-status').textContent,/json/i);assert.match(el('lembrete-salvar-ajuda').textContent,/Não foi possível ler/);assert.equal(storage.v,'{inválido');assert.equal(el('lembrete-salvar').disabled,true);
   console.log('OK Lembretes: datas, persistência, substituição, conclusão/remoção, permissão só por clique, recusa, disparo único, falha, calendário seguro e interface simulada');
 }
@@ -1034,7 +1035,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v35'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v36'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1227,7 +1228,7 @@ function validarRefinamentoA(){
   assert.doesNotMatch(visivel,/json/i);
  }
  const h=fs.readFileSync('public/index.html','utf8');
- assert.equal((h.match(/<button[^>]*>Adicionar um ponto<\/button>/g)||[]).length,1);
+ assert.equal((h.match(/<button[^>]*>Salvar lugar só para mim<\/button>/g)||[]).length,1);
  assert.match(h,/id="cidade-cadastro"[^>]*hidden/);
  assert.match(h,/id="baixar-plano"[^>]*aria-describedby="plano-pdf-ajuda"/);
  assert.match(h,/id="lembrete-salvar"[^>]*aria-describedby="lembrete-salvar-ajuda"/);
@@ -1291,3 +1292,29 @@ async function validarRotinaD(){
 }
 validarRotinaD().catch(e=>{console.error(e);process.exitCode=1;});
 
+
+function validarLimpezaFase1(){
+ const fs=require('node:fs'),html=fs.readFileSync('public/index.html','utf8');
+ assert.doesNotMatch(html,/Combine os filtros|Escolha um cartão|Como o quiz funciona|<summary>Como funciona|Sobre os lembretes/);
+ assert.equal((html.match(/<summary>Saiba mais<\/summary>/g)||[]).length,1);
+ const agir=html.split('id="tela-agir"')[1].split('id="tela-aprender"')[0];
+ assert.equal((agir.match(/Encontrar uma ação/g)||[]).length,1);
+ assert.match(html,/<p class="sr-only" id="guias-contagem"/);
+ assert.match(html,/id="espaco-configuracoes"[\s\S]*id="lembrete-ativar"/);
+ assert.match(html,/class="atalho-lista-teclado"/);
+ assert.doesNotMatch(html,/© OpenStreetMap contributors/);
+ assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/OpenStreetMap/);
+ const eventos={},nodes={};
+ const el=id=>nodes[id]||(nodes[id]={open:false,addEventListener(k,f,c){this[k]=f;this.capture=c;},showModal(){this.open=true;},close(){this.open=false;}});
+ const doc={getElementById:el,addEventListener(k,f){eventos[k]=f;}};
+ const ui=require('./public/limpeza').iniciarFolhaFiltros(doc);
+ el('abrir-filtros').click();assert.equal(el('folha-filtros').open,true);
+ el('filtros').submit();assert.equal(el('folha-filtros').open,false);assert.equal(el('filtros').capture,true);
+ el('abrir-filtros').click();el('fechar-filtros').click();assert.equal(el('folha-filtros').open,false);
+ el('filtros').invalid();assert.equal(el('folha-filtros').open,true);eventos['ecoa-rota']();assert.equal(el('folha-filtros').open,false);ui.fechar();
+ // Referências de acessibilidade apontam para nós existentes após remover textos.
+ const ids=new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]));
+ for(const m of html.matchAll(/aria-(?:labelledby|describedby|controls)="([^"]+)"/g))for(const id of m[1].split(/\s+/))assert.ok(ids.has(id),id);
+ console.log('OK Limpeza Fase 1: folha, fechamento, busca única, ajuda, rótulos e controles preservados');
+}
+validarLimpezaFase1();

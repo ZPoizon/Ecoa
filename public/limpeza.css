@@ -1,0 +1,11 @@
+/* Limpeza: uma folha de filtros, preservando os componentes e tokens existentes. */
+#folha-filtros{box-sizing:border-box;width:min(56rem,calc(100% - 2rem));max-height:85dvh;overflow:auto;margin:auto;border:1px solid var(--line);border-radius:var(--radius-md);padding:1.5rem;background:var(--surface);color:var(--text);box-shadow:var(--shadow-overlay)}
+#folha-filtros::backdrop{background:rgba(0,0,0,.55)}
+.folha-cabecalho{display:flex;align-items:center;justify-content:space-between;gap:1rem}.folha-cabecalho h2{margin:0}
+#folha-filtros .busca-barra{grid-template-columns:repeat(3,minmax(0,1fr))}
+#folha-filtros .aplicar-filtros{width:100%;margin-top:1rem}
+.atalho-lista-teclado:not(:focus){position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.atalho-lista-teclado:focus{display:block;padding:1rem}
+.ajuda-unica{margin-block:1rem}footer p{margin:0}
+#baixar-plano[hidden],#plano-pdf-ajuda[hidden],#lembretes[hidden]{display:none!important}
+@media(max-width:40rem){#folha-filtros{width:100%;max-height:90dvh;max-width:100%;margin:auto 0 0;border-radius:var(--radius-md) var(--radius-md) 0 0;padding:1rem;padding-bottom:calc(1rem + env(safe-area-inset-bottom))}#folha-filtros .busca-barra{grid-template-columns:1fr}}

@@ -53,7 +53,7 @@ function iniciarRotasEcoa(doc,janela,adaptadores={}) {
     // Os guias completos aparecem somente em suas subtelas.
     $('quiz').hidden=!!rota.ods;
     $('aprender-filtros').hidden=!!rota.ods;
-    $('cartoes-guias').hidden=!!rota.ods;$('escolha-guia').hidden=!!rota.ods;
+    $('cartoes-guias').hidden=!!rota.ods;
     $('conteudo-guia').hidden=!rota.ods;$('buscar-guia').hidden=!rota.ods;
     doc.querySelector('.guia-navegacao').hidden=!rota.ods;
     if(rota.ods){

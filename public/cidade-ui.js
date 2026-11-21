@@ -12,7 +12,7 @@ async function iniciarCidade(doc,ambiente,api) {
     $('cidade-total').textContent=resumoPontosCidade(visiveis.length);
     $('cidade-vazio').hidden=visiveis.length>0;
     $('cidade-vazio-titulo').textContent=pontos.length?'Nenhum ponto com esses filtros':'Sua lista começa aqui';
-    $('cidade-vazio-texto').textContent=pontos.length?'Tente outra cidade ou tipo de iniciativa.':'Use “Adicionar um ponto” para guardar um lugar que você conhece.';
+    $('cidade-vazio-texto').textContent=pontos.length?'Tente outra cidade ou tipo de iniciativa.':'Use “Salvar lugar só para mim” para guardar um lugar que você conhece.';
     $('cidade-vazio-acao').textContent='Limpar filtros';
     $('cidade-vazio-acao').hidden=!pontos.length;
     if(camada)camada.clearLayers();
