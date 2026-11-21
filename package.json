@@ -2,8 +2,14 @@
   "name": "ecoa",
   "private": true,
   "scripts": {
-    "dev": "node server.cjs",
+    "dev": "node scripts/dev.cjs",
+    "start": "node scripts/dev.cjs",
+    "preview": "node scripts/dev.cjs --preview",
     "build": "node build.cjs",
-    "test": "node validar.cjs"
+    "test": "node validar.cjs && node --test tests/deploy.test.cjs",
+    "build:worker": "node worker/build.mjs"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

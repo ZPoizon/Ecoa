@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { objetivos, acoes, filtrarAcoes } = require('./dist/acoes');
+const { objetivos, acoes, filtrarAcoes } = require('./public/acoes');
 const casos = [
   ['Catálogo completo', () => assert.equal(objetivos.length, 17)],
   ['Ação para cada ODS', () => objetivos.forEach((_, i) => assert.ok(filtrarAcoes(acoes, {ods:i+1}).length))],
@@ -81,11 +81,11 @@ validarMetadadosVercel();
 async function validarPwa() {
   const { existsSync, readFileSync } = require('node:fs');
   const { runInNewContext } = require('node:vm');
-  const manifesto = require('./dist/manifest.json');
+  const manifesto = require('./public/manifest.json');
   assert.equal(manifesto.display, 'standalone');
   assert.equal(manifesto.start_url, './');
   for (const icone of manifesto.icons) {
-    const png = readFileSync('dist/' + icone.src);
+    const png = readFileSync('public/' + icone.src);
     const tamanho = png.readUInt32BE(16) + 'x' + png.readUInt32BE(20);
     assert.equal(tamanho, icone.sizes);
   }
@@ -101,7 +101,7 @@ async function validarPwa() {
   let assumiuControle = false;
   const rede = [];
   let abertaNotificacao,fechadaNotificacao=false;
-  runInNewContext(readFileSync('dist/sw.js', 'utf8'), {
+  runInNewContext(readFileSync('public/sw.js', 'utf8'), {
     URL, Request,
     fetch: async pedido => { rede.push(pedido.url); return 'rede'; },
     self: {
@@ -115,7 +115,7 @@ async function validarPwa() {
         return {
           addAll: async pedidos => {
             for (const pedido of pedidos) {
-              assert.ok(existsSync('dist/' + pedido.url.slice(origem.length)), pedido.url);
+              assert.ok(existsSync('public/' + pedido.url.slice(origem.length)), pedido.url);
               armazenados.add(pedido.url);
             }
           },
@@ -165,7 +165,7 @@ async function validarPwa() {
   console.log('OK Navegação offline, subpasta, fallback de rede e consulta ONU fora do cache');
 
   let registrado;
-  const executarRegistro = navigator => runInNewContext(readFileSync('dist/pwa.js', 'utf8'), {
+  const executarRegistro = navigator => runInNewContext(readFileSync('public/pwa.js', 'utf8'), {
     navigator, console
   });
   executarRegistro({});
@@ -180,7 +180,7 @@ validarPwa().catch(erro => {
 });
 
 async function validarBackupPlano() {
-  const { validarPlanoJson, exportarPlanoJson, mesclarPlanoJson, importarPlanoJson, lerArquivoPlanoJson } = require('./dist/plano-json');
+  const { validarPlanoJson, exportarPlanoJson, mesclarPlanoJson, importarPlanoJson, lerArquivoPlanoJson } = require('./public/plano-json');
   const chaves = acoes.map(a => a.ods + ':' + a.titulo);
   const atual = new Map([[chaves[0], true], [chaves[1], false]]);
   const texto = exportarPlanoJson(atual, acoes);
@@ -227,7 +227,7 @@ async function validarBackupPlano() {
 validarBackupPlano().catch(erro => { console.error(erro); process.exitCode = 1; });
 
 async function validarCompartilhamento() {
-  const api = require('./dist/compartilhar');
+  const api = require('./public/compartilhar');
   for (const acao of acoes) {
     const dados = api.dadosCompartilhamento(acao, 'https://exemplo.test/sub/index.html?privado=123#guias');
     const url = new URL(dados.url);
@@ -272,7 +272,7 @@ async function validarCompartilhamento() {
     resultado:{hidden:false},status:el('status'),form:{reset(){}},
     mostrar(){contexto.resultado.hidden=false;},
     document:{querySelector:el,addEventListener(){}},window:{addEventListener(){}} };
-  runInNewContext(readFileSync('dist/compartilhar-ui.js','utf8'),contexto);
+  runInNewContext(readFileSync('public/compartilhar-ui.js','utf8'),contexto);
   assert.ok(el('#whatsapp-acao').href.startsWith('https://wa.me/'));
   await contexto.executarCompartilhamento(true);
   assert.equal(el('#copia-manual').hidden,false);
@@ -295,7 +295,7 @@ async function validarCompartilhamento() {
 validarCompartilhamento().catch(erro => { console.error(erro); process.exitCode = 1; });
 
 function validarAcessibilidade() {
-  const a = require('./dist/acessibilidade');
+  const a = require('./public/acessibilidade');
   const padrao = {tema:'sistema',fonte:100};
   assert.deepEqual(a.normalizarPreferencias({tema:'invalido',fonte:999}),padrao);
   assert.deepEqual(a.lerPreferencias({getItem:()=>'{'}),padrao);
@@ -356,7 +356,7 @@ function validarAcessibilidade() {
   console.log('OK Acessibilidade: controles, restauração e mudança de preferência do sistema (DOM simulado)');
 
   const {readFileSync} = require('node:fs');
-  const css = readFileSync('dist/design-system.css','utf8');
+  const css = readFileSync('public/design-system.css','utf8');
   const variaveis = bloco => Object.fromEntries([...bloco.matchAll(/--([\w-]+):\s*(#[a-f\d]{6})/gi)].map(m=>[m[1],m[2]]));
   const claroTokens = variaveis(css.match(/:root\s*\{([^}]+)/)[1]);
   const escuroTokens = {...claroTokens,...variaveis(css.match(/:root\[data-tema="escuro"\]\s*\{([^}]+)/)[1])};
@@ -415,7 +415,7 @@ function validarCartoesGuias() {
   const ctx={document:doc,objetivos,Option:function(text,value){this.value=value;},
     detalhesOds:objetivos.map(()=>['meta1','meta2','exemplo']),descricoes:objetivos,historiasOds:objetivos,
     form:{reset(){}},opcoes:{querySelector:el},atualizarSelecao(){},buscar(){buscou=true;}};
-  runInNewContext(readFileSync('dist/guias.js','utf8'),ctx);
+  runInNewContext(readFileSync('public/guias.js','utf8'),ctx);
   const cartoes=el('#cartoes-guias').children;
   assert.equal(cartoes.length,17);
   assert.equal(cartoes[0]['aria-current'],'page');
@@ -433,7 +433,7 @@ function validarCartoesGuias() {
 validarCartoesGuias();
 
 function validarIsolamentoTema() {
-  const {iniciarAgir}=require('./dist/agir');
+  const {iniciarAgir}=require('./public/agir');
   const elemento=(dataset={})=>({dataset,eventos:{},attrs:{},value:'',hidden:true,
     addEventListener(n,fn){this.eventos[n]=fn;},setAttribute(n,v){this.attrs[n]=v;}});
   const els=new Map(),el=id=>{if(!els.has(id))els.set(id,elemento());return els.get(id);};
@@ -467,8 +467,8 @@ function validarIsolamentoTema() {
 validarIsolamentoTema();
 
 function validarQuiz() {
-  const {perguntasQuiz,calcularResultadoQuiz} = require('./dist/quiz');
-  const {iniciarQuiz} = require('./dist/quiz-ui');
+  const {perguntasQuiz,calcularResultadoQuiz} = require('./public/quiz');
+  const {iniciarQuiz} = require('./public/quiz-ui');
   assert.equal(perguntasQuiz.length,5);
   perguntasQuiz.forEach(p=>p.opcoes.forEach(o=>o.ods.forEach(ods=>assert.ok(Number.isInteger(ods)&&ods>=1&&ods<=17))));
   for (const entrada of [null,[],[0,0,0,0],[0,0,0,0,5],[0,0,0,0,-1],[0,0,0,0,1.5],['0',0,0,0,0]]) assert.throws(()=>calcularResultadoQuiz(entrada));
@@ -527,31 +527,31 @@ validarQuiz();
 function validarMarcaEcoa() {
   const {readFileSync}=require('node:fs');
   const {runInNewContext}=require('node:vm');
-  const html=readFileSync('dist/index.html','utf8');
-  const manifesto=require('./dist/manifest.json');
+  const html=readFileSync('public/index.html','utf8');
+  const manifesto=require('./public/manifest.json');
   assert.equal(manifesto.name,'Ecoa');assert.equal(manifesto.short_name,'Ecoa');assert.equal(manifesto.id,'./');
   assert.ok(html.includes('<title>Ecoa</title>'));
   assert.ok(html.includes('Pequenas ações,'));assert.ok(html.includes('Com o tempo e o dinheiro que tenho hoje, o que posso fazer?'));
   assert.ok(html.includes('og:title'));assert.ok(html.includes('não oficial da ONU'));
   const legado = new Map([[acoes[0].ods+':'+acoes[0].titulo,true]]);
-  const json=require('./dist/plano-json');
+  const json=require('./public/plano-json');
   const backup=JSON.stringify({projeto:'oqdpf',versao:1,acoes:[...legado].map(([chave,concluida])=>({chave,concluida}))});
   assert.deepEqual(json.validarPlanoJson(backup,acoes),legado);
   const elementos=new Map();const el=id=>{if(!elementos.has(id))elementos.set(id,{addEventListener(){},replaceChildren(){},append(){},setAttribute(){}});return elementos.get(id);};
   let leu,escreveu=false;
   const contexto={atualizarProgressoPlano(){},document:{querySelector:el,querySelectorAll:()=>[],addEventListener(){},createElement:()=>el(Symbol())},
     localStorage:{getItem:k=>{leu=k;return JSON.stringify(Object.fromEntries(legado));},setItem:()=>{escreveu=true;}},acoes,encontradas:[],indice:0};
-  runInNewContext(readFileSync('dist/plano.js','utf8'),contexto);
+  runInNewContext(readFileSync('public/plano.js','utf8'),contexto);
   assert.equal(leu,'oqdpf-plano-v1');assert.equal(escreveu,false);
   assert.equal(runInNewContext('plano.size',contexto),1);
   assert.equal(runInNewContext('[...plano.values()][0]',contexto),true);
-  assert.ok(readFileSync('dist/acessibilidade.js','utf8').includes("'oqdpf-acessibilidade-v1'"));
+  assert.ok(readFileSync('public/acessibilidade.js','utf8').includes("'oqdpf-acessibilidade-v1'"));
   console.log('OK Ecoa: título, manifesto, marca independente e preservação de plano/preferências/JSON antigos sem migração');
 }
 validarMarcaEcoa();
 
 function validarDesafioSeteDias() {
-  const d=require('./dist/desafio');
+  const d=require('./public/desafio');
   const {readFileSync}=require('node:fs');const {runInNewContext}=require('node:vm');
   assert.equal(d.dataLocalDesafio(new Date(2026,10,11,23,59)),'2026-11-11');
   assert.equal(d.numeroDiaDesafio('2024-03-01')-d.numeroDiaDesafio('2024-02-28'),2);
@@ -589,7 +589,7 @@ function validarDesafioSeteDias() {
   const ctx={...d,document:{querySelector:el,createElement:elemento,addEventListener(){}},objetivos,acoes,praticasOds:praticas,
     Option:function(){},localStorage:{getItem:()=>null,setItem(){escritas++;}},setInterval(){},
     form:{reset(){}},opcoes:{querySelector:el},atualizarSelecao(){},buscar(){buscou=true;}};
-  runInNewContext(readFileSync('dist/desafio-ui.js','utf8'),ctx);
+  runInNewContext(readFileSync('public/desafio-ui.js','utf8'),ctx);
   el('#desafio-iniciar').eventos.click();
   assert.equal(escritas,1);assert.equal(el('#desafio-dias').children.length,7);
   const caixa=el('#desafio-dias').children[0].children[3].children[0];caixa.checked=true;caixa.eventos.change();
@@ -603,7 +603,7 @@ function validarDesafioSeteDias() {
 validarDesafioSeteDias();
 
 async function validarProgresso() {
-  const {calcularProgressoPlano,renderizarProgressoPlano}=require('./dist/progresso');
+  const {calcularProgressoPlano,renderizarProgressoPlano}=require('./public/progresso');
   const chave=a=>a.ods+':'+a.titulo;
   const vazio=calcularProgressoPlano(new Map(),acoes);
   assert.equal(vazio.salvas,0);assert.equal(vazio.concluidas,0);assert.equal(vazio.pendentes,0);
@@ -654,8 +654,8 @@ async function validarProgresso() {
   let salvo;
   const ctx={document:doc,acoes,objetivos,encontradas:[acoes[0]],indice:0,
     localStorage:{getItem:()=>null,setItem:(k,v)=>{salvo=v;}},
-    ...require('./dist/plano-json')};
-  runInNewContext(readFileSync('dist/progresso.js','utf8')+'\n'+readFileSync('dist/plano.js','utf8'),ctx);
+    ...require('./public/plano-json')};
+  runInNewContext(readFileSync('public/progresso.js','utf8')+'\n'+readFileSync('public/plano.js','utf8'),ctx);
   assert.equal(el('#baixar-plano').disabled,true);assert.equal(el('#plano-vazio').hidden,false);assert.match(el('#plano-pdf-ajuda').textContent,/Salve uma ação/);
   el('#salvar-acao').eventos.click();assert.equal(el('#plano-vazio').hidden,true);assert.equal(el('#progresso-pendentes').textContent,'1');assert.equal(el('#baixar-plano').disabled,false);assert.match(el('#plano-pdf-ajuda').textContent,/Baixe um PDF/);
   const caixa=el('#plano-lista').children[0].children[0].children[0];caixa.checked=true;caixa.eventos.change();
@@ -663,7 +663,7 @@ async function validarProgresso() {
   caixa.checked=false;caixa.eventos.change();assert.equal(el('#progresso-concluidas').textContent,'0');
   el('#plano-lista').children[0].children[1].eventos.click();assert.equal(el('#progresso-pendentes').textContent,'0');
   assert.equal(el('#baixar-plano').disabled,true);assert.equal(el('#plano-vazio').hidden,false);assert.match(el('#plano-pdf-ajuda').textContent,/Salve uma ação/);
-  const backup=require('./dist/plano-json').exportarPlanoJson(completo,acoes);
+  const backup=require('./public/plano-json').exportarPlanoJson(completo,acoes);
   el('#arquivo-plano').files=[{name:'ecoa.json',size:backup.length,text:async()=>backup}];
   await el('#arquivo-plano').eventos.change();
   assert.equal(el('#progresso-concluidas').textContent,'20');assert.equal(el('#progresso-ods').textContent,'17');
@@ -673,7 +673,7 @@ async function validarProgresso() {
 validarProgresso().catch(erro=>{console.error(erro);process.exitCode=1;});
 
 function validarEstimativas() {
-  const e=require('./dist/estimativa');
+  const e=require('./public/estimativa');
   assert.equal(e.calcularEstimativa('agua',{quantidade:1,dias:30}).valor,1380);
   assert.equal(e.calcularEstimativa('agua',{quantidade:2,dias:0}).valor,0);
   assert.equal(e.calcularEstimativa('energia',{potencia:10,quantidade:2,horas:3,dias:30}).valor,1.8);
@@ -708,7 +708,7 @@ function validarEstimativas() {
   }
   assert.match(e.formatarEstimativa(e.calcularEstimativa('banho',{antes:10,depois:5,banhos:7})),/350 L/);
   console.log('OK Estimativas: fórmulas, unidades, zero, decimais, limites, erros e fontes por ação');
-  const {iniciarEstimativa}=require('./dist/estimativa-ui');
+  const {iniciarEstimativa}=require('./public/estimativa-ui');
   const elementos=new Map();
   const elemento=()=>({children:[],eventos:{},value:'',textContent:'',
     setAttribute(){},addEventListener(k,v){this.eventos[k]=v;},append(...v){this.children.push(...v);v.forEach(x=>{if(x.id)elementos.set('#'+x.id,x);});},
@@ -747,7 +747,7 @@ function validarEstimativas() {
 validarEstimativas();
 
 async function validarCidade() {
-  const c=require('./dist/cidade');
+  const c=require('./public/cidade');
   const p={id:'teste',nome:'Local de teste',cidade:'São Paulo, SP',categoria:'coleta',endereco:'Endereço de teste',detalhes:'Dados sintéticos apenas para testes',latitude:-23,longitude:-46,fonte:'https://example.org',consultadoEm:'2026-01-01'};
   const envelope=pontos=>({versao:1,pontos});
   assert.deepEqual(c.lerJsonCidade('\uFEFF'+JSON.stringify(envelope([p]))),c.validarPontosCidade(envelope([p])));
@@ -762,7 +762,7 @@ async function validarCidade() {
   const storage={valor:null,setItem(k,v){this.valor=v;},getItem(){return this.valor;}};
   c.salvarPontosCidade(storage,[p]);assert.equal(c.lerJsonCidade(storage.valor)[0].id,p.id);
   assert.throws(()=>c.salvarPontosCidade({setItem(){throw Error();}},[p]),/Não foi possível salvar/);
-  const ui=require('./dist/cidade-ui');
+  const ui=require('./public/cidade-ui');
   const {iniciarCidade,carregarLeafletCidade,resumoPontosCidade}=ui;
   assert.equal(resumoPontosCidade(1),'1 ponto na sua lista.');
   assert.equal(resumoPontosCidade(2),'2 pontos na sua lista.');
@@ -806,13 +806,13 @@ async function validarCidade() {
   storage.valor='JSON inválido';await iniciarCidade(doc,ambiente,c);
   for(const campo of Object.keys(p).filter(k=>k!=='id'))el('ponto-'+campo).value=String(p[campo]);
   el('cidade-form').eventos.submit({preventDefault(){}});assert.equal(storage.valor,'JSON inválido');
-  const html=require('fs').readFileSync('dist/index.html','utf8');assert.match(html,/id="na-minha-cidade"/);assert.match(html,/id="cidade-lista"/);
+  const html=require('fs').readFileSync('public/index.html','utf8');assert.match(html,/id="na-minha-cidade"/);assert.match(html,/id="cidade-lista"/);
   console.log('OK Cidade: schema, limites, links seguros, datas, filtros, união, persistência, cadastro, remoção, importação, exportação, falha de mapa e proteção de dados inválidos (DOM simulado)');
 }
 validarCidade().catch(erro=>{console.error(erro);process.exitCode=1;});
 
 async function validarEnderecos() {
-  const a=require('./dist/enderecos');
+  const a=require('./public/enderecos');
   const feature=(nome,pais='BR')=>({geometry:{coordinates:[-48,-23]},properties:{name:nome,street:'Rua A',district:'Centro',city:'Capão Bonito',state:'São Paulo',countrycode:pais}});
   let url,opcoes;
   const itens=await a.consultarProvedorEndereco('Rua A',{vies:{latitude:-23,longitude:-48},fetcher:async(u,o)=>{url=new URL(u);opcoes=o;return {ok:true,json:async()=>({features:[feature('Outro','PT'),feature('<img src=x onerror=alert(1)>')]})};}});
@@ -859,7 +859,7 @@ async function validarEnderecos() {
 validarEnderecos().catch(erro=>{console.error(erro);process.exitCode=1;});
 
 async function validarCep() {
-  const a=require('./dist/enderecos');
+  const a=require('./public/enderecos');
   assert.equal(a.normalizarBuscaEndereco('  SÃO   PAULO '),'sao paulo');
   assert.equal(a.identificarCepEndereco('18300-000'),'18300000');
   assert.equal(a.identificarCepEndereco('18300000'),'18300000');
@@ -884,7 +884,7 @@ async function validarCep() {
 setTimeout(()=>validarCep().catch(e=>{console.error(e);process.exitCode=1;}),0);
 
 async function validarLembretesEtapa10(){
-  const a=require('./dist/lembretes'),acao=acoes[0],chave=acao.ods+':'+acao.titulo;
+  const a=require('./public/lembretes'),acao=acoes[0],chave=acao.ods+':'+acao.titulo;
   const storage={v:null,getItem(){return this.v;},setItem(k,v){this.v=v;}};
   let d=a.lerLembretes(storage,acoes),p=new Map([[chave,false]]);
   const futuro=Date.now()+60000;
@@ -921,7 +921,7 @@ async function validarLembretesEtapa10(){
   storage.v=null;let solicitacoes=0,envios=0;
   const env={localStorage:storage,navigator:{},Notification:{permission:'default'},setInterval(){},setTimeout(){},addEventListener(){}};
   const api={...a,permitirNotificacoes:async()=>{solicitacoes++;env.Notification.permission='granted';return 'granted';},notificarLembrete:async()=>{envios++;return true;}};
-  const ui=require('./dist/lembretes-ui').iniciarLembretes(doc,env,acoes,()=>p,api);
+  const ui=require('./public/lembretes-ui').iniciarLembretes(doc,env,acoes,()=>p,api);
   assert.equal(solicitacoes,0);assert.equal(el('lembrete-salvar').disabled,false);
   assert.equal(el('lembrete-acao').children[0].value,'');assert.match(el('lembrete-acao').children[0].textContent,/Escolha uma ação/);assert.equal(el('lembrete-quando').disabled,false);
   await el('lembrete-ativar').eventos.click();assert.equal(solicitacoes,1);assert.equal(a.lerLembretes(storage,acoes).notificacoes,true);
@@ -941,7 +941,7 @@ function validarSobreEFontes(){
   const fs=require('fs'),path=require('path');
   const origem='https://o-que-da-pra-fazer-ods.gardendogwood1.chatgpt.site';
   for(const pagina of ['index.html','sobre.html']){
-    const h=fs.readFileSync('dist/'+pagina,'utf8');
+    const h=fs.readFileSync('public/'+pagina,'utf8');
     const canonico=origem+(pagina==='index.html'?'/':'/sobre.html');
     assert.ok(h.includes(`rel="canonical" href="${canonico}"`));
     assert.ok(h.includes(`property="og:url" content="${canonico}"`));
@@ -950,23 +950,23 @@ function validarSobreEFontes(){
     const ids=[...h.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);assert.equal(new Set(ids).size,ids.length);
     for(const m of h.matchAll(/(?:href|src)="([^"]+)"/g)){
       const url=m[1];if(url.startsWith('https:'))continue;
-      if(url.startsWith('#/')){assert.equal(require('./dist/rotas').resolverRotaEcoa(url).hash,url);continue;}
+      if(url.startsWith('#/')){assert.equal(require('./public/rotas').resolverRotaEcoa(url).hash,url);continue;}
       if(url.startsWith('#')){assert.ok(ids.includes(url.slice(1)),url);continue;}
-      const destino=url.split('#')[0]||'index.html';assert.ok(fs.existsSync(path.join('dist',destino)),destino);
+      const destino=url.split('#')[0]||'index.html';assert.ok(fs.existsSync(path.join('public',destino)),destino);
     }
   }
-  const sobre=fs.readFileSync('dist/sobre.html','utf8');
+  const sobre=fs.readFileSync('public/sobre.html','utf8');
   for(let i=1;i<=17;i++)assert.ok(sobre.includes(`href="https://brasil.un.org/pt-br/sdgs/${i}"`));
   for(const id of ['proposta','metodologia','limites','dados','fontes','alternar-tema','preferencia-tema','aumentar-fonte','reduzir-fonte','restaurar-leitura'])assert.ok(sobre.includes(`id="${id}"`));
   assert.match(sobre,/Meta oficial/);assert.match(sobre,/Exemplo didático/);assert.match(sobre,/Ação do projeto/);
   assert.ok(!sobre.includes('src="app.js"'));
-  assert.match(fs.readFileSync('dist/index.html','utf8'),/href="sobre.html"/);
+  assert.match(fs.readFileSync('public/index.html','utf8'),/href="sobre.html"/);
   console.log('OK Sobre e fontes: 17 links oficiais, seções, controles de leitura, links internos, IDs únicos e metadados de ambas as páginas');
 }
 validarSobreEFontes();
 
 function validarRotasFase1() {
-  const {resolverRotaEcoa:resolver,iniciarRotasEcoa,atalhosEcoa}=require('./dist/rotas');
+  const {resolverRotaEcoa:resolver,iniciarRotasEcoa,atalhosEcoa}=require('./public/rotas');
   const fs=require('node:fs');
   for(const [antigo,novo] of Object.entries(atalhosEcoa))assert.equal(resolver('#'+antigo).hash,novo);
   for(const hash of ['','#/nao-existe','#/aprender/ods-0','#/aprender/ods-18','#/agir/outro','#/inicio/extra','#/agir/calcular/extra'])assert.equal(resolver(hash).hash,'#/inicio');
@@ -974,8 +974,8 @@ function validarRotasFase1() {
   for(const acao of acoes){const chave=acao.ods+':'+acao.titulo;
     const antiga='#acao='+encodeURIComponent(chave),nova=resolver(antiga);
     assert.equal(nova.acao,chave);assert.equal(nova.hash,'#/agir?acao='+encodeURIComponent(chave));
-    assert.equal(require('./dist/compartilhar').acaoDoLink(antiga,acoes),acao);
-    assert.equal(require('./dist/compartilhar').acaoDoLink(nova.hash,acoes),acao);
+    assert.equal(require('./public/compartilhar').acaoDoLink(antiga,acoes),acao);
+    assert.equal(require('./public/compartilhar').acaoDoLink(nova.hash,acoes),acao);
   }
   const elementos=new Map(),eventos={},docEventos={};let foco,rolagens=0,guia,acao;
   const el=id=>{if(!elementos.has(id))elementos.set(id,{id,hidden:false,dataset:{},attrs:{},eventos:{},value:'',
@@ -1030,26 +1030,26 @@ function validarRotasFase1() {
   const link=el('link');link.attrs.href='#/aprender';let impediu=false;
   docEventos.click({target:{closest:()=>link},button:0,preventDefault(){impediu=true;}});assert.ok(impediu);assert.equal(janela.location.hash,'#/aprender');
   link.attrs.href='#conteudo';docEventos.click({target:{closest:()=>link},button:0,preventDefault(){}});assert.equal(foco,'tela-aprender-titulo');
-  const html=fs.readFileSync('dist/index.html','utf8');
+  const html=fs.readFileSync('public/index.html','utf8');
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('dist/sw.js','utf8'),/prefixo \+ 'v34'/);
-  assert.match(fs.readFileSync('dist/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
-  assert.match(fs.readFileSync('dist/cidade-ui.js','utf8'),/invalidateSize/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v35'/);
+  assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
+  assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
 }
 validarRotasFase1();
 
 function validarDesafioSalvoFase1(){
-  const {runInNewContext}=require('node:vm'),fs=require('node:fs'),api=require('./dist/desafio');
+  const {runInNewContext}=require('node:vm'),fs=require('node:fs'),api=require('./public/desafio');
   const salvo={versao:1,ods:6,inicio:api.dataLocalDesafio(),dias:[true,false,false,false,false,false,false]};
   const texto=JSON.stringify(salvo);let escritas=0;const elementos=new Map();
   const criar=()=>({value:'',children:[],dataset:{},eventos:{},append(...x){this.children.push(...x);},replaceChildren(...x){this.children=x;},add(){},addEventListener(k,f){this.eventos[k]=f;},focus(){}});
   const el=id=>{if(!elementos.has(id))elementos.set(id,criar());return elementos.get(id);};
   const ctx={...api,objetivos,acoes,praticasOds:objetivos.map(n=>[n,'Passo 1','Passo 2','Registro']),Option:function(){},setInterval(){},
     document:{querySelector:el,createElement:criar,addEventListener(){}},localStorage:{getItem(k){assert.equal(k,'ecoa-desafio-v1');return texto;},setItem(){escritas++;}}};
-  runInNewContext(fs.readFileSync('dist/desafio-ui.js','utf8'),ctx);
+  runInNewContext(fs.readFileSync('public/desafio-ui.js','utf8'),ctx);
   assert.equal(el('#desafio-dias').children.length,7);assert.equal(el('#desafio-dias').children[0].children[3].children[0].checked,true);
   assert.equal(el('#desafio-ods').value,6);assert.equal(escritas,0);
   assert.deepEqual(JSON.parse(runInNewContext('JSON.stringify(desafioAtual)',ctx)),salvo);
@@ -1062,8 +1062,8 @@ function validarDesafioSalvoFase1(){
 validarDesafioSalvoFase1();
 
 async function validarInicioFase2(){
-  const {renderizarResumoInicio,iniciarInicio}=require('./dist/inicio');
-  const {calcularProgressoPlano}=require('./dist/progresso');
+  const {renderizarResumoInicio,iniciarInicio}=require('./public/inicio');
+  const {calcularProgressoPlano}=require('./public/progresso');
   const fs=require('node:fs'),{runInNewContext}=require('node:vm');
   const elementos=new Map(),eventos={};
   const criar=()=>({children:[],eventos:{},style:{},dataset:{},hidden:false,textContent:'',value:'',
@@ -1094,20 +1094,20 @@ async function validarInicioFase2(){
   const eventosJanela={};
   const ctx={document:doc,acoes,objetivos,encontradas:[acoes[1]],indice:0,
     localStorage:{getItem(){return armazenado;},setItem(k,v){assert.equal(k,'oqdpf-plano-v1');armazenado=v;escritas++;}},
-    window:{addEventListener(k,f){eventosJanela[k]=f;}},...require('./dist/plano-json')};
-  runInNewContext(['progresso.js','plano.js','inicio.js'].map(f=>fs.readFileSync('dist/'+f,'utf8')).join('\n'),ctx);
+    window:{addEventListener(k,f){eventosJanela[k]=f;}},...require('./public/plano-json')};
+  runInNewContext(['progresso.js','plano.js','inicio.js'].map(f=>fs.readFileSync('public/'+f,'utf8')).join('\n'),ctx);
   assert.equal(escritas,0);assert.equal(el('#inicio-concluidas').textContent,'1');
   el('#salvar-acao').eventos.click();assert.equal(el('#inicio-pendentes').textContent,'1');assert.equal(el('#inicio-barra').max,2);
   const caixa=el('#plano-lista').children[1].children[0].children[0];caixa.checked=true;caixa.eventos.change();
   assert.equal(el('#inicio-concluidas').textContent,'2');assert.equal(el('#inicio-pendentes').textContent,'0');
   el('#plano-lista').children[1].children[1].eventos.click();assert.equal(el('#inicio-concluidas').textContent,'1');
-  const backup=require('./dist/plano-json').exportarPlanoJson(new Map([[chave(acoes[2]),false]]),acoes);
+  const backup=require('./public/plano-json').exportarPlanoJson(new Map([[chave(acoes[2]),false]]),acoes);
   el('#arquivo-plano').files=[{name:'antigo.json',size:backup.length,text:async()=>backup}];
   await el('#arquivo-plano').eventos.change();assert.equal(el('#inicio-pendentes').textContent,'1');assert.equal(el('#inicio-concluidas').textContent,'1');
   const escritasAntes=escritas;
   eventosJanela.storage({key:'oqdpf-plano-v1',newValue:'{}'});
   assert.equal(el('#inicio-progresso').hidden,true);assert.equal(escritas,escritasAntes);
-  const html=fs.readFileSync('dist/index.html','utf8');
+  const html=fs.readFileSync('public/index.html','utf8');
   const home=html.slice(html.indexOf('<section id="inicio"'),html.indexOf('<section class="wrap tela"'));
   for(const [texto,rota] of [['Encontrar uma ação','#/agir'],['Quero uma ação agora','#/agir'],['Quero entender os ODS','#/aprender'],['Quero me desafiar','#/meu-espaco/desafio']]){
     assert.ok([...home.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)].some(m=>m[1]===rota&&m[2].includes(texto)),texto);
@@ -1121,8 +1121,8 @@ validarInicioFase2().catch(e=>{console.error(e);process.exitCode=1;});
 
 
 function validarIndicadorAtividades() {
-  const {resumirAtividadesEcoa, iniciarAtividadesEcoa}=require('./dist/atividades');
-  const {novoDesafio,concluirDiaDesafio}=require('./dist/desafio');
+  const {resumirAtividadesEcoa, iniciarAtividadesEcoa}=require('./public/atividades');
+  const {novoDesafio,concluirDiaDesafio}=require('./public/desafio');
   const hoje='2026-11-12', desafio=novoDesafio(6,hoje);
   assert.equal(resumirAtividadesEcoa(0,null,hoje).visivel,false);
   assert.equal(resumirAtividadesEcoa(1,null,hoje).texto,'1 ação pendente');
@@ -1143,7 +1143,7 @@ function validarIndicadorAtividades() {
 validarIndicadorAtividades();
 
 function validarBuscaGuias() {
- const {normalizarBuscaGuia,encontrarGuias,iniciarBuscaGuias}=require('./dist/aprender');
+ const {normalizarBuscaGuia,encontrarGuias,iniciarBuscaGuias}=require('./public/aprender');
  assert.equal(normalizarBuscaGuia(' ÁGUA '),'agua');
  assert.deepEqual(encontrarGuias(objetivos,'ODS 6'),[6]);
  assert.deepEqual(encontrarGuias(objetivos,'1'),[1]);
@@ -1166,8 +1166,8 @@ function validarBuscaGuias() {
 validarBuscaGuias();
 
 async function validarPontosAutomaticos() {
- const api=require('./dist/pontos-osm');
- const {linksSugestaoOSM,iniciarPontosOSM}=require('./dist/pontos-osm-ui');
+ const api=require('./public/pontos-osm');
+ const {linksSugestaoOSM,iniciarPontosOSM}=require('./public/pontos-osm-ui');
  const b=[-23.56,-46.65,-23.55,-46.64];
  for(const [cat,d] of Object.entries(api.categoriasOSM)){
    const q=api.montarConsultaOSM(cat,b);for(const [k,v] of d.tags)assert.ok(q.includes(`["${k}"="${v}"]`));
@@ -1221,26 +1221,26 @@ validarPontosAutomaticos().catch(e=>{console.error(e);process.exitCode=1;});
 
 function validarRefinamentoA(){
  const fs=require('node:fs');
- for(const arquivo of ['dist/index.html','dist/sobre.html']){
+ for(const arquivo of ['public/index.html','public/sobre.html']){
   const html=fs.readFileSync(arquivo,'utf8');
   const visivel=html.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<[^>]*>/g,'');
   assert.doesNotMatch(visivel,/json/i);
  }
- const h=fs.readFileSync('dist/index.html','utf8');
+ const h=fs.readFileSync('public/index.html','utf8');
  assert.equal((h.match(/<button[^>]*>Adicionar um ponto<\/button>/g)||[]).length,1);
  assert.match(h,/id="cidade-cadastro"[^>]*hidden/);
  assert.match(h,/id="baixar-plano"[^>]*aria-describedby="plano-pdf-ajuda"/);
  assert.match(h,/id="lembrete-salvar"[^>]*aria-describedby="lembrete-salvar-ajuda"/);
  assert.match(h,/id="lembrete-data-ajuda"/);
  for(const texto of ['{','{}',JSON.stringify({projeto:'oqdpf',versao:1,acoes:[{chave:'x',concluida:'sim'}]})]){
-  try{require('./dist/plano-json').validarPlanoJson(texto,acoes);assert.fail('Deveria rejeitar');}catch(e){assert.doesNotMatch(e.message,/json|true ou false/i);}
+  try{require('./public/plano-json').validarPlanoJson(texto,acoes);assert.fail('Deveria rejeitar');}catch(e){assert.doesNotMatch(e.message,/json|true ou false/i);}
  }
  console.log('OK Fase A: cópias sem jargão, entrada única para adicionar ponto, textos-guia e motivos acessíveis');
 }
 validarRefinamentoA();
 
 function validarEstruturaB(){
- const fs=require('node:fs');const html=fs.readFileSync('dist/index.html','utf8');
+ const fs=require('node:fs');const html=fs.readFileSync('public/index.html','utf8');
  assert.match(html,/<button type="submit" form="filtros">Encontrar uma ação/);
  assert.match(html,/id="espaco-abas" role="tablist"/);
  for(const nome of ['plano','desafio','conquistas','configuracoes'])assert.match(html,new RegExp('id="espaco-tab-'+nome+'" role="tab"'));
@@ -1251,7 +1251,7 @@ function validarEstruturaB(){
  const gatilho={focus(){focou=true;}},painel={open:true,querySelector:()=>gatilho,contains:e=>e==='dentro',addEventListener(k,f){eventos[k]=f;}};
  const doc={getElementById:()=>painel,querySelector:()=>({getBoundingClientRect:()=>({height:100.5})}),addEventListener(k,f){cliques[k]=f;},documentElement:{style:{setProperty(k,v){valor=v;}}}};
  const janela={ResizeObserver:class{constructor(f){observer=f;}observe(){}}};
- require('./dist/estrutura').iniciarEstruturaEcoa(doc,janela);assert.equal(valor,'101px');observer();
+ require('./public/estrutura').iniciarEstruturaEcoa(doc,janela);assert.equal(valor,'101px');observer();
  cliques.click({target:'dentro'});assert.equal(painel.open,true);
  eventos.keydown({key:'Escape',preventDefault(){}});assert.equal(painel.open,false);assert.equal(focou,true);
  painel.open=true;cliques.click({target:'fora'});assert.equal(painel.open,false);
@@ -1262,7 +1262,7 @@ function validarEstruturaB(){
 validarEstruturaB();
 
 async function validarRotinaD(){
- const {escolherAcaoDoDia,iniciarAcaoDiaria,iniciarGradeDesafio,iniciarInstalacaoEcoa}=require('./dist/rotina');
+ const {escolherAcaoDoDia,iniciarAcaoDiaria,iniciarGradeDesafio,iniciarInstalacaoEcoa}=require('./public/rotina');
  const data=new Date(2026,10,19,1),fim=new Date(2026,10,19,23,59);
  assert.equal(escolherAcaoDoDia(acoes,data),escolherAcaoDoDia(acoes,fim));
  assert.notEqual(escolherAcaoDoDia(acoes,data),escolherAcaoDoDia(acoes,new Date(2026,10,20)));
@@ -1271,7 +1271,7 @@ async function validarRotinaD(){
  const els=new Map(),el=id=>{if(!els.has(id))els.set(id,criar());return els.get(id);};
  const eventos={},doc={getElementById:el,createElement:criar,addEventListener(k,f){eventos[k]=f;}};
  let hoje=data;iniciarAcaoDiaria(doc,acoes,()=>hoje);const primeiro=el('acao-dia-link').href;
- assert.equal(require('./dist/compartilhar').acaoDoLink(primeiro,acoes),escolherAcaoDoDia(acoes,data));
+ assert.equal(require('./public/compartilhar').acaoDoLink(primeiro,acoes),escolherAcaoDoDia(acoes,data));
  hoje=new Date(2026,10,20);eventos.visibilitychange();assert.notEqual(el('acao-dia-link').href,primeiro);
  iniciarGradeDesafio(doc,objetivos);assert.equal(el('desafio-grade').children.length,17);
  const botoes=el('desafio-grade').children;botoes[5].eventos.click();assert.equal(el('desafio-ods').value,'6');
@@ -1290,3 +1290,4 @@ async function validarRotinaD(){
  console.log('OK Fase D: data local, virada do dia, link da ação, grade de 17 ODS, seleção, instalação opt-in, recusa, falha e standalone');
 }
 validarRotinaD().catch(e=>{console.error(e);process.exitCode=1;});
+

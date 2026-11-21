@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const porta = Number(process.env.PORT || 4173);
-const raiz = path.resolve(__dirname, "dist");
+const raiz = path.resolve(__dirname, "..", process.argv.includes("--preview") ? "dist" : "public");
 const tipos = {
   ".html": "text/html",
   ".css": "text/css",
@@ -15,16 +15,16 @@ const tipos = {
   ".ico": "image/x-icon"
 };
 
-http.createServer(async (requisicao, resposta) => {
+const servidor = http.createServer(async (requisicao, resposta) => {
   if (requisicao.method !== "GET") {
     resposta.writeHead(405).end();
     return;
   }
 
-  const caminhoUrl = new URL(requisicao.url, `http://${requisicao.headers.host}`);
+  const caminhoUrl = new URL(requisicao.url, "http://localhost");
   if (caminhoUrl.pathname === "/api/onu") {
     try {
-      const handler = require("./api/onu.js");
+      const handler = require("../api/onu.js");
       await handler(
         { method: "GET", query: Object.fromEntries(caminhoUrl.searchParams) },
         criarRespostaApi(resposta)
@@ -36,7 +36,9 @@ http.createServer(async (requisicao, resposta) => {
     return;
   }
 
-  let caminho = decodeURIComponent(caminhoUrl.pathname);
+  let caminho;
+  try { caminho = decodeURIComponent(caminhoUrl.pathname); }
+  catch { resposta.writeHead(400).end("Endereço inválido."); return; }
   if (caminho === "/") caminho = "/index.html";
   const arquivo = path.resolve(raiz, "." + caminho);
   if (!arquivo.startsWith(raiz + path.sep)) {
@@ -51,8 +53,8 @@ http.createServer(async (requisicao, resposta) => {
     resposta.setHeader("Content-Type", `${tipos[path.extname(arquivo)] || "application/octet-stream"}; charset=utf-8`);
     resposta.end(dados);
   });
-}).listen(porta, "127.0.0.1", () => {
-  console.log(`Ecoa em http://127.0.0.1:${porta}`);
+}).listen(porta, process.env.HOST || "127.0.0.1", () => {
+  console.log(`Ecoa em http://localhost:${servidor.address().port}`);
 });
 
 function criarRespostaApi(resposta) {
@@ -66,3 +68,4 @@ function criarRespostaApi(resposta) {
     end(conteudo) { resposta.end(conteudo); }
   };
 }
+

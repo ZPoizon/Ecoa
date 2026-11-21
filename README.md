@@ -1,3 +1,28 @@
+## Abrir, editar e publicar
+
+Abra **a raiz deste repositório** no VS Code, Cursor ou outro editor que aceite projetos HTML/CSS/JavaScript. Requer Node.js 22. Não há dependências nem chaves obrigatórias.
+
+- `public/`: HTML, CSS, JavaScript, imagens e PWA editáveis.
+- `api/onu.js`: única função da Vercel, para conteúdos complementares da ONU.
+- `scripts/dev.cjs`: servidor local, fora da raiz para evitar confusão com uma aplicação de servidor em produção.
+- `build.cjs`: copia os fontes para `dist/`, sem modificá-los.
+- `dist/`: resultado gerado e ignorado pelo Git; somente arquivos estáticos.
+- `worker/`: adaptador da hospedagem anterior. `npm run build:worker` gera `worker-dist/`, separado da Vercel.
+
+### No editor
+
+Execute `npm run dev` e abra http://localhost:4173. Em ambientes remotos, configure `HOST=0.0.0.0` e encaminhe a porta 4173. `npm test` executa a validação funcional e os testes de publicação. Para conferir o pacote final, execute `npm run build` e depois `npm run preview`. Também é possível usar Live Server sobre `public/index.html`; nesse caso, os conteúdos online da ONU exigem a API, mas o restante da interface funciona.
+
+### Vercel — nova publicação após erro 500
+
+Importe `ZPoizon/Ecoa`, branch `main`, com **Root Directory na raiz**, **Framework Preset Other**, build `npm run build` e saída `dist`. O `vercel.json` fixa explicitamente o modo estático e mantém apenas `/api/onu` como função. Remova overrides antigos incompatíveis no painel e faça um novo deploy do commit atualizado; reutilizar o deploy antigo não atualiza a configuração. Não aponte a raiz do projeto para `public/` nem `dist/`.
+
+A página inicial deve ser servida como HTML estático, mesmo quando a ONU estiver fora do ar. A imagem do erro `FUNCTION_INVOCATION_FAILED` confirma uma falha de função, mas a causa exata depende dos logs da implantação. Depois de publicar, confira `/`, `/manifest.json`, `/sw.js` e `/api/onu?ods=6`. Não há rewrite de todas as páginas para um servidor.
+
+Opcional: `SITE_URL=https://seu-dominio` define os metadados de compartilhamento. Sem essa variável, o build usa o domínio informado pela Vercel. As rotas continuam por hash e nenhuma chave do localStorage é alterada. Se trocar de domínio, exporte/restaure a cópia do plano, pois o armazenamento pertence ao domínio anterior.
+
+Referência: https://vercel.com/docs/project-configuration
+
 # 🌱 Ecoa
 
 **Pequenas ações, grandes mudanças.**
@@ -81,7 +106,7 @@ Conforme a organização inicialmente descrita:
 
 ```text
 .
-├── dist/
+├── public/
 │   ├── index.html    # Estrutura principal da interface
 │   ├── style.css     # Estilos e responsividade
 │   ├── acoes.js      # Catálogo de ações e filtros
@@ -91,7 +116,7 @@ Conforme a organização inicialmente descrita:
 │   └── onu.js        # Integração com conteúdos da ONU Brasil
 ├── api/onu.js        # Função serverless da consulta à ONU Brasil
 ├── vercel.json       # Saída estática e configuração da função
-├── server.cjs        # Servidor local para testar a interface e a API
+├── scripts/dev.cjs        # Servidor local para testar a interface e a API
 ├── package.json      # Comandos de desenvolvimento, build e testes
 └── validar.cjs       # Testes automatizados
 ```
@@ -101,7 +126,7 @@ O diretório `worker/` contém a implementação anterior para outra plataforma 
 ## 🚀 Como executar
 
 1. Clone o repositório e abra a pasta do projeto no editor de sua preferência.
-2. Para testar a interface, sirva a pasta `dist/` utilizando um servidor HTTP local, como a extensão **Live Server** do VS Code.
+2. Para testar a interface, sirva a pasta `public/` utilizando um servidor HTTP local, como a extensão **Live Server** do VS Code.
 3. Acesse o endereço local exibido pelo servidor no navegador.
 
 > A consulta automática a conteúdos externos pode depender da disponibilidade da função serverless e da ONU Brasil. A interface e o catálogo de ações são independentes dessa consulta.
@@ -123,7 +148,7 @@ O projeto pode ser importado diretamente no painel da Vercel a partir do reposit
 - Diretório raiz (Root Directory): raiz do repositório (`.`)
 - Plataforma (Framework Preset): Other
 - Comando de build (Build Command): `npm run build`
-- Diretório de saída (Output Directory): `dist`
+- Diretório de saída (Output Directory): `dist` (gerado; não editar)
 
 O arquivo `api/onu.js` fornece a consulta a conteúdos da ONU Brasil como função serverless. Não é necessário publicar o diretório `worker/`, específico da hospedagem anterior. Durante o build, os metadados de compartilhamento são atualizados para o domínio da implantação informado pela Vercel.
 
@@ -161,13 +186,13 @@ O **Ecoa** nasceu da proposta de transformar conhecimento em atitude. Mais do qu
 
 ## Documentação técnica do Ecoa
 
-Guia de ações práticas da Agenda 2030. Abra dist/index.html diretamente no navegador. Para hospedar no GitHub Pages, publique o conteúdo de dist como raiz do site. Para validar os filtros, rode `node validar.cjs` na raiz do projeto.
+Guia de ações práticas da Agenda 2030. Execute `npm run dev` para abrir o site com suporte a PWA e API. Para hospedar no GitHub Pages, gere `dist/` com `npm run build` e publique seu conteúdo como raiz do site (a API ONU exige hospedagem de funções separada). Para validar os filtros, rode `node validar.cjs` na raiz do projeto.
 
 ## Estrutura
-- dist/index.html — interface e formulário
-- dist/style.css — layout responsivo
-- dist/acoes.js — dados e regras de filtragem
-- dist/app.js — interação e atualização da página
+- public/index.html — interface e formulário
+- public/style.css — layout responsivo
+- public/acoes.js — dados e regras de filtragem
+- public/app.js — interação e atualização da página
 - validar.cjs — testes automatizados do catálogo e da filtragem
 - BACKLOG.md — tarefas, critérios, histórico e registro de equipe
 
@@ -183,7 +208,7 @@ Abra o site em HTTPS. No Android, procure **Instalar app** ou **Adicionar à tel
 
 A primeira visita precisa de internet para armazenar os arquivos. Depois, a busca, os guias, o plano salvo e a exportação em PDF usam os arquivos locais. As consultas à ONU e a abertura de links externos exigem conexão.
 
-Ao atualizar arquivos incluídos no cache, incremente a versão em `dist/sw.js`. A nova versão entra em uso quando as abas da versão anterior forem fechadas.
+Ao atualizar arquivos incluídos no cache, incremente a versão em `public/sw.js`. A nova versão entra em uso quando as abas da versão anterior forem fechadas.
 
 ### Backup do Meu plano em JSON (etapa 2)
 
@@ -229,7 +254,7 @@ Sem dependências novas. Arquivos do quiz incluídos no cache offline v7. `node 
 
 ### Marca Ecoa
 
-**Pequenas ações, 17 objetivos.** Pergunta central: “Com o tempo e o dinheiro que tenho hoje, o que posso fazer?”. Projeto independente e educativo, não oficial da ONU. O SVG em `dist/icons/ecoa.svg` é a origem dos ícones PNG (192, 512 e maskable), com três círculos concêntricos e um ponto central; o desenho fica dentro da área segura circular de 80% do maskable. O PDF reproduz o símbolo em vetores.
+**Pequenas ações, 17 objetivos.** Pergunta central: “Com o tempo e o dinheiro que tenho hoje, o que posso fazer?”. Projeto independente e educativo, não oficial da ONU. O SVG em `public/icons/ecoa.svg` é a origem dos ícones PNG (192, 512 e maskable), com três círculos concêntricos e um ponto central; o desenho fica dentro da área segura circular de 80% do maskable. O PDF reproduz o símbolo em vetores.
 
 As chaves `oqdpf-plano-v1` e `oqdpf-acessibilidade-v1`, o identificador de backup `oqdpf`, a versão 1 e o ID do manifesto foram mantidos. Não é necessária migração: os planos, preferências e JSON antigos continuam sendo lidos diretamente. O prefixo de cache legado permanece para permitir a limpeza das versões antigas; versão de marca: v8. Não houve alteração da URL ou do repositório Ecoa.
 
@@ -273,7 +298,7 @@ A base inicial é vazia: **nenhum ponto real foi verificado nesta etapa**. O usu
 
 Cadastros ficam em `localStorage`, chave `ecoa-pontos-v1`, sem alterar o Meu plano. Importação une por identificador e preserva o registro existente em caso de conflito. Remover pede confirmação. Falhas de leitura bloqueiam novos cadastros, preservando dados anteriores. Exportação inclui todos os pontos, mesmo com filtros ativos. Máximo 200 pontos/500 KB; campos, coordenadas, datas, links e IDs são validados antes da gravação. Conteúdo importado é exibido como texto, nunca HTML.
 
-Arquivo `dist/pontos-modelo.json`: `{"versao":1,"pontos":[]}`. Cada item de `pontos` deve conter:
+Arquivo `public/pontos-modelo.json`: `{"versao":1,"pontos":[]}`. Cada item de `pontos` deve conter:
 
 - `id`: identificador único, até 80 caracteres;
 - `nome`, `cidade`, `endereco`, `detalhes`: textos preenchidos (limites 120, 100, 240 e 600);
@@ -290,7 +315,7 @@ Validação: `node validar.cjs`, testes de dados e interface/mapa simulados, sin
 
 ### Autocomplete reutilizável de endereços
 
-`dist/enderecos.js` conecta automaticamente inputs com `data-autocomplete-endereco`, inclusive inseridos depois no DOM. O atributo opcional `data-endereco-formato="cidade"` preenche cidade/UF; demais campos recebem o endereço. O evento `endereco-selecionado` fornece `detail` com rótulo, bairro, cidade, UF, latitude e longitude. `window.Enderecos.buscar(input)` executa a busca explícita e seleciona o primeiro resultado (formulário do mapa, inclusive Enter sem opção ativa).
+`public/enderecos.js` conecta automaticamente inputs com `data-autocomplete-endereco`, inclusive inseridos depois no DOM. O atributo opcional `data-endereco-formato="cidade"` preenche cidade/UF; demais campos recebem o endereço. O evento `endereco-selecionado` fornece `detail` com rótulo, bairro, cidade, UF, latitude e longitude. `window.Enderecos.buscar(input)` executa a busca explícita e seleciona o primeiro resultado (formulário do mapa, inclusive Enter sem opção ativa).
 
 Toda consulta e interpretação do Photon estão em `consultarProvedorEndereco`, único adaptador para trocar de provedor. Usa `lang=pt`, cinco resultados e viés de localização: centro aproximado do mapa (duas casas decimais), ou centro do Brasil. Resultados brasileiros recebidos são ordenados primeiro, sem excluir outros países. A cobertura e os nomes dependem do OpenStreetMap; campos ausentes não são inventados.
 
@@ -326,7 +351,7 @@ Validação: `node validar.cjs` cobre datas inválidas/passadas, substituição,
 
 ### Sobre e fontes / compartilhamento (etapa 11)
 
-Página estática `dist/sobre.html`, acessível pelo rodapé, com proposta do Ecoa, distinção entre meta oficial/exemplo didático/ação do projeto, metodologia dos filtros e quiz, limites de calculadora/mapa/lembretes e explicação do armazenamento local e consultas externas. Reúne links para os 17 ODS, Agenda 2030, indicadores, Faça a sua parte, Histórias e referências técnicas. A leitura completa funciona sem JavaScript; tema e preferências reutilizam os controles existentes. Nenhuma alteração no catálogo ou nos dados salvos.
+Página estática `public/sobre.html`, acessível pelo rodapé, com proposta do Ecoa, distinção entre meta oficial/exemplo didático/ação do projeto, metodologia dos filtros e quiz, limites de calculadora/mapa/lembretes e explicação do armazenamento local e consultas externas. Reúne links para os 17 ODS, Agenda 2030, indicadores, Faça a sua parte, Histórias e referências técnicas. A leitura completa funciona sem JavaScript; tema e preferências reutilizam os controles existentes. Nenhuma alteração no catálogo ou nos dados salvos.
 
 Página inicial e Sobre têm canonical e `og:url` específicos, título/descrição, imagem PNG existente do logo (512×512), dimensões, texto alternativo e Twitter Card summary. Não foi adicionada biblioteca nem alterada a URL/repositório. Links de ações usam fragmentos: sua prévia usa os metadados gerais da página inicial, pois robôs não executam a seleção da ação. A hospedagem mantém o acesso atual; restrições de acesso e cache dos aplicativos podem impedir ou atrasar prévias. Não há garantia de exibição por WhatsApp/redes sociais.
 
@@ -349,9 +374,9 @@ A navegação principal agora mostra uma tela por vez, mantendo os elementos exi
 | `#/meu-espaco/conquistas` | Acesso direto aos selos existentes |
 | `#/meu-espaco/configuracoes` | Acesso às preferências de leitura existentes |
 
-O roteador `dist/rotas.js` mantém Voltar/Avançar do navegador, título, foco e links antigos (`#busca`, `#buscar`, `#explorar`, `#guias`, `#quiz`, `#desafio`, `#meu-plano`, `#estimativa`, `#na-minha-cidade`). Links antigos `#acao=...` continuam funcionando; novos compartilhamentos usam `#/agir?acao=...`. Rotas desconhecidas voltam ao Início. As abas Buscar/Calcular aceitam setas, Home e End. O mapa recalcula suas dimensões ao retornar à tela. Menu superior no desktop e barra inferior no celular compartilham os mesmos cinco links, com ícones SVG, `aria-current`, safe-area e badge preparado (oculto até a fase 6).
+O roteador `public/rotas.js` mantém Voltar/Avançar do navegador, título, foco e links antigos (`#busca`, `#buscar`, `#explorar`, `#guias`, `#quiz`, `#desafio`, `#meu-plano`, `#estimativa`, `#na-minha-cidade`). Links antigos `#acao=...` continuam funcionando; novos compartilhamentos usam `#/agir?acao=...`. Rotas desconhecidas voltam ao Início. As abas Buscar/Calcular aceitam setas, Home e End. O mapa recalcula suas dimensões ao retornar à tela. Menu superior no desktop e barra inferior no celular compartilham os mesmos cinco links, com ícones SVG, `aria-current`, safe-area e badge preparado (oculto até a fase 6).
 
-`dist/design-system.css` concentra tokens de cores claras/escuras, feedback, âmbar, estados desativados, sobreposição, tipografia, espaçamento, raios e sombras. Os nomes CSS antigos apontam para esses tokens para preservar os componentes. Títulos usam Georgia e corpo usa fontes do sistema; sem CDN/fonte nova. Números usam `lining-nums`; estatísticas também usam `tabular-nums`. Cores oficiais dos ODS não foram alteradas. Componentes incluem botões, chips, abas, cartões, avisos, estados vazios e estilos de modal.
+`public/design-system.css` concentra tokens de cores claras/escuras, feedback, âmbar, estados desativados, sobreposição, tipografia, espaçamento, raios e sombras. Os nomes CSS antigos apontam para esses tokens para preservar os componentes. Títulos usam Georgia e corpo usa fontes do sistema; sem CDN/fonte nova. Números usam `lining-nums`; estatísticas também usam `tabular-nums`. Cores oficiais dos ODS não foram alteradas. Componentes incluem botões, chips, abas, cartões, avisos, estados vazios e estilos de modal.
 
 **Dados preservados:** `oqdpf-plano-v1`, `oqdpf-acessibilidade-v1`, `ecoa-desafio-v1`, `ecoa-pontos-v1` e `ecoa-lembretes-v1` continuam iguais. O roteador não acessa localStorage. Formato de backup legado `oqdpf`, versão 1, mantido; sem migração. Cache PWA incrementado para **v19**, incluindo roteador e design system. Feche todas as abas do Ecoa e reabra para ativar uma atualização que esteja aguardando.
 
@@ -433,7 +458,7 @@ Provedores: overpass-api.de e overpass.private.coffee, com fallback. AbortContro
 
 ### Adicionar pontos curados
 
-Edite `dist/pontos-fixos.json`: os dois registros são **EXEMPLOS FICTÍCIOS**, com `exemplo: true`, e ficam excluídos dos resultados. Substitua por dados que você conferiu e só então remova a flag ou use `false`. Não publique coordenadas/endereço de exemplo como se reais fossem.
+Edite `public/pontos-fixos.json`: os dois registros são **EXEMPLOS FICTÍCIOS**, com `exemplo: true`, e ficam excluídos dos resultados. Substitua por dados que você conferiu e só então remova a flag ou use `false`. Não publique coordenadas/endereço de exemplo como se reais fossem.
 
 Campos: `id` único; `nome`; `categoria` (`reciclagem`, `doacao`, `agua`, `verde`, `outros`); `endereco`; `cidade`; `UF`; `latitude` e `longitude` numéricas; `horario`; `aceita`; `telefone`; `fonte` HTTPS; `dataVerificacao` em AAAA-MM-DD válida, sem data futura. Endereço/horário/o que aceita também aceitam as chaves acentuadas `endereço`, `horário`, `o que aceita`. Confirme nome, condições, fonte e posição. Não inclua telefones ou endereços pessoais privados. A interface mostra “Verificado em dd/mm/aaaa”; não existe verificação automática. Dados inválidos são omitidos.
 
@@ -441,7 +466,7 @@ Fixos têm prioridade na mesclagem: mesmo identificador ou nome semelhante (acen
 
 ### Sugestões e correções
 
-Configure `CONTATO_PONTOS_EMAIL` e/ou `CONTATO_PONTOS_WHATSAPP` no topo de `dist/pontos-osm-ui.js`. WhatsApp: só dígitos, país+DDD+número. Enquanto vazios, enviar fica indisponível, com aviso claro e opção de copiar. Formulário prepara links mailto/WhatsApp; usuário revisa e confirma no aplicativo. Nenhum backend ou envio automático. Correções preenchem referência do local no mesmo formulário.
+Configure `CONTATO_PONTOS_EMAIL` e/ou `CONTATO_PONTOS_WHATSAPP` no topo de `public/pontos-osm-ui.js`. WhatsApp: só dígitos, país+DDD+número. Enquanto vazios, enviar fica indisponível, com aviso claro e opção de copiar. Formulário prepara links mailto/WhatsApp; usuário revisa e confirma no aplicativo. Nenhum backend ou envio automático. Correções preenchem referência do local no mesmo formulário.
 
 ### Privacidade, offline e testes
 
@@ -480,6 +505,7 @@ Testes: `node validar.cjs` inclui progresso vazio, parcial, completo e recalcula
 
 Ação do dia derivada da data local e da ordem do catálogo; estável durante o dia, atualizada ao voltar ao Início ou à aba. Abre o passo a passo pela rota de compartilhamento existente. O resumo do plano é apresentado como Continuar de onde parei. O plano vazio tem um convite único para encontrar uma ação, preservando PDF e lembretes com suas mensagens.
 
-O desafio ganhou 17 botões com ícones oficiais, nomes acessíveis, foco e estado selecionado; o seletor original continua sendo a fonte da escolha e o desafio salvo não muda até a confirmação existente. Instalar o Ecoa fica em Meu espaço > Configurações: solicitação nativa somente após clique, instruções alternativas quando indisponível e ocultação quando aberto como aplicativo. Sem novas dependências ou chaves de armazenamento. Cache v34 inclui a integração com a função da Vercel.
+O desafio ganhou 17 botões com ícones oficiais, nomes acessíveis, foco e estado selecionado; o seletor original continua sendo a fonte da escolha e o desafio salvo não muda até a confirmação existente. Instalar o Ecoa fica em Meu espaço > Configurações: solicitação nativa somente após clique, instruções alternativas quando indisponível e ocultação quando aberto como aplicativo. Sem novas dependências ou chaves de armazenamento. Cache v35 inclui a integração com a função da Vercel.
 
 Validação: node validar.cjs cobre data local, troca de dia, links, seleção dos 17 ODS, instalação somente por clique, recusa, erro, modo aplicativo e plano vazio/preenchido. No navegador foram conferidos a ação do dia, o plano existente e a seleção pelo teclado. Instalação real em Android/iOS, Lighthouse e uso em aparelho físico não foram verificados.
+

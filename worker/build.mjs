@@ -11,13 +11,15 @@ const mime = {
   '.json': 'application/json; charset=utf-8'
 };
 const arquivos = {};
-for (const caminho of await readdir('dist', { recursive: true })) {
+for (const caminho of await readdir('public', { recursive: true })) {
   const tipo = mime[extname(caminho)];
   if (!tipo || caminho.startsWith('server/')) continue;
-  arquivos['/' + caminho] = [tipo, (await readFile('dist/' + caminho)).toString('base64')];
+  arquivos['/' + caminho] = [tipo, (await readFile('public/' + caminho)).toString('base64')];
 }
-await mkdir('dist/server', { recursive: true });
-await mkdir('dist/.openai', { recursive: true });
-await copyFile('.openai/hosting.json', 'dist/.openai/hosting.json');
-await writeFile('dist/server/index.js',
+await mkdir('worker-dist/server', { recursive: true });
+await mkdir('worker-dist/.openai', { recursive: true });
+// A configuração da hospedagem anterior é local e opcional no GitHub.
+try { await copyFile('.openai/hosting.json', 'worker-dist/.openai/hosting.json'); }
+catch (erro) { if (erro.code !== 'ENOENT') throw erro; }
+await writeFile('worker-dist/server/index.js',
   'const arquivos = ' + JSON.stringify(arquivos) + ';\n' + await readFile('worker/index.mjs', 'utf8'));
