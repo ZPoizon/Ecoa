@@ -513,3 +513,9 @@ Validação: node validar.cjs cobre data local, troca de dia, links, seleção d
 ## Polimento — Fase 1
 
 Interface com uma folha modal de filtros (campos originais, Escape nativo, aplicação e validação), ajuda essencial em Saiba mais, notificações em Configurações e calendário como opção principal dos lembretes. PDF e lembretes só aparecem com ações no plano. Nenhuma chave de armazenamento mudou. Cache PWA v36 inclui limpeza.js e limpeza.css. Validação: npm test cobre abertura/fechamento/validação da folha, referências ARIA e estados vazio/preenchido do plano; npm run build gera o pacote. A prévia no navegador remoto não foi acessível nesta rodada; validar toque em aparelhos físicos e importação do calendário no aplicativo de destino.
+
+## Polimento — Fase 2
+
+`public/cidade-config.js` centraliza centro, zoom e categoria inicial do mapa: Capão Bonito-SP, zoom 14, Reciclagem. A consulta continua sob demanda, ao entrar em Na cidade, com debounce/cancelamento/cache existentes. Meus lugares não altera o centro inicial nem é regravado. Lembretes oferecem atalhos de horário e edição manual no fuso local. Navegação por toque mantém foco sem moldura; teclado preserva foco visível. Formulários empilham em telas estreitas; texto mínimo de 16 px e navegação inferior de 12 px. Cache v37.
+
+Validação: npm test (inclui datas locais, virada de ano, ano bissexto, foco por modalidade e mapa/categoria padrão); npm run build. Mapa ao vivo, verificação visual em aparelhos e notificações do sistema não foram verificados nesta rodada.

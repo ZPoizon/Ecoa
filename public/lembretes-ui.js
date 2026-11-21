@@ -1,3 +1,12 @@
+// Usa o calendário local, evitando conversão para UTC nos campos datetime-local.
+function horarioSugeridoLembrete(opcao,agora=new Date()) {
+  const data=new Date(agora);
+  if(opcao==='hora')data.setTime(data.getTime()+3600000);
+  else if(opcao==='amanha'||opcao==='semana'){data.setDate(data.getDate()+(opcao==='amanha'?1:7));data.setHours(9,0,0,0);}
+  else return '';
+  const pad=n=>String(n).padStart(2,'0');
+  return `${data.getFullYear()}-${pad(data.getMonth()+1)}-${pad(data.getDate())}T${pad(data.getHours())}:${pad(data.getMinutes())}`;
+}
 function iniciarLembretes(doc,ambiente,catalogo,obterPlano,api) {
   const $=id=>doc.getElementById(id);let ocupado=false,bloqueado=false;
   const aviso=t=>{$('lembrete-status').textContent=t;};
@@ -16,7 +25,7 @@ function iniciarLembretes(doc,ambiente,catalogo,obterPlano,api) {
       seletor.value=pendentes.some(a=>a.ods+':'+a.titulo===escolhida)?escolhida:'';
       const vazio=!pendentes.length;
       if($('lembretes'))$('lembretes').hidden=!plano.size;
-      seletor.disabled=vazio;$('lembrete-quando').disabled=vazio;$('lembrete-salvar').disabled=vazio;
+      seletor.disabled=vazio;$('lembrete-opcao').disabled=vazio;$('lembrete-quando').disabled=vazio;$('lembrete-salvar').disabled=vazio;
       $('lembrete-form').setAttribute('aria-disabled',String(vazio));
       $('lembrete-salvar-ajuda').textContent=vazio?'Salve uma ação pendente no plano para criar um lembrete.':'Escolha uma ação e uma data futura para salvar o lembrete.';
       $('lembrete-vazio').hidden=true;
@@ -34,8 +43,13 @@ function iniciarLembretes(doc,ambiente,catalogo,obterPlano,api) {
         li.append(calendario,cancelar);$('lembrete-lista').append(li);
       }
       bloqueado=false;
-    }catch(e){bloqueado=true;$('lembrete-salvar').disabled=true;$('lembrete-acao').disabled=true;$('lembrete-quando').disabled=true;$('lembrete-form').setAttribute('aria-disabled','true');$('lembrete-salvar-ajuda').textContent='Não foi possível ler os lembretes salvos; recarregue a página para tentar novamente.';aviso(e.message||'Não foi possível ler os lembretes. Nenhum dado foi apagado.');}
+    }catch(e){bloqueado=true;$('lembrete-salvar').disabled=true;$('lembrete-opcao').disabled=true;$('lembrete-acao').disabled=true;$('lembrete-quando').disabled=true;$('lembrete-form').setAttribute('aria-disabled','true');$('lembrete-salvar-ajuda').textContent='Não foi possível ler os lembretes salvos; recarregue a página para tentar novamente.';aviso(e.message||'Não foi possível ler os lembretes. Nenhum dado foi apagado.');}
   }
+  $('lembrete-opcao').addEventListener('change',()=>{
+    $('lembrete-quando').value=horarioSugeridoLembrete($('lembrete-opcao').value);
+    if($('lembrete-opcao').value==='personalizado')$('lembrete-quando').focus();
+  });
+  $('lembrete-quando').addEventListener('input',()=>{$('lembrete-opcao').value='personalizado';});
   $('lembrete-form').addEventListener('submit',e=>{e.preventDefault();if(bloqueado)return;try{gravar(api.agendarLembrete(ler(),$('lembrete-acao').value,api.horarioLembrete($('lembrete-quando').value),obterPlano()));atualizar();aviso('Lembrete preparado. Use Adicionar ao calendário e confirme o alerta no aplicativo.');}catch(e){aviso(e.message);}$('lembrete-status').focus();});
   $('lembrete-ativar').addEventListener('click',async()=>{
     $('lembrete-ativar').disabled=true;
@@ -58,5 +72,5 @@ function iniciarLembretes(doc,ambiente,catalogo,obterPlano,api) {
   ambiente.addEventListener('storage',e=>{if(e.key===api.chaveLembretes)atualizar();});
   atualizar();verificar();return {atualizar,verificar};
 }
-if(typeof module!=='undefined')module.exports={iniciarLembretes};
+if(typeof module!=='undefined')module.exports={iniciarLembretes,horarioSugeridoLembrete};
 else window.ecoaLembretes=iniciarLembretes(document,window,acoes,()=>plano,{chaveLembretes,lerLembretes,salvarLembretes,horarioLembrete,agendarLembrete,lembretesVencidos,reconciliarLembretes,permitirNotificacoes,notificarLembrete,calendarioLembrete});

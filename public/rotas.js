@@ -33,7 +33,9 @@ function atualizarAbasEspaco(doc,sub){
 }
 function iniciarRotasEcoa(doc,janela,adaptadores={}) {
   const $=id=>doc.getElementById(id);
-  let ultima=null;
+  let ultima=null,usandoPonteiro=false;
+  doc.addEventListener('pointerdown',()=>{usandoPonteiro=true;},true);
+  doc.addEventListener('keydown',()=>{usandoPonteiro=false;doc.activeElement?.removeAttribute('data-foco-toque');},true);
   function aplicar(hash,forcar=false) {
     const rota=resolverRotaEcoa(hash);
     if(janela.location.hash!==rota.hash)janela.history.replaceState(null,'',rota.hash);
@@ -66,7 +68,7 @@ function iniciarRotasEcoa(doc,janela,adaptadores={}) {
     const alvo=rota.ods?$('guia-nome'):rota.sub==='desafio'?$('desafio-titulo'):
       rota.sub==='conquistas'?$('conquistas-titulo'):rota.sub==='configuracoes'?$('configuracoes-titulo'):$('tela-'+rota.tela+'-titulo');
     if(rota.alvo==='preferencia-tema')doc.querySelector('.leitura').open=true;
-    if(alvo){alvo.tabIndex=-1;alvo.focus({preventScroll:true});}
+    if(alvo){alvo.setAttribute('data-foco-toque',String(usandoPonteiro));alvo.tabIndex=-1;alvo.focus({preventScroll:true});}
     janela.scrollTo({top:0,left:0,behavior:'instant'});
 
     if(rota.alvo&&rota.alvo!=='inicio'){const destino=$(rota.alvo);abrirDetalhes(destino);destino?.scrollIntoView({block:'start',behavior:'instant'});}

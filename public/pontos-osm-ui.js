@@ -6,7 +6,9 @@ function linksSugestaoOSM(texto,email=CONTATO_PONTOS_EMAIL,numero=CONTATO_PONTOS
 }
 function iniciarPontosOSM(doc,ambiente,api) {
   const $=id=>doc.getElementById(id),criar=(tag,texto)=>{const e=doc.createElement(tag);if(texto!==undefined)e.textContent=String(texto);return e;};
-  let mapa,camada,categoria='',fixos=[],pontos=[],visiveis=[],posicaoPendente,fixosFalharam=false,ativo=false;
+  const inicial=ambiente.EcoaMapaInicial||(typeof module!=='undefined'?require('./cidade-config'):ECOA_MAPA_INICIAL);
+  let mapa,camada,categoria=inicial.categoria,fixos=[],pontos=[],visiveis=[],posicaoPendente,fixosFalharam=false,ativo=false;
+  for(const chip of doc.querySelectorAll('[data-categoria-osm]'))chip.setAttribute('aria-pressed',String(chip.dataset.categoriaOsm===categoria));
   let storage;try{storage=ambiente.sessionStorage;}catch{}
   const cliente=api.criarClienteOSM({fetcher:ambiente.fetch.bind(ambiente),storage});
   const bbox=()=>{if(!mapa)return null;const b=mapa.getBounds();return [b.getSouth(),b.getWest(),b.getNorth(),b.getEast()];};

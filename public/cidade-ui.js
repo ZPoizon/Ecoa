@@ -2,7 +2,8 @@ function resumoPontosCidade(total){return total===1?'1 ponto na sua lista.':`${t
 async function iniciarCidade(doc,ambiente,api) {
   const {categoriasCidade,chaveCidade,validarPontosCidade,lerJsonCidade,unirPontosCidade,filtrarPontosCidade,salvarPontosCidade}=api;
   const $=id=>doc.getElementById(id);
-  let pontos=[],mapa,camada,carregando=false,leituraFalhou=false,enderecoSelecionado,visaoInicial=false;
+  const inicial=ambiente.EcoaMapaInicial||(typeof module!=='undefined'?require('./cidade-config'):ECOA_MAPA_INICIAL);
+  let pontos=[],mapa,camada,carregando=false,leituraFalhou=false,enderecoSelecionado;
   const aviso=texto=>{$('cidade-status').textContent=texto;};
   function criar(tag,texto){const el=doc.createElement(tag);if(texto)el.textContent=texto;return el;}
   function link(texto,url){const a=criar('a',texto);a.href=url;a.target='_blank';a.rel='noopener noreferrer';return a;}
@@ -30,7 +31,6 @@ async function iniciarCidade(doc,ambiente,api) {
       if(camada){const popup=criar('div');popup.append(criar('strong',p.nome),criar('p',p.endereco),criar('p',p.detalhes),link('Consultar fonte',p.fonte));
         ambiente.L.marker([p.latitude,p.longitude],{title:p.nome,alt:p.nome}).bindPopup(popup).addTo(camada);}
     });
-    if(mapa&&!visaoInicial){visaoInicial=true;if(visiveis.length)mapa.fitBounds(visiveis.map(p=>[p.latitude,p.longitude]),{padding:[24,24],maxZoom:15,animate:false});else mapa.setView([-14.2,-51.9],4);}
   }
   function guardar(novos){if(leituraFalhou)throw Error('O armazenamento contém dados que não puderam ser lidos. Nenhum cadastro foi sobrescrito.');pontos=salvarPontosCidade(ambiente.localStorage,unirPontosCidade(pontos,novos));desenhar();}
   function baixar(){const url=ambiente.URL.createObjectURL(new Blob([JSON.stringify({versao:1,pontos},null,2)],{type:'application/json'}));const a=criar('a');a.href=url;a.download='ecoa-pontos-locais.json';doc.body.append(a);a.click();a.remove();ambiente.setTimeout(()=>ambiente.URL.revokeObjectURL(url),1000);aviso('Cópia preparada com todos os seus pontos, inclusive os ocultos pelos filtros.');}
@@ -84,7 +84,7 @@ async function iniciarCidade(doc,ambiente,api) {
     try{
       await carregarLeafletCidade(doc,ambiente);
       $('cidade-mapa').hidden=false;
-      mapa=ambiente.L.map('cidade-mapa',{scrollWheelZoom:false,zoomAnimation:false,fadeAnimation:false,zoomControl:false}).setView([-14.2,-51.9],4);
+      mapa=ambiente.L.map('cidade-mapa',{scrollWheelZoom:false,zoomAnimation:false,fadeAnimation:false,zoomControl:false}).setView(inicial.centro,inicial.zoom);
       ambiente.L.control.zoom({zoomInTitle:'Aproximar',zoomOutTitle:'Afastar'}).addTo(mapa);
       ambiente.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'}).on('tileerror',()=>aviso('Parte do mapa não carregou. Verifique a conexão; a lista abaixo continua disponível.')).addTo(mapa);
       camada=ambiente.L.layerGroup().addTo(mapa);desenhar();
@@ -98,7 +98,7 @@ async function iniciarCidade(doc,ambiente,api) {
       if(mapa.on){mapa.on('moveend',atualizarVies);atualizarVies();}
       ambiente.ecoaPontosMapa?.conectar(mapa);
       $('cidade-carregar').hidden=true;$('cidade-mapa-abertura').hidden=true;aviso('Mapa aberto. Os mesmos locais estão na lista abaixo.');
-    }catch{$('cidade-carregar').hidden=false;if(mapa){mapa.remove();mapa=null;camada=null;visaoInicial=false;}$('cidade-mapa').hidden=true;aviso('Não foi possível carregar o mapa. A lista e os cadastros continuam funcionando. Você pode tentar novamente.');}
+    }catch{$('cidade-carregar').hidden=false;if(mapa){mapa.remove();mapa=null;camada=null;}$('cidade-mapa').hidden=true;aviso('Não foi possível carregar o mapa. A lista e os cadastros continuam funcionando. Você pode tentar novamente.');}
     finally{carregando=false;$('cidade-carregar').disabled=false;}
   });
   try{const salvo=ambiente.localStorage.getItem(chaveCidade);if(salvo)pontos=lerJsonCidade(salvo);}catch{leituraFalhou=true;$('cidade-exportar').disabled=true;aviso('Não foi possível ler os pontos salvos. Nenhum dado foi apagado; novos cadastros estão bloqueados para evitar sobrescrever esses dados.');}

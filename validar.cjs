@@ -798,10 +798,11 @@ async function validarCidade() {
   const envCarga={setTimeout:()=>1,clearTimeout(){}};
   await carregarLeafletCidade(docCarga,envCarga);assert.equal(envCarga.__ecoaLeafletPronto,true);await carregarLeafletCidade(docCarga,envCarga);
   let marcadores=0,limpezas=0;
-  const mapaFake={setView(){return this;},fitBounds(){},remove(){}};
+  let centroInicial,zoomInicial;
+  const mapaFake={setView(centro,zoom){centroInicial=centro;zoomInicial=zoom;return this;},fitBounds(){throw Error('Não deve deslocar o centro pelos lugares salvos');},remove(){}};
   ambiente.__ecoaLeafletPronto=true;
   ambiente.L={map:()=>mapaFake,control:{zoom:()=>({addTo(){}})},tileLayer:()=>({on(){return this;},addTo(){}}),layerGroup:()=>({addTo(){return this;},clearLayers(){limpezas++;}}),marker:()=>({bindPopup(popup){assert.equal(typeof popup,'object');return this;},addTo(){marcadores++;}})};
-  await el('cidade-carregar').eventos.click();assert.equal(el('cidade-mapa').hidden,false);assert.equal(marcadores,2);
+  await el('cidade-carregar').eventos.click();assert.equal(el('cidade-mapa').hidden,false);assert.equal(marcadores,2);assert.deepEqual(centroInicial,[-24.01,-48.35]);assert.equal(zoomInicial,14);
   el('cidade-categoria').value='horta';el('cidade-categoria').eventos.change();assert.equal(el('cidade-lista').children.length,0);assert.ok(limpezas>=2);
   storage.valor='JSON inválido';await iniciarCidade(doc,ambiente,c);
   for(const campo of Object.keys(p).filter(k=>k!=='id'))el('ponto-'+campo).value=String(p[campo]);
@@ -922,6 +923,8 @@ async function validarLembretesEtapa10(){
   const env={localStorage:storage,navigator:{},Notification:{permission:'default'},setInterval(){},setTimeout(){},addEventListener(){}};
   const api={...a,permitirNotificacoes:async()=>{solicitacoes++;env.Notification.permission='granted';return 'granted';},notificarLembrete:async()=>{envios++;return true;}};
   const ui=require('./public/lembretes-ui').iniciarLembretes(doc,env,acoes,()=>p,api);
+  el('lembrete-opcao').value='amanha';el('lembrete-opcao').eventos.change();assert.match(el('lembrete-quando').value,/T09:00$/);
+  el('lembrete-quando').eventos.input();assert.equal(el('lembrete-opcao').value,'personalizado');
   assert.equal(solicitacoes,0);assert.equal(el('lembretes').hidden,false);assert.equal(el('lembrete-salvar').disabled,false);
   assert.equal(el('lembrete-acao').children[0].value,'');assert.match(el('lembrete-acao').children[0].textContent,/Escolha uma ação/);assert.equal(el('lembrete-quando').disabled,false);
   await el('lembrete-ativar').eventos.click();assert.equal(solicitacoes,1);assert.equal(a.lerLembretes(storage,acoes).notificacoes,true);
@@ -994,6 +997,8 @@ function validarRotasFase1() {
   Object.defineProperty(janela,'localStorage',{get(){throw Error('Roteador não deve acessar dados salvos');}});
   const router=iniciarRotasEcoa(doc,janela,{abrirGuia(n){guia=n;},abrirAcao(chave){acao=chave;}});
   assert.equal(janela.location.hash,'#/agir');assert.equal(doc.title,'Agir | Ecoa');assert.equal(foco,'tela-agir-titulo');assert.equal(rolagens,1);
+  docEventos.pointerdown();router.navegar('#/inicio');assert.equal(el('tela-inicio-titulo').attrs['data-foco-toque'],'true');
+  docEventos.keydown();router.navegar('#/agir');assert.equal(el('tela-agir-titulo').attrs['data-foco-toque'],'false');
   const estado=()=>{assert.equal(telas.filter(t=>!t.hidden).length,1);assert.equal(nav.filter(n=>n.attrs['aria-current']==='page').length,1);};estado();
   el('campo-existente').value='valor não salvo';const original=el('campo-existente');
   router.navegar('#/agir/calcular');assert.equal(el('painel-buscar').hidden,true);assert.equal(el('painel-calcular').hidden,false);
@@ -1035,7 +1040,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v36'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v37'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1318,3 +1323,28 @@ function validarLimpezaFase1(){
  console.log('OK Limpeza Fase 1: folha, fechamento, busca única, ajuda, rótulos e controles preservados');
 }
 validarLimpezaFase1();
+
+function validarCorrecoesFase2(){
+ const {horarioSugeridoLembrete:h}=require('./public/lembretes-ui');
+ const agora=new Date(2026,11,31,23,30);
+ assert.equal(h('hora',agora),'2027-01-01T00:30');
+ assert.equal(h('amanha',agora),'2027-01-01T09:00');
+ assert.equal(h('semana',agora),'2027-01-07T09:00');
+ assert.equal(h('amanha',new Date(2028,1,28,18)),'2028-02-29T09:00');
+ assert.equal(h('personalizado',agora),'');assert.equal(h('',agora),'');assert.equal(agora.getFullYear(),2026);
+ const cfg=require('./public/cidade-config');assert.equal(cfg.categoria,'reciclagem');assert.ok(cfg.zoom>=13);
+ const elementos=new Map(),eventos={},chamadas=[];
+ const criar=()=>({dataset:{},children:[],setAttribute(k,v){this[k]=v;},replaceChildren(){this.children=[];},append(x){this.children.push(x);},addEventListener(){}});
+ const el=id=>{if(!elementos.has(id))elementos.set(id,criar());return elementos.get(id);};
+ const chips=['reciclagem','agua'].map(c=>{const e=criar();e.dataset.categoriaOsm=c;return e;});
+ const api=require('./public/pontos-osm');
+ const env={EcoaMapaInicial:cfg,fetch:async()=>({ok:true,json:async()=>[]}),navigator:{onLine:true},addEventListener(){},L:{layerGroup:()=>({addTo(){return this;},clearLayers(){}})}};
+ const ui=require('./public/pontos-osm-ui').iniciarPontosOSM({getElementById:el,createElement:criar,querySelectorAll:()=>chips,addEventListener(k,f){eventos[k]=f;}},env,{...api,criarClienteOSM:()=>({consultar(){}}),criarBuscaOSM:()=>({cancelar(){},agendar(...args){chamadas.push(args);}})});
+ assert.equal(chips[0]['aria-pressed'],'true');assert.equal(chips[1]['aria-pressed'],'false');assert.equal(chamadas.length,0);
+ eventos['ecoa-rota']({detail:{tela:'na-cidade'}});
+ ui.conectar({on(){},getZoom:()=>14,getBounds:()=>({getSouth:()=>-24.02,getWest:()=>-48.36,getNorth:()=>-24,getEast:()=>-48.34})});
+ assert.equal(chamadas.length,1);assert.equal(chamadas[0][0],'reciclagem');
+ eventos['ecoa-rota']({detail:{tela:'inicio'}});ui.atualizar();assert.equal(chamadas.length,1);
+ console.log('OK Fase 2: datas locais, viradas de ano, mapa padrão, categoria ativa e consulta só na tela');
+}
+validarCorrecoesFase2();
