@@ -23,3 +23,8 @@
  .cidade-busca-linha button { margin-top:var(--space-3); width:100%; }
  #cidade-adicionar { width:100%; }
 }
+
+/* Sobreposição de 1px elimina fissuras por arredondamento de tiles fracionários. */
+#cidade-mapa .leaflet-tile { width:257px !important; height:257px !important; max-width:none !important; max-height:none !important; }
+#cidade-mapa { background:var(--surface); }
+#osm-sugerir { margin-block:var(--space-4); }

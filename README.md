@@ -557,3 +557,20 @@ git push
 Com o Git conectado e deploy automático ativo na Vercel, o push inicia a republicação. Os visitantes passam a receber os pontos pela base pública, com categoria, descrição e “Verificado em dd/mm/aaaa”; eles aparecem na área e categoria escolhidas e são mesclados com o OpenStreetMap. `horta` entra em Hortas e áreas verdes; `outro` em Outros. Óleo de cozinha e Pilhas e eletrônicos têm filtros próprios. Os dados são declarações do curador, não certificação independente.
 
 Offline após o primeiro acesso: formulário, lista fixa em cache, prévia e geração de arquivo. Tiles do mapa e busca de endereços exigem rede; a alternativa são lista e coordenadas manuais. Cache PWA v40 inclui a ferramenta. `npm test` cobre geração, validação, preservação, IDs, duplicados, categorias, ordenação e renderização com texto seguro. Mapa com provedores reais, clipboard do celular, leitura por tecnologia assistiva e deploy da Vercel não foram verificados nesta rodada.
+
+## Base regional offline e limpeza do mapa
+
+A base OSM de Capão Bonito e arredores é distribuída em `public/pontos-osm.json`, copiada para `dist/` no build. O importador Node (sem dependências) faz uma consulta reunindo as categorias, com fallback de servidor, e só substitui os arquivos depois de uma resposta completa. Raio padrão: 25 km, configurável de 1 a 100 km. Não roda no build nem a cada visita. Execute manualmente para atualizar os dados da comunidade; eles não equivalem a pontos verificados pelo curador. Atribuição: © OpenStreetMap contributors, licença ODbL, https://www.openstreetmap.org/copyright.
+
+```powershell
+node scripts/importar-osm.mjs --raio-km 25
+npm test
+npm run build
+git add public/pontos-osm.json
+git commit -m "data: atualiza base regional do OpenStreetMap"
+git push
+```
+
+Atualize também a versão em `public/sw.js` ao publicar uma base nova. O site combina base regional, pontos curados e consulta ao vivo, preservando os salvos quando a rede falha. A consulta ao vivo usa timeout de 45 s no servidor, 60 s no cliente, mirrors, cache e backoff. O mapa/lista abre com a base local antes da consulta remota. Sem rede, marcadores e lista continuam disponíveis após o primeiro acesso; o fundo de ruas exige rede e não é baixado em massa. Leaflet 1.9.4 (a biblioteca já usada), CSS e ícones estão locais, sob licença BSD em `public/vendor/leaflet/LICENSE`.
+
+A interface de Meus lugares foi retirada; nenhum dado antigo do localStorage foi apagado. Há uma única entrada Sugerir ao Ecoa. Cache v41. Validação automatizada cobre fallback, resposta incompleta, categorias, mesclagem, limite de raio e ausência de erro bloqueante.

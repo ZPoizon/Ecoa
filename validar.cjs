@@ -807,7 +807,7 @@ async function validarCidade() {
   storage.valor='JSON inválido';await iniciarCidade(doc,ambiente,c);
   for(const campo of Object.keys(p).filter(k=>k!=='id'))el('ponto-'+campo).value=String(p[campo]);
   el('cidade-form').eventos.submit({preventDefault(){}});assert.equal(storage.valor,'JSON inválido');
-  const html=require('fs').readFileSync('public/index.html','utf8');assert.match(html,/id="na-minha-cidade"/);assert.match(html,/id="cidade-lista"/);
+  const html=require('fs').readFileSync('public/index.html','utf8');assert.match(html,/id="na-minha-cidade"/);assert.match(html,/id="osm-lista"/);
   console.log('OK Cidade: schema, limites, links seguros, datas, filtros, união, persistência, cadastro, remoção, importação, exportação, falha de mapa e proteção de dados inválidos (DOM simulado)');
 }
 validarCidade().catch(erro=>{console.error(erro);process.exitCode=1;});
@@ -1041,7 +1041,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v40'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v41'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1220,7 +1220,7 @@ async function validarPontosAutomaticos() {
  el('osm-perto').click();assert.equal(localizacoes,1);assert.equal(el('osm-perto').disabled,false);
  const texto=JSON.stringify(el('osm-lista').children);assert.match(texto,/Verificado pelo Ecoa/);assert.match(texto,/Verificado em 01\/01\/2026/);
  ambiente.navigator.onLine=true;receberUI(ps);assert.equal(el('osm-lista').children.length,2);assert.ok(JSON.stringify(el('osm-lista').children).includes('<img src=x onerror=alert(1)>'));
- ambiente.navigator.onLine=false;eventos.offline();assert.equal(el('osm-lista').children.length,1);
+ ambiente.navigator.onLine=false;eventos.offline();assert.equal(el('osm-lista').children.length,2);
  el('osm-sug-form').eventos.submit({preventDefault(){}});assert.match(el('osm-contato-aviso').textContent,/não foi enviada/);assert.equal(el('osm-enviar-email').hidden,true);
  console.log('OK Pontos OSM: consultas por categoria, limite, cache de sessão/TTL, 429/504 e mirrors, debounce 600ms, cancelamento, resposta tardia/vazia, mesclagem, datas, offline e localização opt-in');
 }
@@ -1234,8 +1234,8 @@ function validarRefinamentoA(){
   assert.doesNotMatch(visivel,/json/i);
  }
  const h=fs.readFileSync('public/index.html','utf8');
- assert.equal((h.match(/<button[^>]*>Salvar lugar só para mim<\/button>/g)||[]).length,1);
- assert.match(h,/id="cidade-cadastro"[^>]*hidden/);
+ assert.equal((h.match(/<button[^>]*>Salvar lugar só para mim<\/button>/g)||[]).length,0);
+ assert.doesNotMatch(h,/id="cidade-cadastro"/);
  assert.match(h,/id="baixar-plano"[^>]*aria-describedby="plano-pdf-ajuda"/);
  assert.match(h,/id="lembrete-salvar"[^>]*aria-describedby="lembrete-salvar-ajuda"/);
  assert.match(h,/id="lembrete-data-ajuda"/);
@@ -1325,7 +1325,7 @@ function validarLimpezaFase1(){
 }
 validarLimpezaFase1();
 
-function validarCorrecoesFase2(){
+async function validarCorrecoesFase2(){
  const {horarioSugeridoLembrete:h}=require('./public/lembretes-ui');
  const agora=new Date(2026,11,31,23,30);
  assert.equal(h('hora',agora),'2027-01-01T00:30');
@@ -1342,7 +1342,7 @@ function validarCorrecoesFase2(){
  const env={EcoaMapaInicial:cfg,fetch:async()=>({ok:true,json:async()=>[]}),navigator:{onLine:true},addEventListener(){},L:{layerGroup:()=>({addTo(){return this;},clearLayers(){}})}};
  const ui=require('./public/pontos-osm-ui').iniciarPontosOSM({getElementById:el,createElement:criar,querySelectorAll:()=>chips,addEventListener(k,f){eventos[k]=f;}},env,{...api,criarClienteOSM:()=>({consultar(){}}),criarBuscaOSM:()=>({cancelar(){},agendar(...args){chamadas.push(args);}})});
  assert.equal(chips[0]['aria-pressed'],'true');assert.equal(chips[1]['aria-pressed'],'false');assert.equal(chamadas.length,0);
- eventos['ecoa-rota']({detail:{tela:'na-cidade'}});
+ await ui.pronto;eventos['ecoa-rota']({detail:{tela:'na-cidade'}});
  ui.conectar({on(){},getZoom:()=>14,getBounds:()=>({getSouth:()=>-24.02,getWest:()=>-48.36,getNorth:()=>-24,getEast:()=>-48.34})});
  assert.equal(chamadas.length,1);assert.equal(chamadas[0][0],'reciclagem');
  eventos['ecoa-rota']({detail:{tela:'inicio'}});ui.atualizar();assert.equal(chamadas.length,1);
@@ -1364,7 +1364,7 @@ function validarPolimentoFase3(){
    assert.equal(el('acao-dia-titulo').textContent,acao.titulo);
    assert.ok(el('acao-dia-link').href.includes(encodeURIComponent(ods+':'+acao.titulo)));
  }
- assert.equal((html.match(/class="ilustracao-vazio"/g)||[]).length,5);
+ assert.equal((html.match(/class="ilustracao-vazio"/g)||[]).length,4);
  assert.equal((html.match(/class="chip-icone"/g)||[]).length,10);
  for(const svg of html.matchAll(/<svg class="(?:ilustracao-inicio|ilustracao-vazio|chip-icone)"[^>]*>/g)){
    assert.ok(svg[0].includes('aria-hidden="true"'));assert.ok(svg[0].includes('focusable="false"'));
@@ -1433,3 +1433,25 @@ function validarCurador(){
  console.log('OK Curador: JSON completo, exemplos, limites, URLs, IDs únicos, duplicidade, categorias, ordenação, XSS e rota');
 }
 validarCurador();
+
+async function validarBaseRegional(){
+ const api=require('./public/pontos-osm'),fs=require('node:fs');
+ const {consultaImportacao,converterImportacao,importar}=await import('./scripts/importar-osm.mjs');
+ assert.match(consultaImportacao(25),/around:25000,-24.01,-48.35/);assert.throws(()=>consultaImportacao(101));
+ const dados={elements:[{type:'node',id:123,lat:-24.01,lon:-48.35,tags:{name:'Praça',leisure:'park'}}]};
+ const base=converterImportacao(dados);assert.equal(base.categorias.verde.length,1);assert.equal(base.categorias.agua.length,0);
+ let chamadas=0;await importar({fetcher:async()=>{if(++chamadas===1)throw Error('sem rede');return {ok:true,json:async()=>dados};}});assert.equal(chamadas,2);
+ await assert.rejects(importar({fetcher:async()=>{throw Error('sem rede');}}));
+ const ps=api.validarBaseOSM(base),fixo={...ps[0],id:'curado',origem:'fixo'};
+ assert.equal(api.pontosDisponiveisOSM([fixo],ps,ps,'verde',null).length,1);
+ assert.equal(api.pontosDisponiveisOSM([],ps,[],'verde',null).length,1);
+ const tarefas=[],estados=[],recebidos=[];
+ const busca=api.criarBuscaOSM({consultar:async()=>{throw Error('O servidor demorou para responder');},receber:x=>recebidos.push(x),estado:(t,tipo)=>estados.push([t,tipo]),relogio:{setTimeout:f=>tarefas.push(f),clearTimeout(){}}});
+ busca.agendar('verde',[-24.02,-48.36,-24,-48.34],14);await tarefas[0]();
+ assert.deepEqual(recebidos,[]);assert.deepEqual(estados.at(-1),['Mostrando pontos salvos','salvos']);
+ const html=fs.readFileSync('public/index.html','utf8');assert.doesNotMatch(html,/Meus lugares|Salvar lugar só para mim|Cópia dos meus pontos/);
+ assert.equal((html.match(/>Sugerir ao Ecoa<\/button>/g)||[]).length,1);assert.match(html,/class="sr-only" id="cidade-status"/);
+ assert.ok(api.validarBaseOSM(JSON.parse(fs.readFileSync('public/pontos-osm.json'))).length>0);
+ console.log('OK Base regional: importação, fallback, mesclagem, offline, falha não bloqueante e limpeza');
+}
+validarBaseRegional().catch(e=>{console.error(e);process.exitCode=1;});

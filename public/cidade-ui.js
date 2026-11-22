@@ -109,14 +109,18 @@ function carregarLeafletCidade(doc,ambiente) {
   if(ambiente.__ecoaLeafletPronto)return Promise.resolve();
   // Carregamento sob demanda; mapas externos não entram no cache offline do PWA.
   return Promise.allSettled([
-    ['link','https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY='],
-    ['script','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=']
+    ['link','vendor/leaflet/leaflet.css','sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY='],
+    ['script','vendor/leaflet/leaflet.js','sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=']
   ].map(([tag,url,hash])=>new Promise((resolve,reject)=>{
     const el=doc.createElement(tag);el.integrity=hash;el.crossOrigin='anonymous';
     if(tag==='link'){el.rel='stylesheet';el.href=url;}else el.src=url;
     const timer=ambiente.setTimeout(()=>{el.remove();reject(Error('Tempo esgotado'));},15000);
     el.onload=()=>{ambiente.clearTimeout(timer);resolve();};el.onerror=()=>{ambiente.clearTimeout(timer);el.remove();reject(Error('Falha na rede'));};doc.head.append(el);
-  }))).then(resultados=>{if(resultados.some(r=>r.status==='rejected'))throw Error('Falha ao carregar Leaflet');ambiente.__ecoaLeafletPronto=true;});
+  }))).then(resultados=>{if(resultados.some(r=>r.status==='rejected'))throw Error('Falha ao carregar Leaflet');if(ambiente.L?.Icon?.Default){
+      const pin='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 41"><path d="M12.5 40C10 32 1 22 1 13a11.5 11.5 0 0 1 23 0c0 9-9 19-11.5 27Z" fill="#205b3e" stroke="white"/><circle cx="12.5" cy="13" r="4" fill="white"/></svg>');
+      ambiente.L.Icon.Default.prototype._getIconUrl=function(nome){return this.options[nome+'Url'];};
+      ambiente.L.Icon.Default.mergeOptions({iconUrl:pin,iconRetinaUrl:pin,shadowUrl:null});
+    }ambiente.__ecoaLeafletPronto=true;});
 }
 if(typeof module!=='undefined')module.exports={iniciarCidade,carregarLeafletCidade,resumoPontosCidade};
 else if(document.getElementById("cidade-form")) iniciarCidade(document,window,{categoriasCidade,chaveCidade,validarPontosCidade,lerJsonCidade,unirPontosCidade,filtrarPontosCidade,salvarPontosCidade});

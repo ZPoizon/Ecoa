@@ -21,7 +21,7 @@ function montarConsultaOSM(categoria,bbox) {
   if(!Object.hasOwn(categoriasOSM,categoria))throw Error('Escolha uma categoria.');
   const b=areaOSM(bbox);
   if(b[2]-b[0]>.3||b[3]-b[1]>.3)throw Error('Aproxime o mapa para ver pontos.');
-  return `/* Ecoa - pontos na cidade */[out:json][timeout:20];(${categoriasOSM[categoria].tags.map(([k,v])=>`nwr["${k}"="${v}"](${b.join(',')});`).join('')});out center tags 200;`;
+  return `/* Ecoa - pontos na cidade */[out:json][timeout:45];(${categoriasOSM[categoria].tags.map(([k,v])=>`nwr["${k}"="${v}"](${b.join(',')});`).join('')});out center tags 200;`;
 }
 function pontoValidoOSM(p) {return p&&typeof p.id==='string'&&typeof p.nome==='string'&&Object.hasOwn(categoriasOSM,categoriaMapaOSM(p.categoria))&&Number.isFinite(p.latitude)&&Number.isFinite(p.longitude)&&Math.abs(p.latitude)<=90&&Math.abs(p.longitude)<=180;}
 function converterPontosOSM(dados,categoria) {
@@ -72,7 +72,7 @@ function criarClienteOSM({fetcher=fetch,storage,agora=Date.now,esperar=esperarOS
       if(liberar>agora()){ocupado(Math.ceil((liberar-agora())/1000));await esperar(liberar-agora(),signal);}
       if(signal?.aborted)throw abortadoOSM();
       const controle=new AbortController(),cancelar=()=>controle.abort();signal?.addEventListener('abort',cancelar,{once:true});
-      const timer=setTimeout(cancelar,30000);
+      const timer=setTimeout(cancelar,60000);
       try {
         const r=await fetcher(servidores[inicio%servidores.length],{method:'POST',body:new URLSearchParams({data:query}),signal:controle.signal,credentials:'omit',cache:'no-store'});
         if(r.status===429||r.status===504){const raw=r.headers?.get('Retry-After');const retry=/^\d+$/.test(raw||'')?Number(raw)*1000:Math.max(0,Date.parse(raw)-agora())||0;liberar=agora()+Math.max(retry,30000*2**Math.min(falhas++,3));throw Error('Servidor ocupado. Tente novamente em instantes.');}
@@ -104,10 +104,24 @@ function criarBuscaOSM({consultar,receber,estado,relogio=globalThis}) {
     timer=relogio.setTimeout(async()=>{
       estado('Buscando pontos nesta área…','carregando');
       try{const pontos=await consultar(cat,bbox,{signal,ocupado:s=>{if(atual===geracao)estado(`Servidor ocupado. Nova tentativa em ${s} segundos…`,'carregando');}});if(atual===geracao){receber(pontos);estado(pontos.length?'Pontos atualizados.':'Nenhum ponto encontrado nesta área.','pronto');}}
-      catch(e){if(atual===geracao&&e.name!=='AbortError'){receber([]);estado(e.message,'erro');}}
+      catch(e){if(atual===geracao&&e.name!=='AbortError'){estado('Mostrando pontos salvos','salvos');}}
     },600);
   }
   return {agendar,cancelar};
+}
+// A base distribuída é lida antes da busca ao vivo e funciona no cache offline.
+function validarBaseOSM(dados) {
+ if(dados?.versao!==1||!dados.categorias)throw Error('Base regional inválida');
+ return Object.entries(categoriasOSM).flatMap(([cat])=>{
+  const pontos=dados.categorias[cat];
+  if(!Array.isArray(pontos)||!pontos.every(p=>pontoValidoOSM(p)&&p.categoria===cat&&p.origem==='osm'))throw Error('Base regional inválida');
+  return pontos;
+ });
+}
+function pontosDisponiveisOSM(fixos,salvos,vivos,categoria,bbox){
+ const filtrar=lista=>lista.filter(p=>categoriaMapaOSM(p.categoria)===categoria&&dentroAreaOSM(p,bbox));
+ // Curadoria tem prioridade; dados ao vivo atualizam a cópia pelo mesmo ID.
+ return mesclarPontosOSM(filtrar(fixos),[...filtrar(vivos),...filtrar(salvos)]);
 }
 function preencherCartaoPonto(doc,item,p){
  const texto=(tag,t)=>{const el=doc.createElement(tag);el.textContent=String(t);item.append(el);};
@@ -119,5 +133,5 @@ function preencherCartaoPonto(doc,item,p){
   try{const u=new URL(valor);if(u.protocol!=='https:'||u.username||u.password)continue;const a=doc.createElement('a');a.textContent=rotulo;a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';a.className='ecoa-button secondary';item.append(a);}catch{}
  }
 }
-const apiPontosOSM={categoriaMapaOSM,preencherCartaoPonto,categoriasOSM,servidoresOSM,areaOSM,montarConsultaOSM,converterPontosOSM,validarFixosOSM,distanciaOSM,nomesParecidosOSM,mesclarPontosOSM,dentroAreaOSM,criarClienteOSM,criarBuscaOSM};
+const apiPontosOSM={validarBaseOSM,pontosDisponiveisOSM,categoriaMapaOSM,preencherCartaoPonto,categoriasOSM,servidoresOSM,areaOSM,montarConsultaOSM,converterPontosOSM,validarFixosOSM,distanciaOSM,nomesParecidosOSM,mesclarPontosOSM,dentroAreaOSM,criarClienteOSM,criarBuscaOSM};
 if(typeof module!=='undefined')module.exports=apiPontosOSM;else window.EcoaPontosOSM=apiPontosOSM;

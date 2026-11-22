@@ -7,7 +7,7 @@ function linksSugestaoOSM(texto,email=CONTATO_PONTOS_EMAIL,numero=CONTATO_PONTOS
 function iniciarPontosOSM(doc,ambiente,api) {
   const $=id=>doc.getElementById(id),criar=(tag,texto)=>{const e=doc.createElement(tag);if(texto!==undefined)e.textContent=String(texto);return e;};
   const inicial=ambiente.EcoaMapaInicial||(typeof module!=='undefined'?require('./cidade-config'):ECOA_MAPA_INICIAL);
-  let mapa,camada,categoria=inicial.categoria,fixos=[],pontos=[],visiveis=[],posicaoPendente,fixosFalharam=false,ativo=false;
+  let mapa,camada,categoria=inicial.categoria,fixos=[],salvos=[],pontos=[],visiveis=[],posicaoPendente,fixosFalharam=false,basePronta=false,ativo=false;
   for(const chip of doc.querySelectorAll('[data-categoria-osm]'))chip.setAttribute('aria-pressed',String(chip.dataset.categoriaOsm===categoria));
   let storage;try{storage=ambiente.sessionStorage;}catch{}
   const cliente=api.criarClienteOSM({fetcher:ambiente.fetch.bind(ambiente),storage});
@@ -15,13 +15,13 @@ function iniciarPontosOSM(doc,ambiente,api) {
   const online=()=>ambiente.navigator.onLine!==false;
   const link=(texto,url)=>{const a=criar('a',texto);a.className='ecoa-button secondary';a.href=url;a.target='_blank';a.rel='noopener noreferrer';return a;};
   function estado(texto,tipo='inicial') {
-    $('osm-status').textContent=texto+(fixosFalharam?' A lista de pontos verificados não está disponível.':'');
+    $('osm-status').textContent=tipo==='erro'?'Mostrando pontos salvos':texto;
     $('osm-lista').setAttribute('aria-busy',String(tipo==='carregando'));
-    $('osm-tentar').hidden=tipo!=='erro';
+    $('osm-tentar').hidden=!['erro','salvos'].includes(tipo);
     if(tipo==='pronto')$('osm-status').textContent=visiveis.length===200?'Exibindo até 200 pontos; aproxime para refinar.':visiveis.length?`${visiveis.length} ${visiveis.length===1?'ponto encontrado':'pontos encontrados'}.`:'Nenhum ponto encontrado nesta área.';
   }
   function sugerir(p) {
-    $('osm-sugerir').open=true;
+    $('osm-sugerir').hidden=false;$('osm-vazio-sugerir').setAttribute('aria-expanded','true');
     if(p){$('osm-sug-nome').value=p.nome;$('osm-sug-endereco').value=[p.endereco,p.cidade,p.UF].filter(Boolean).join(', ');$('osm-sug-detalhes').value=`Correção do ponto: ${p.fonte}\nPosição: ${p.latitude}, ${p.longitude}\nO que precisa mudar: `;}
     $('osm-sug-nome').focus();
   }
@@ -31,8 +31,7 @@ function iniciarPontosOSM(doc,ambiente,api) {
   }
   function renderizar() {
     const b=bbox();
-    const curados=fixos.filter(p=>api.categoriaMapaOSM(p.categoria)===categoria&&api.dentroAreaOSM(p,b));
-    visiveis=api.mesclarPontosOSM(curados,online()?pontos.filter(p=>api.categoriaMapaOSM(p.categoria)===categoria&&api.dentroAreaOSM(p,b)):[]);
+    visiveis=api.pontosDisponiveisOSM(fixos,salvos,pontos,categoria,b);
     $('osm-lista').replaceChildren();camada?.clearLayers();
     $('osm-vazio').hidden=!categoria||visiveis.length>0;
     for(const p of visiveis){
@@ -53,11 +52,11 @@ function iniciarPontosOSM(doc,ambiente,api) {
   }
   const busca=api.criarBuscaOSM({consultar:cliente.consultar,receber:lista=>{pontos=lista;renderizar();},estado});
   function atualizar() {
-    busca.cancelar();pontos=[];renderizar();
+    busca.cancelar();renderizar();
     if(!categoria){estado('Escolha uma categoria para buscar pontos.');return;}
-    if(!online()){estado('Você está offline. Mostramos apenas os pontos verificados disponíveis; Meus lugares permanece abaixo.');return;}
+    if(!online()){estado('Mostrando pontos salvos — offline','salvos');return;}
     if(!mapa){estado('Abra o mapa ou busque um endereço para escolher a área.');return;}
-    if(!ativo)return;
+    if(!ativo||!basePronta)return;
     busca.agendar(categoria,bbox(),mapa.getZoom());
   }
   function conectar(m) {
@@ -74,6 +73,7 @@ function iniciarPontosOSM(doc,ambiente,api) {
   });
   $('osm-tentar').addEventListener('click',()=>{if(!mapa)$('cidade-carregar').click();atualizar();});
   $('osm-vazio-sugerir').addEventListener('click',()=>sugerir());
+  $('osm-fechar-sugestao').addEventListener('click',()=>{$('osm-sugerir').hidden=true;$('osm-vazio-sugerir').setAttribute('aria-expanded','false');$('osm-vazio-sugerir').focus();});
   $('osm-perto').addEventListener('click',()=>{
     if(!ambiente.navigator.geolocation){estado('Este navegador não oferece localização. Digite um endereço.','erro');return;}
     $('osm-perto').disabled=true;estado('Aguardando sua permissão de localização…');
@@ -95,8 +95,12 @@ function iniciarPontosOSM(doc,ambiente,api) {
   $('osm-copiar').addEventListener('click',async()=>{try{await ambiente.navigator.clipboard.writeText($('osm-sug-texto').value);$('osm-contato-aviso').textContent='Sugestão copiada.';}catch{$('osm-sug-texto').focus();$('osm-sug-texto').select();$('osm-contato-aviso').textContent='Selecione e copie o texto acima.';}});
   ambiente.addEventListener('offline',atualizar);ambiente.addEventListener('online',atualizar);
   doc.addEventListener('ecoa-rota',e=>{ativo=e.detail.tela==='na-cidade';if(ativo)atualizar();else busca.cancelar();});
-  ambiente.fetch('pontos-fixos.json',{credentials:'same-origin'}).then(r=>{if(!r.ok)throw Error();return r.json();}).then(d=>{fixos=api.validarFixosOSM(d);renderizar();}).catch(()=>{fixosFalharam=true;estado('Não foi possível carregar os pontos verificados.','erro');});
-  return {conectar,atualizar};
+  const carregar=async(url,validar)=>{try{const r=await ambiente.fetch(url,{credentials:'same-origin'});if(!r.ok)throw Error();return validar(await r.json());}catch{return [];}};
+  const pronto=Promise.all([
+    carregar('pontos-osm.json',api.validarBaseOSM).then(lista=>{salvos=lista;renderizar();}),
+    carregar('pontos-fixos.json',api.validarFixosOSM).then(lista=>{fixos=lista;renderizar();})
+  ]).then(()=>{basePronta=true;atualizar();});
+  return {conectar,atualizar,pronto};
 }
 if(typeof module!=='undefined')module.exports={iniciarPontosOSM,linksSugestaoOSM};
 else window.ecoaPontosMapa=iniciarPontosOSM(document,window,window.EcoaPontosOSM);
