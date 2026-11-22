@@ -19,7 +19,7 @@ function iniciarMapaPublico(doc,ambiente){
    if(ambiente.navigator.onLine!==false)ambiente.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'}).addTo(mapa);
    else mapa.attributionControl.addAttribution('&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>');
    const vies=()=>{const p=mapa.getCenter();$('cidade-endereco').dataset.enderecoLat=p.lat.toFixed(2);$('cidade-endereco').dataset.enderecoLon=p.lng.toFixed(2);};
-   mapa.on('moveend',vies);vies();ambiente.ecoaPontosMapa?.conectar(mapa);
+   mapa.on('moveend',vies);vies();ambiente.ecoaPontosMapa?.conectar(mapa);ambiente.ecoaCadastro?.conectar(mapa);
    $('cidade-mapa-abertura').hidden=true;aviso('Mapa aberto. Os mesmos locais estão na lista abaixo.');
   }catch{
    mapa?.remove();mapa=null;$('cidade-mapa').hidden=true;

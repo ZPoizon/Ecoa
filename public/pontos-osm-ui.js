@@ -46,6 +46,7 @@ function iniciarPontosOSM(doc,ambiente,api) {
       const coord=`${p.latitude},${p.longitude}`;
       botoes.append(link('Abrir no Waze',`https://www.waze.com/ul?ll=${encodeURIComponent(coord)}&navigate=yes`));
       const corrigir=criar('button','Sugerir correção');corrigir.type='button';corrigir.className='secondary';corrigir.addEventListener('click',()=>sugerir(p));botoes.append(corrigir);
+      if(p.bancoId){const denunciar=criar('button','Denunciar este ponto');denunciar.type='button';denunciar.className='secondary';denunciar.addEventListener('click',()=>ambiente.ecoaCadastro?.denunciar(p));botoes.append(denunciar);}
       item.append(botoes);$('osm-lista').append(item);
       if(camada){
         const icon=ambiente.L.divIcon({className:'osm-marker',html:'<span aria-hidden="true">●</span>',iconSize:[30,30],iconAnchor:[15,15]});
@@ -138,7 +139,7 @@ function iniciarPontosOSM(doc,ambiente,api) {
     carregar('pontos-osm.json',api.validarBaseOSM).then(lista=>{salvos=lista;renderizar();}),
     carregar('pontos-fixos.json',api.validarFixosOSM).then(lista=>{fixos=lista;renderizar();})
   ]).then(()=>{basePronta=true;cidadesOpcoes();atualizar();});
-  return {conectar,atualizar,pronto};
+  return {conectar,atualizar,pronto,todos:()=>[...fixos,...salvos,...pontos,...compartilhados]};
 }
 if(typeof module!=='undefined')module.exports={iniciarPontosOSM,linksSugestaoOSM};
 else window.ecoaPontosMapa=iniciarPontosOSM(document,window,window.EcoaPontosOSM);

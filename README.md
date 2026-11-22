@@ -596,3 +596,53 @@ git push
 ```
 
 Verificação desta entrega: leitura REST real retornou PGRST205 (tabela public.pontos ainda ausente), sem executar SQL ou gravações no banco. Integração do mapa testada com Supabase simulado, incluindo debounce e falha 503 preservando resultados. A tentativa de validação visual com Chromium foi bloqueada pelo ambiente (socket não permitido); celular real, instalação offline, regras em Postgres e deploy Vercel permanecem sem verificar.
+
+## Cadastro e denúncia — Supabase, fase 2
+
+**Procedência da base:** `public/pontos-osm.json` foi importado pela Overpass em 22/11/2026, raio 25 km de Capão Bonito. São 1 registro `amenity=recycling`, 4 `amenity=drinking_water`, 59 `leisure=garden/park` ou `landuse=allotments` e 4 `amenity=public_bookcase/community_centre`. Doação, óleo e pilhas/eletrônicos retornaram zero. Todos os 68 têm origem OSM e link para o objeto original; nenhum é fictício. Não equivalem a verificação presencial. Os dois registros fictícios de `public/pontos-fixos.json` e os dois INSERTs do schema são EXEMPLO, excluídos da interface pública. `public/config.js` tem somente URL e chave pública publishable, equivalente ao acesso anon sem login; nenhuma chave privilegiada.
+
+“Cadastrar um ponto” reutiliza o autocomplete de endereço. É possível escolher a posição pelo mapa, usar seu centro pelo teclado ou preencher coordenadas. Cidade/UF/bairro vêm da sugestão quando disponíveis. O formulário exige confirmação **Este é um local público**, e informa: **Cadastre apenas locais públicos. Não informe endereço de casa nem dados pessoais.** O adaptador envia uma lista explícita de campos, sempre status pendente e verificado false, com `Prefer: return=minimal` (pendentes não são legíveis por anon). Apenas a resposta positiva do serviço mostra “Recebemos! O ponto aparece depois de aprovado.”
+
+O nome semelhante a até 100 m gera aviso e confirmação adicional. A comparação usa todos os pontos carregados e até 200 aprovados próximos, sem aplicar os filtros da tela; não garante ausência absoluta de duplicados, especialmente pendentes (privados). Os cartões compartilhados têm “Denunciar este ponto”, com os três motivos previstos. Pontos OSM/curados continuam com “Sugerir correção”, pois não têm ID na tabela pontos para a chave estrangeira da denúncia. Denunciar não exclui nem oculta o local automaticamente: exige revisão do responsável.
+
+Honeypot no cadastro e limite combinado de **5 tentativas de cadastro/denúncia por dia local e aparelho**, na chave nova `ecoa:pontos:envios-v1`; chaves anteriores não são alteradas. A reserva acontece antes do POST, inclusive em falha de rede: um timeout pode acontecer após o banco aceitar o envio. Não há repetição automática. Web Locks serializa abas onde disponível; sem essa API, o limite é uma barreira local de melhor esforço. Limpar o armazenamento, adulterar o cliente ou chamar a API diretamente contorna essa barreira: **não é proteção de servidor contra spam**. RLS continua sendo responsável por impedir aprovação/verificação/edição/exclusão pelo visitante.
+
+Erros de rede, permissão, tabela inexistente e dados recusados têm mensagens próprias; o formulário preserva os campos e o mapa segue funcionando. Não é necessário reexecutar `schema.sql` nesta fase. Cache PWA v43 inclui os três arquivos de cadastro; a API continua fora do cache estático. Nenhuma biblioteca nova.
+
+### Provar as restrições no banco
+
+Abra **supabase/testar-rls.sql** e execute o conteúdo completo no SQL Editor. O teste cria uma linha temporária como administrador, troca para `anon` e comprova: leitura de aprovado; criação de pendente não verificado; pendente invisível; criação aprovada/verificada negada; UPDATE/DELETE negados; denúncia permitida e leitura de denúncias proibida. Também verifica o contador. O **ROLLBACK final desfaz tudo**, inclusive a linha e a denúncia. As mensagens PASSOU ficam nos resultados/notices do editor. Se ocorrer FALHOU, execute ROLLBACK e revise as políticas antes de abrir cadastros. Não substitua o ROLLBACK por COMMIT.
+
+PowerShell, uma linha por vez (Set-Clipboard apenas copia o SQL para colar no editor; não executa no banco):
+
+```powershell
+git pull
+Get-Content -Raw .\supabase\testar-rls.sql | Set-Clipboard
+node validar.cjs
+npm test
+npm run build
+```
+
+Para alterações futuras:
+
+```powershell
+git add public supabase/testar-rls.sql validar.cjs README.md
+git commit -m "feat: adiciona cadastro pendente e denuncia de pontos"
+git push
+```
+
+Os testes automatizados simulam a API: validação, status/verificado forçados, honeypot, quota, virada do dia, preservação dos dados, duplicado, duplo clique, uso do autocomplete, denúncia, rede/RLS/tabela inexistente e texto seguro. Eles não substituem executar o teste SQL no seu banco. Nenhum cadastro/denúncia de teste foi enviado à produção nesta entrega. Verificação visual em celular, leitor de tela, instalação offline e execução SQL real permanecem pendentes. A fase 3 entregará cache persistente dos resultados do banco e workflow.
+
+Na conferência de 22/11/2026, a URL configurada ainda retornou `404 / PGRST205` para leitura de pontos. Isso pode indicar schema aplicado em outro projeto, uma transação que falhou ou cache de API desatualizado. Confira no SQL Editor do projeto `nxacxbowkfstyovzgqye`:
+
+```sql
+select to_regclass('public.pontos');
+```
+
+Se retornar `public.pontos`, solicite a atualização do cache e tente a leitura novamente:
+
+```sql
+notify pgrst, 'reload schema';
+```
+
+Se retornar NULL, confira o resultado/erro da execução anterior do schema; não considere o banco configurado até as tabelas existirem. O SQL de prova não depende desse cache, pois roda diretamente no banco.

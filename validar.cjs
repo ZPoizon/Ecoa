@@ -1041,7 +1041,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v42'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v43'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1505,3 +1505,54 @@ async function validarIntegracaoBancoMapa(){
  console.log('OK Integração banco/mapa: carregamento, debounce, filtros juntos, lista preservada em 503 e cancelamento ao sair');
 }
 validarIntegracaoBancoMapa().catch(e=>{console.error(e);process.exitCode=1;});
+
+async function validarCadastroFase2(){
+ const c=require('./public/cadastro-pontos'),osm=require('./public/pontos-osm'),fs=require('node:fs');
+ const dados={nome:'Praça Água',cidade:'Capão Bonito',uf:'sp',bairro:'Centro',categoria:'agua',endereco:'Rua Pública, 10',descricao:'Bebedouro público',horario:'8h às 18h',aceita:'',telefone:'',site:'',lat:'-24,01',lng:'-48,35',localPublico:true,website_extra:'',status:'aprovado',verificado:true,denuncias:99};
+ const p=c.validarCadastroPonto(dados);assert.equal(p.status,'pendente');assert.equal(p.verificado,false);assert.equal(p.denuncias,undefined);assert.equal(p.localPublico,undefined);assert.equal(p.lat,-24.01);assert.equal(p.uf,'SP');
+ for(const extra of [{localPublico:false},{website_extra:'spam'},{nome:'x'},{descricao:'a'.repeat(601)},{lat:''},{lat:Infinity},{lat:91},{lng:-181},{uf:'ZZ'},{categoria:'inventada'},{site:'javascript:alert(1)'},{site:'https://a:b@example.org'},{cidade:12}])assert.throws(()=>c.validarCadastroPonto({...dados,...extra}));
+ const xss=c.validarCadastroPonto({...dados,nome:'<img src=x onerror=alert(1)>'});assert.equal(xss.nome,'<img src=x onerror=alert(1)>');
+ const a={id:'osm-1',nome:'Praca Agua',latitude:-24.0105,longitude:-48.35};assert.equal(c.duplicadosCadastroPonto(p,[a,{...a,nome:'Outro'},{...a,latitude:-25},{...a,exemplo:true}],osm).length,1);
+ const mem=new Map([['plano-antigo','preservado']]),storage={getItem:k=>mem.get(k)||null,setItem:(k,v)=>mem.set(k,v)};
+ for(let i=1;i<=5;i++)assert.equal(c.reservarEnvioPonto(storage,new Date(2026,10,22)),i);
+ assert.throws(()=>c.reservarEnvioPonto(storage,new Date(2026,10,22)),/5 envios/);assert.equal(c.reservarEnvioPonto(storage,new Date(2026,10,23)),1);assert.equal(mem.get('plano-antigo'),'preservado');
+ assert.throws(()=>c.reservarEnvioPonto({getItem:()=>'{',setItem(){}}),/armazenamento/);
+ assert.throws(()=>c.reservarEnvioPonto({getItem:()=>null,setItem(){throw Error();}}),/armazenamento/);
+ const config={SUPABASE_URL:'https://teste.supabase.co',SUPABASE_ANON_KEY:'sb_publishable_teste'},requisicoes=[];mem.delete(c.CHAVE_ENVIOS_PONTOS);
+ const cli=c.criarEnviosPontos(config,{storage,fetcher:async(u,o)=>{requisicoes.push([u,o]);return {ok:true,status:201};}});
+ await cli.cadastrar(dados);assert.equal(requisicoes[0][1].headers.Prefer,'return=minimal');const corpo=JSON.parse(requisicoes[0][1].body);assert.equal(corpo.status,'pendente');assert.equal(corpo.verificado,false);assert.equal(corpo.denuncias,undefined);
+ assert.throws(()=>cli.cadastrar({...dados,website_extra:'bot'}));assert.equal(requisicoes.length,1);
+ await cli.denunciar('ec0a0000-0000-4000-8000-000000000002','nao_existe');assert.equal(JSON.parse(requisicoes[1][1].body).motivo,'nao_existe');assert.throws(()=>cli.denunciar('osm-1','nao_existe'));assert.throws(()=>c.validarDenunciaPonto('ec0a0000-0000-4000-8000-000000000002','outro'));
+ for(const [status,codigo,regex] of [[403,'42501',/permissões/],[404,'PGRST205',/tabela/],[429,'',/Muitos envios/],[400,'23514',/Confira/]]){
+  const s={getItem:()=>null,setItem(){}};await assert.rejects(c.criarEnviosPontos(config,{storage:s,fetcher:async()=>({ok:false,status,json:async()=>({code:codigo,message:'<script>não mostrar</script>'})})}).cadastrar(dados),regex);
+ }
+ await assert.rejects(c.criarEnviosPontos(config,{storage:{getItem:()=>null,setItem(){}},fetcher:async()=>{throw TypeError('network');}}).cadastrar(dados),/conexão/);
+ const html=fs.readFileSync('public/index.html','utf8');assert.match(html,/Cadastre apenas locais públicos\. Não informe endereço de casa nem dados pessoais\./);assert.match(html,/id="cadastro-localPublico"[^>]*required/);assert.match(html,/id="cadastro-endereco"[^>]*data-autocomplete-endereco/);
+ const sql=fs.readFileSync('supabase/testar-rls.sql','utf8');assert.match(sql,/set local role anon/);assert.match(sql,/rollback;/);assert.match(sql,/visitante criou aprovado/);assert.match(sql,/UPDATE não foi negado/);assert.match(sql,/DELETE não foi negado/);
+ console.log('OK Cadastro fase 2: pendente forçado, validação, privacidade, honeypot, quota/data, armazenamento preservado, duplicados 100m, denúncia, erros rede/RLS/tabela e SQL de prova');
+}
+validarCadastroFase2().catch(e=>{console.error(e);process.exitCode=1;});
+
+async function validarInterfaceCadastroFase2(){
+ const api=require('./public/cadastro-pontos'),osm=require('./public/pontos-osm'),comp=require('./public/pontos-compartilhados');
+ const els=new Map();const el=id=>{if(!els.has(id))els.set(id,{value:'',checked:false,hidden:false,disabled:false,open:false,eventos:{},addEventListener(k,f){this.eventos[k]=f;},setAttribute(){},focus(){},scrollIntoView(){},reset(){},showModal(){this.open=true;},close(){this.open=false;},set innerHTML(v){throw Error('XSS');}});return els.get(id);};
+ let posts=0,liberar,duplicate=false;const store=new Map(),eventos={};
+ const env={EcoaConfig:{SUPABASE_URL:'https://teste.supabase.co',SUPABASE_ANON_KEY:'sb_publishable_teste'},EcoaCompartilhados:comp,EcoaPontosOSM:osm,ecoaPontosMapa:{todos:()=>[]},navigator:{onLine:true},localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)},fetch:async(u,o)=>{
+  if(o.method==='POST'){posts++;await new Promise(r=>liberar=r);return {ok:true};}
+  return {ok:true,json:async()=>duplicate?[{id:'ec0a0000-0000-4000-8000-000000000002',nome:'Praça Pública',categoria:'agua',lat:-24.01,lng:-48.35,status:'aprovado',verificado:false}]:[]};
+ }};
+ const ui=require('./public/cadastro-pontos-ui').iniciarCadastroPontos({getElementById:el,addEventListener:(k,f)=>eventos[k]=f},env,api);
+ const valores={nome:'Praça Pública',cidade:'Capão Bonito',uf:'SP',categoria:'agua',endereco:'Rua Pública, 10',descricao:'Bebedouro',lat:'-24.01',lng:'-48.35'};
+ for(const [k,v] of Object.entries(valores))el('cadastro-'+k).value=v;el('cadastro-localPublico').checked=true;
+ el('cadastro-abrir').eventos.click();assert.equal(el('cadastro-painel').hidden,false);
+ const submit=()=>el('cadastro-form').eventos.submit({preventDefault(){}});
+ duplicate=true;await submit();assert.equal(posts,0);assert.equal(el('cadastro-duplicado').hidden,false);assert.match(el('cadastro-duplicado-texto').textContent,/100 m/);
+ el('cadastro-confirmar-duplicado').checked=true;const pending=submit();await new Promise(r=>setTimeout(r,0));await submit();assert.equal(posts,1);liberar();await pending;assert.match(el('cadastro-status').textContent,/Recebemos!/);assert.equal(el('cadastro-campos').disabled,false);
+ env.navigator.onLine=false;await submit();assert.match(el('cadastro-status').textContent,/offline/);assert.equal(posts,1);
+ ui.denunciar({bancoId:'ec0a0000-0000-4000-8000-000000000002',nome:'<img onerror=x>'});assert.equal(el('denuncia-local').textContent,'<img onerror=x>');assert.equal(el('denuncia-dialogo').open,true);
+ el('denuncia-motivo').value='nao_existe';await el('denuncia-form').eventos.submit({preventDefault(){}});assert.match(el('denuncia-status').textContent,/offline/);assert.equal(posts,1);
+ el('cadastro-endereco').eventos['endereco-selecionado']({detail:{cidade:'Itapeva',uf:'SP',bairro:'Centro',latitude:-23.98,longitude:-48.87}});assert.equal(el('cadastro-cidade').value,'Itapeva');assert.equal(el('cadastro-lat').value,'-23.980000');
+ eventos['ecoa-rota']();assert.equal(el('denuncia-dialogo').open,false);
+ console.log('OK Interface cadastro: endereço reutilizado, duplicado exige confirmação, bloqueio de duplo envio, mensagem offline, denúncia e texto seguro');
+}
+validarInterfaceCadastroFase2().catch(e=>{console.error(e);process.exitCode=1;});

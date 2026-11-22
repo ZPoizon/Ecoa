@@ -38,7 +38,7 @@ function criarClientePontosCompartilhados(config,{fetcher=fetch}={}){
   try{
    // Publishable não é JWT: só apikey, sem Authorization Bearer inválido.
    const resposta=await fetcher(url,{headers:{apikey:config.SUPABASE_ANON_KEY},signal:controle.signal,cache:'no-store',credentials:'omit'});
-   if(!resposta.ok)throw Error('Pontos compartilhados indisponíveis');return await resposta.json();
+   if(!resposta.ok){let corpo={};try{corpo=await resposta.json();}catch{}const erro=Error('Pontos compartilhados indisponíveis');erro.status=resposta.status;erro.codigo=corpo.code;throw erro;}return await resposta.json();
   }finally{clearTimeout(timer);signal?.removeEventListener('abort',cancelar);}
  }
  return {
