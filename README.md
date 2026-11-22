@@ -574,3 +574,25 @@ git push
 Atualize também a versão em `public/sw.js` ao publicar uma base nova. O site combina base regional, pontos curados e consulta ao vivo, preservando os salvos quando a rede falha. A consulta ao vivo usa timeout de 45 s no servidor, 60 s no cliente, mirrors, cache e backoff. O mapa/lista abre com a base local antes da consulta remota. Sem rede, marcadores e lista continuam disponíveis após o primeiro acesso; o fundo de ruas exige rede e não é baixado em massa. Leaflet 1.9.4 (a biblioteca já usada), CSS e ícones estão locais, sob licença BSD em `public/vendor/leaflet/LICENSE`.
 
 A interface de Meus lugares foi retirada; nenhum dado antigo do localStorage foi apagado. Há uma única entrada Sugerir ao Ecoa. Cache v41. Validação automatizada cobre fallback, resposta incompleta, categorias, mesclagem, limite de raio e ausência de erro bloqueante.
+
+## Pontos compartilhados — Supabase, fase 1
+
+1. No projeto Supabase, abra SQL Editor e execute `supabase/schema.sql` inteiro **uma vez**. Ele cria as tabelas, índices, políticas RLS e duas linhas **EXEMPLO FICTÍCIO**. Não apaga tabelas existentes: se já houver tabelas com esses nomes, a transação é cancelada; revise uma migração antes de repetir. As extensões unaccent e pg_trgm usam o schema extensions, padrão do Supabase.
+2. A URL e a chave pública fornecidas estão somente em `public/config.js`, copiado pelo build para `dist/config.js`. A publishable key é pública por design e vai no cabeçalho apikey; não é um JWT. Não coloque chaves secret/service_role nesse arquivo. Referências oficiais: https://supabase.com/docs/guides/getting-started/api-keys e https://supabase.com/docs/guides/database/postgres/row-level-security.
+3. No Table Editor, substitua os exemplos por locais públicos reais: dados completos, coordenadas e categoria corretas. Remova o prefixo EXEMPLO só depois da revisão; linhas com esse prefixo são ocultadas no mapa e na lista de cidades. A verificação é sua responsabilidade, não uma certificação automática.
+4. Para aprovar um cadastro, mude status para aprovado. Marque verificado somente após conferência. Visitantes nunca podem UPDATE/DELETE, ver denúncias ou ler pendentes/rejeitados. Novos envios por anon só podem ser pendentes e não verificados; os campos id, contador e data são definidos pelo banco. A contagem de denúncias é incrementada por trigger.
+5. O site lê até 200 aprovados por categoria na área visível ou na cidade escolhida, com busca de nome sem acentos/caixa. A lista de cidades vem da função cidades_pontos, que respeita RLS. Dados aprovados se misturam aos curados e à base OSM, sem duplicatas pelo ID ou por nome semelhante a menos de 30 m. A origem aparece no cartão. A busca de endereço anterior permanece.
+
+Esta fase usa fetch nativo, sem SDK/CDN adicional. O cache de arquivos v42 inclui a configuração e o adaptador; chamadas /rest/v1/ ficam fora do service worker. Na indisponibilidade do banco, os pontos da base regional/curadoria continuam disponíveis com aviso discreto. Cache persistente dos resultados do banco, cadastro, denúncia e workflow de leitura serão entregues nas fases 2 e 3. O honeypot/limite por aparelho da próxima fase é apenas uma barreira contra envios acidentais: RLS não impede spam distribuído.
+
+Validação local: npm test cobre consultas, filtros, cancelamento, conversão, coordenadas, XSS, mesclagem e contrato estático do SQL. Isso **não comprova as políticas executadas em um Postgres real**. Antes de abrir o cadastro público, testar com anon leitura de aprovado/pendente, inserção pendente, tentativa de aprovado/verificado, atualização, exclusão e denúncia. Não aplicar o schema não impede a base OSM de funcionar.
+
+```powershell
+npm test
+npm run build
+git add supabase public README.md validar.cjs
+git commit -m "feat: adiciona leitura e filtros de pontos compartilhados"
+git push
+```
+
+Verificação desta entrega: leitura REST real retornou PGRST205 (tabela public.pontos ainda ausente), sem executar SQL ou gravações no banco. Integração do mapa testada com Supabase simulado, incluindo debounce e falha 503 preservando resultados. A tentativa de validação visual com Chromium foi bloqueada pelo ambiente (socket não permitido); celular real, instalação offline, regras em Postgres e deploy Vercel permanecem sem verificar.

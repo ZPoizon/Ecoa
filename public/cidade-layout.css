@@ -28,3 +28,8 @@
 #cidade-mapa .leaflet-tile { width:257px !important; height:257px !important; max-width:none !important; max-height:none !important; }
 #cidade-mapa { background:var(--surface); }
 #osm-sugerir { margin-block:var(--space-4); }
+
+.cidade-filtros-publicos { display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-block:1rem; }
+.cidade-filtros-publicos label { display:grid;gap:.4rem;min-width:0; }
+.cidade-filtros-publicos input,.cidade-filtros-publicos select { width:100%;min-width:0;font-size:1rem; }
+@media(max-width:40rem){.cidade-filtros-publicos{grid-template-columns:1fr;}}

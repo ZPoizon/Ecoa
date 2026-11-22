@@ -7,6 +7,9 @@ function linksSugestaoOSM(texto,email=CONTATO_PONTOS_EMAIL,numero=CONTATO_PONTOS
 function iniciarPontosOSM(doc,ambiente,api) {
   const $=id=>doc.getElementById(id),criar=(tag,texto)=>{const e=doc.createElement(tag);if(texto!==undefined)e.textContent=String(texto);return e;};
   const inicial=ambiente.EcoaMapaInicial||(typeof module!=='undefined'?require('./cidade-config'):ECOA_MAPA_INICIAL);
+  let compartilhados=[],cidadesRemotas=[],cidadeAtual=null,enquadrarCidade=false,consultaBanco=0,timerBanco,controleBanco,cidadesCarregadas=false;
+  const compartilhadoAPI=ambiente.EcoaCompartilhados;
+  const clienteBanco=compartilhadoAPI&&ambiente.EcoaConfig?compartilhadoAPI.criarClientePontosCompartilhados(ambiente.EcoaConfig,{fetcher:ambiente.fetch.bind(ambiente)}):null;
   let mapa,camada,categoria=inicial.categoria,fixos=[],salvos=[],pontos=[],visiveis=[],posicaoPendente,fixosFalharam=false,basePronta=false,ativo=false;
   for(const chip of doc.querySelectorAll('[data-categoria-osm]'))chip.setAttribute('aria-pressed',String(chip.dataset.categoriaOsm===categoria));
   let storage;try{storage=ambiente.sessionStorage;}catch{}
@@ -30,8 +33,10 @@ function iniciarPontosOSM(doc,ambiente,api) {
     item.dataset.selecionado='true';item.focus({preventScroll:true});item.scrollIntoView({block:'nearest',behavior:'instant'});marker?.openPopup();
   }
   function renderizar() {
-    const b=bbox();
-    visiveis=api.pontosDisponiveisOSM(fixos,salvos,pontos,categoria,b);
+    const b=cidadeAtual?null:bbox();
+    const filtros={cidade:cidadeAtual?.cidade||'',uf:cidadeAtual?.uf||'',nome:$('osm-nome')?.value||''};
+    const filtrar=lista=>compartilhadoAPI?compartilhadoAPI.filtrarPontosCompartilhados(lista,filtros):lista;
+    visiveis=api.pontosDisponiveisOSM(filtrar([...fixos,...compartilhados]),filtrar(salvos),filtrar(pontos),categoria,b);
     $('osm-lista').replaceChildren();camada?.clearLayers();
     $('osm-vazio').hidden=!categoria||visiveis.length>0;
     for(const p of visiveis){
@@ -52,16 +57,49 @@ function iniciarPontosOSM(doc,ambiente,api) {
   }
   const busca=api.criarBuscaOSM({consultar:cliente.consultar,receber:lista=>{pontos=lista;renderizar();},estado});
   function atualizar() {
-    busca.cancelar();renderizar();
+    busca.cancelar();renderizar();agendarBanco();
     if(!categoria){estado('Escolha uma categoria para buscar pontos.');return;}
     if(!online()){estado('Mostrando pontos salvos — offline','salvos');return;}
     if(!mapa){estado('Abra o mapa ou busque um endereço para escolher a área.');return;}
     if(!ativo||!basePronta)return;
     busca.agendar(categoria,bbox(),mapa.getZoom());
   }
+  function cidadesOpcoes(){
+    if(!clienteBanco)return;
+    const locais=[...fixos,...salvos].filter(p=>p.cidade&&p.UF).map(p=>({cidade:p.cidade,uf:p.UF}));
+    const lista=[...new Map([...locais,...cidadesRemotas].map(p=>[p.cidade+' / '+p.uf,p])).values()].sort((a,b)=>a.cidade.localeCompare(b.cidade,'pt-BR'));
+    const selecionada=$('osm-cidade').value;
+    $('osm-cidade').replaceChildren();const todas=criar('option','Área visível no mapa');todas.value='';$('osm-cidade').append(todas);
+    for(const p of lista){const op=criar('option',p.cidade+' / '+p.uf);op.value=JSON.stringify(p);$('osm-cidade').append(op);}
+    $('osm-cidade').value=selecionada||'';
+  }
+  function cancelarBanco(){consultaBanco++;clearTimeout(timerBanco);controleBanco?.abort();}
+  function agendarBanco(){
+    cancelarBanco();
+    if(!clienteBanco||!basePronta||!ativo)return;
+    if(!online()){$('osm-banco-status').textContent='Mostrando pontos salvos';return;}
+    if(!cidadeAtual&&(!mapa||mapa.getZoom()<13))return;
+    const geracao=consultaBanco;controleBanco=new AbortController();
+    const signal=controleBanco.signal;
+    const filtros={cidade:cidadeAtual?.cidade||'',uf:cidadeAtual?.uf||'',categoria,nome:$('osm-nome').value,bbox:bbox()};
+    timerBanco=setTimeout(async()=>{
+      try{
+        const lista=await clienteBanco.consultar(filtros,{signal});
+        if(geracao!==consultaBanco)return;
+        compartilhados=lista;renderizar();estado('Pontos atualizados.','pronto');
+        if(enquadrarCidade&&mapa&&visiveis.length){enquadrarCidade=false;mapa.fitBounds(visiveis.map(p=>[p.latitude,p.longitude]),{padding:[30,30],maxZoom:15,animate:false});}
+        $('osm-banco-status').textContent='';
+      }catch(e){if(geracao===consultaBanco&&e.name!=='AbortError'){$('osm-banco-status').textContent='Mostrando pontos salvos';$('osm-tentar').hidden=false;}}
+    },600);
+    if(!cidadesCarregadas){cidadesCarregadas=true;clienteBanco.cidades().then(lista=>{cidadesRemotas=lista;cidadesOpcoes();}).catch(()=>{cidadesCarregadas=false;});}
+  }
+  if(clienteBanco){
+    $('osm-cidade').addEventListener('change',()=>{cidadeAtual=$('osm-cidade').value?JSON.parse($('osm-cidade').value):null;enquadrarCidade=!!cidadeAtual;atualizar();});
+    $('osm-nome').addEventListener('input',atualizar);
+  }
   function conectar(m) {
     mapa=m;camada=ambiente.L.layerGroup().addTo(mapa);
-    mapa.on('movestart',()=>busca.cancelar());mapa.on('moveend',atualizar);
+    mapa.on('movestart',()=>{busca.cancelar();cancelarBanco();});mapa.on('moveend',atualizar);
     if(posicaoPendente){mapa.setView(posicaoPendente,15,{animate:false});posicaoPendente=null;}
     atualizar();
   }
@@ -94,12 +132,12 @@ function iniciarPontosOSM(doc,ambiente,api) {
   });
   $('osm-copiar').addEventListener('click',async()=>{try{await ambiente.navigator.clipboard.writeText($('osm-sug-texto').value);$('osm-contato-aviso').textContent='Sugestão copiada.';}catch{$('osm-sug-texto').focus();$('osm-sug-texto').select();$('osm-contato-aviso').textContent='Selecione e copie o texto acima.';}});
   ambiente.addEventListener('offline',atualizar);ambiente.addEventListener('online',atualizar);
-  doc.addEventListener('ecoa-rota',e=>{ativo=e.detail.tela==='na-cidade';if(ativo)atualizar();else busca.cancelar();});
+  doc.addEventListener('ecoa-rota',e=>{ativo=e.detail.tela==='na-cidade';if(ativo)atualizar();else {busca.cancelar();cancelarBanco();}});
   const carregar=async(url,validar)=>{try{const r=await ambiente.fetch(url,{credentials:'same-origin'});if(!r.ok)throw Error();return validar(await r.json());}catch{return [];}};
   const pronto=Promise.all([
     carregar('pontos-osm.json',api.validarBaseOSM).then(lista=>{salvos=lista;renderizar();}),
     carregar('pontos-fixos.json',api.validarFixosOSM).then(lista=>{fixos=lista;renderizar();})
-  ]).then(()=>{basePronta=true;atualizar();});
+  ]).then(()=>{basePronta=true;cidadesOpcoes();atualizar();});
   return {conectar,atualizar,pronto};
 }
 if(typeof module!=='undefined')module.exports={iniciarPontosOSM,linksSugestaoOSM};

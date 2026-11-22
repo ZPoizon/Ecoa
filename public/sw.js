@@ -1,8 +1,8 @@
 // Incremente a versão ao atualizar arquivos armazenados para uso offline.
 const prefixo = 'oqdpf:' + self.registration.scope + ':';
-const versao = prefixo + 'v41';
+const versao = prefixo + 'v42';
 const arquivos = [
-  'pontos-osm.json', 'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css', 'cidade-publica.js', 'curador.html', 'curador.js', 'curador-ui.js', 'curador.css', 'vida.js', 'vida.css', 'polimento.css', 'cidade-config.js', 'limpeza.js', 'limpeza.css',
+  'config.js', 'pontos-compartilhados.js', 'pontos-osm.json', 'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css', 'cidade-publica.js', 'curador.html', 'curador.js', 'curador-ui.js', 'curador.css', 'vida.js', 'vida.css', 'polimento.css', 'cidade-config.js', 'limpeza.js', 'limpeza.css',
   'rotina.js', 'rotina.css', 'refino-visual.css', 'estrutura.js', 'estrutura.css',
   'pontos-osm.js', 'pontos-osm-ui.js', 'pontos-osm.css', 'pontos-fixos.json', 'cidade-layout.css', 'aprender.js', 'aprender.css', 'agir.js', 'agir.css', 'atividades.js', 'inicio.js', 'inicio.css', 'rotas.js', 'design-system.css', 'acessibilidade.js', 'acessibilidade.css', 'index.html', 'sobre.html', 'style.css', 'manifest.json', 'pwa.js', 'acoes.js', 'app.js',
   'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'compartilhar.js', 'compartilhar-ui.js', 'onu.js', 'plano.js', 'progresso.js', 'plano-json.js', 'plano-pdf.js', 'guias.js', 'vendor/pdf-lib.min.js',
@@ -31,6 +31,8 @@ self.addEventListener('fetch', evento => {
   const pedido = evento.request;
   // Overpass, Photon e demais APIs externas seguem somente pela rede, nunca CacheStorage.
   if (['https://photon.komoot.io','https://viacep.com.br','https://overpass-api.de','https://overpass.private.coffee'].includes(new URL(pedido.url).origin)) return;
+  // API do banco nunca é cacheada como arquivo estático.
+  if (new URL(pedido.url).pathname.startsWith('/rest/v1/')) return;
   const inicio = self.registration.scope;
   if (pedido.method !== 'GET' || !pedido.url.startsWith(inicio)) return;
 

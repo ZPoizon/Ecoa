@@ -1041,7 +1041,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v41'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v42'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1455,3 +1455,53 @@ async function validarBaseRegional(){
  console.log('OK Base regional: importação, fallback, mesclagem, offline, falha não bloqueante e limpeza');
 }
 validarBaseRegional().catch(e=>{console.error(e);process.exitCode=1;});
+
+async function validarSupabaseFase1(){
+ const api=require('./public/pontos-compartilhados'),osm=require('./public/pontos-osm'),fs=require('node:fs');
+ const config={SUPABASE_URL:'https://exemplo.supabase.co',SUPABASE_ANON_KEY:'sb_publishable_teste'};
+ const url=api.montarConsultaPontos(config,{cidade:'Capão Bonito',uf:'SP',categoria:'verde',nome:'ÁGUA & x',bbox:[-24.02,-48.36,-24,-48.34]});
+ assert.equal(url.searchParams.get('cidade_busca'),'eq.capao bonito');assert.equal(url.searchParams.get('uf'),'eq.SP');assert.equal(url.searchParams.get('categoria'),'eq.horta');assert.equal(url.searchParams.get('nome_busca'),'ilike.*agua & x*');assert.equal(url.searchParams.get('status'),'eq.aprovado');assert.equal(url.searchParams.has('lat'),false);
+ const area=api.montarConsultaPontos(config,{bbox:[-24.02,-48.36,-24,-48.34],nome:'%_*'});
+ assert.deepEqual(area.searchParams.getAll('lat'),['gte.-24.02','lte.-24']);assert.equal(area.searchParams.has('nome_busca'),false);
+ assert.throws(()=>api.montarConsultaPontos(config,{bbox:[NaN,0,1,2]}));assert.throws(()=>api.montarConsultaPontos(config,{categoria:'ataque'}));
+ const ponto={id:'a',nome:'<img src=x onerror=alert(1)>',cidade:'Capão Bonito',uf:'SP',categoria:'agua',lat:-24.01,lng:-48.35,status:'aprovado',verificado:true};
+ const ps=api.converterPontosCompartilhados([ponto,{...ponto,id:'b',status:'pendente'},{...ponto,id:'c',lat:Infinity},{...ponto,id:'d',lat:'-24'},{...ponto,id:'e',nome:'EXEMPLO FICTÍCIO'}]);assert.equal(ps.length,1);
+ assert.equal(api.filtrarPontosCompartilhados(ps,{cidade:'capao bonito',uf:'SP'}).length,1);assert.equal(api.filtrarPontosCompartilhados(ps,{cidade:'Outra'}).length,0);
+ const cards=[];const doc={createElement:()=>({set textContent(v){cards.push(v);},set innerHTML(v){throw Error('XSS');}})},item={append(){}};
+ osm.preencherCartaoPonto(doc,item,ps[0]);assert.ok(cards.includes(ponto.nome));assert.ok(cards.includes('Verificado'));
+ osm.preencherCartaoPonto(doc,item,{...ps[0],verificado:false});assert.ok(cards.includes('Aprovado pela comunidade'));
+ assert.equal(osm.pontosDisponiveisOSM(ps,[{...ps[0],id:'osm-1',origem:'osm'}],[],'agua',null).length,1);
+ const requests=[];
+ const client=api.criarClientePontosCompartilhados(config,{fetcher:async(u,o)=>{requests.push([u,o]);return {ok:true,json:async()=>String(u).includes('rpc/')?[{cidade:'Capão Bonito',uf:'SP'}]:[ponto]};}});
+ assert.equal((await client.consultar({categoria:'agua'})).length,1);assert.equal((await client.cidades()).length,1);
+ assert.equal(requests[0][1].headers.apikey,config.SUPABASE_ANON_KEY);assert.equal(requests[0][1].headers.Authorization,undefined);assert.equal(requests[0][1].cache,'no-store');
+ await assert.rejects(api.criarClientePontosCompartilhados(config,{fetcher:async()=>({ok:false,status:503})}).consultar({}));
+ const abort=new AbortController();abort.abort();await assert.rejects(client.consultar({},{signal:abort.signal}),{name:'AbortError'});
+ const sql=fs.readFileSync('supabase/schema.sql','utf8');
+ for(const t of ['pontos','denuncias'])assert.ok(sql.includes('alter table public.'+t+' enable row level security'));
+ assert.match(sql,/with check\(status='pendente' and verificado=false and denuncias=0\)/);assert.match(sql,/for select to anon using\(status='aprovado'\)/);
+ assert.doesNotMatch(sql,/grant\s+(?:all|update|delete)\s+on\s+public\.(?:pontos|denuncias)\s+to\s+anon/i);assert.match(sql,/security invoker/);assert.match(sql,/gin_trgm_ops/);
+ const sw=fs.readFileSync('public/sw.js','utf8');assert.match(sw,/'pontos-compartilhados.js'/);assert.match(sw,/pathname.startsWith\('\/rest\/v1\/'\)/);
+ console.log('OK Supabase fase 1: consultas, filtros, coordenadas, aprovados, XSS, mesclagem, cancelamento, contrato RLS e API fora do cache SW');
+}
+validarSupabaseFase1().catch(e=>{console.error(e);process.exitCode=1;});
+
+async function validarIntegracaoBancoMapa(){
+ const osm=require('./public/pontos-osm'),sup=require('./public/pontos-compartilhados');
+ const criar=()=>({children:[],eventos:{},dataset:{},value:'',hidden:false,textContent:'',append(...x){this.children.push(...x);},prepend(...x){this.children.unshift(...x);},replaceChildren(...x){this.children=x;},setAttribute(k,v){this[k]=v;},removeAttribute(k){delete this[k];},addEventListener(k,f){this.eventos[k]=f;},focus(){},scrollIntoView(){},click(){this.eventos.click?.();},set innerHTML(v){throw Error('XSS');}});
+ const els=new Map(),el=id=>{if(!els.has(id))els.set(id,criar());return els.get(id);},eventos={};
+ const ponto={id:'db-1',nome:'Água da praça',categoria:'agua',cidade:'Capão Bonito',UF:'SP',latitude:-24.01,longitude:-48.35,origem:'supabase',verificado:true};
+ const chips=['agua'].map(c=>{const e=criar();e.dataset.categoriaOsm=c;return e;});let falhar=false;const queries=[];
+ const env={EcoaMapaInicial:{categoria:'agua'},EcoaConfig:{},EcoaCompartilhados:{...sup,criarClientePontosCompartilhados:()=>({cidades:async()=>[{cidade:'Capão Bonito',uf:'SP'}],consultar:async filtros=>{queries.push(filtros);if(falhar)throw Error('503');return [ponto];}})},fetch:async()=>({ok:true,json:async()=>[]}),navigator:{onLine:true},addEventListener(){},L:{layerGroup:()=>({addTo(){return this;},clearLayers(){}}),divIcon:()=>({}),marker:()=>({addTo(){return this;},bindPopup(){},on(){}})}};
+ const ui=require('./public/pontos-osm-ui').iniciarPontosOSM({getElementById:el,createElement:criar,querySelectorAll:()=>chips,addEventListener:(k,f)=>eventos[k]=f},env,{...osm,criarBuscaOSM:()=>({cancelar(){},agendar(){}})});
+ await ui.pronto;
+ ui.conectar({on(){},getZoom:()=>14,getBounds:()=>({getSouth:()=>-24.02,getWest:()=>-48.36,getNorth:()=>-24,getEast:()=>-48.34}),fitBounds(){}});
+ eventos['ecoa-rota']({detail:{tela:'na-cidade'}});await new Promise(r=>setTimeout(r,650));
+ assert.equal(el('osm-lista').children.length,1);assert.equal(queries.length,1);
+ el('osm-nome').value='agua';el('osm-nome').eventos.input();el('osm-cidade').value=JSON.stringify({cidade:'Capão Bonito',uf:'SP'});el('osm-cidade').eventos.change();await new Promise(r=>setTimeout(r,650));
+ assert.equal(queries.length,2);assert.equal(queries[1].cidade,'Capão Bonito');assert.equal(queries[1].nome,'agua');
+ falhar=true;ui.atualizar();await new Promise(r=>setTimeout(r,650));assert.equal(el('osm-lista').children.length,1);assert.equal(el('osm-banco-status').textContent,'Mostrando pontos salvos');assert.equal(el('osm-tentar').hidden,false);
+ eventos['ecoa-rota']({detail:{tela:'inicio'}});
+ console.log('OK Integração banco/mapa: carregamento, debounce, filtros juntos, lista preservada em 503 e cancelamento ao sair');
+}
+validarIntegracaoBancoMapa().catch(e=>{console.error(e);process.exitCode=1;});
