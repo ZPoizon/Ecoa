@@ -119,4 +119,4 @@ function carregarLeafletCidade(doc,ambiente) {
   }))).then(resultados=>{if(resultados.some(r=>r.status==='rejected'))throw Error('Falha ao carregar Leaflet');ambiente.__ecoaLeafletPronto=true;});
 }
 if(typeof module!=='undefined')module.exports={iniciarCidade,carregarLeafletCidade,resumoPontosCidade};
-else iniciarCidade(document,window,{categoriasCidade,chaveCidade,validarPontosCidade,lerJsonCidade,unirPontosCidade,filtrarPontosCidade,salvarPontosCidade});
+else if(document.getElementById("cidade-form")) iniciarCidade(document,window,{categoriasCidade,chaveCidade,validarPontosCidade,lerJsonCidade,unirPontosCidade,filtrarPontosCidade,salvarPontosCidade});

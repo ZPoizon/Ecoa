@@ -31,20 +31,16 @@ function iniciarPontosOSM(doc,ambiente,api) {
   }
   function renderizar() {
     const b=bbox();
-    const curados=fixos.filter(p=>p.categoria===categoria&&api.dentroAreaOSM(p,b));
-    visiveis=api.mesclarPontosOSM(curados,online()?pontos.filter(p=>p.categoria===categoria&&api.dentroAreaOSM(p,b)):[]);
+    const curados=fixos.filter(p=>api.categoriaMapaOSM(p.categoria)===categoria&&api.dentroAreaOSM(p,b));
+    visiveis=api.mesclarPontosOSM(curados,online()?pontos.filter(p=>api.categoriaMapaOSM(p.categoria)===categoria&&api.dentroAreaOSM(p,b)):[]);
     $('osm-lista').replaceChildren();camada?.clearLayers();
     $('osm-vazio').hidden=!categoria||visiveis.length>0;
     for(const p of visiveis){
       const item=criar('li');item.tabIndex=-1;item.className='osm-card';
-      item.append(criar('p',api.categoriasOSM[p.categoria].nome),criar('h3',p.nome));
-      if(p.origem==='fixo')item.append(criar('p','Verificado em '+p.dataVerificacao.split('-').reverse().join('/')));
-      for(const texto of [[p.endereco,p.cidade,p.UF].filter(Boolean).join(' · '),p.horario&&'Horário: '+p.horario,p.aceita&&'O que aceita / informações: '+p.aceita,p.telefone&&'Telefone: '+p.telefone])if(texto)item.append(criar('p',texto));
-      item.append(criar('p',p.origem==='fixo'?'Verificado pelo Ecoa':'Fonte: OpenStreetMap'),criar('p','Dados da comunidade. Confirme antes de ir'));
+      api.preencherCartaoPonto(doc,item,p);
       const botoes=criar('div');botoes.className='buttons';
       const coord=`${p.latitude},${p.longitude}`;
-      botoes.append(link('Como chegar',`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(coord)}`),link('Abrir no Waze',`https://www.waze.com/ul?ll=${encodeURIComponent(coord)}&navigate=yes`));
-      try{const url=new URL(p.fonte);if(url.protocol==='https:'&&!url.username&&!url.password)botoes.append(link('Consultar fonte',url.href));}catch{}
+      botoes.append(link('Abrir no Waze',`https://www.waze.com/ul?ll=${encodeURIComponent(coord)}&navigate=yes`));
       const corrigir=criar('button','Sugerir correção');corrigir.type='button';corrigir.className='secondary';corrigir.addEventListener('click',()=>sugerir(p));botoes.append(corrigir);
       item.append(botoes);$('osm-lista').append(item);
       if(camada){

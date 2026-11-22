@@ -10,6 +10,7 @@ const atalhosEcoa = {
   'preferencia-tema':'#/meu-espaco/configuracoes',lembretes:'#/meu-espaco'
 };
 function resolverRotaEcoa(hash) {
+  if(hash==='#/curador')return {tela:'curador',hash,titulo:'Modo curador | Ecoa',ods:null,sub:null,acao:null,alvo:null};
   let valor=hash || '#/inicio',alvo=null;
   if(valor.startsWith('#acao='))valor='#/agir?acao='+valor.slice(6);
   if(Object.hasOwn(atalhosEcoa,valor.slice(1))){alvo=valor.slice(1);valor=atalhosEcoa[alvo];}
@@ -38,6 +39,7 @@ function iniciarRotasEcoa(doc,janela,adaptadores={}) {
   doc.addEventListener('keydown',()=>{usandoPonteiro=false;doc.activeElement?.removeAttribute('data-foco-toque');},true);
   function aplicar(hash,forcar=false) {
     const rota=resolverRotaEcoa(hash);
+    if(rota.tela==='curador'){janela.location.replace('curador.html#/curador');return rota;}
     if(janela.location.hash!==rota.hash)janela.history.replaceState(null,'',rota.hash);
     if(!forcar&&ultima===rota.hash)return rota;
     ultima=rota.hash;
@@ -81,6 +83,7 @@ function iniciarRotasEcoa(doc,janela,adaptadores={}) {
   }
   function navegar(hash){
     const rota=resolverRotaEcoa(hash);
+    if(rota.tela==='curador'){janela.location.replace('curador.html#/curador');return rota;}
     if(janela.location.hash!==rota.hash)janela.history.pushState(null,'',rota.hash);
     return aplicar(hash,true);
   }

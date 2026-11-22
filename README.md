@@ -533,3 +533,27 @@ Ilustrações SVG inline no Início e nos cinco estados vazios, sem CDN, sem nov
 O Início mostra o anel de conclusão do plano e a sequência do **Desafio de 7 dias**, explicitamente identificada, apenas quando há plano. São projeções dos dados existentes: nenhuma chave nova ou migração. “Surpreenda-me”, em Agir, sorteia entre todas as ações sem usar os filtros, evita repetição imediata quando há alternativas e abre o passo a passo pelo roteador existente. A ação diária continua determinística.
 
 Cache v39. `npm test` cobre sorteio vazio/único/múltiplo, anel e sequência, confirmação, cancelamento e movimento reduzido; `npm run build` gera os arquivos estáticos. A validação visual em aparelhos, anúncios com leitor de tela real e Lighthouse seguem pendentes.
+
+## Modo curador — pontos permanentes sem backend
+
+Abra `#/curador` no Ecoa. A rota leva a `curador.html#/curador`, uma página própria com `<meta name="robots" content="noindex">`, fora dos menus. Isso evita aplicar noindex ao site inteiro; não é autenticação nem uma área secreta. A ferramenta só gera texto e downloads: não salva nem publica cadastros, não usa localStorage e não envia sugestões automaticamente.
+
+1. Confira os pontos atuais na lista/mapa. Os dois registros com `exemplo: true` são fictícios e não são publicados no mapa dos visitantes. Remova ou substitua esses exemplos ao montar sua base real.
+2. Preencha o formulário. Nome, categoria, descrição, endereço, cidade, UF, coordenadas, fonte HTTPS e data válida são obrigatórios. Clicar no mapa ou selecionar uma sugestão preenche a posição. Quem usa teclado ou está offline pode digitar coordenadas.
+3. Gere e revise o cartão. A prévia reutiliza o conteúdo do cartão público. Pontos próximos (menos de 30 m) com nome parecido preservam o registro existente; nomes iguais em locais distintos recebem identificadores com sufixo.
+4. “Copiar este ponto” copia um objeto para inserir manualmente na lista. “Baixar pontos-fixos.json atualizado” entrega a lista completa, ordenada, incluindo os registros atuais e os exemplos. Não recorta a base para o limite de 200 resultados do mapa.
+5. Substitua **public/pontos-fixos.json** pelo download. `dist/pontos-fixos.json` é gerado pelo build: não é o arquivo-fonte. Para cadastrar vários pontos, atualize/recarregue a base entre cadastros; cada download contém a base carregada + um ponto. Confira a versão atual do Git antes de substituir para não sobrescrever contribuições recentes.
+
+Na raiz do projeto, em PowerShell, uma linha de cada vez:
+
+```powershell
+npm test
+npm run build
+git add public/pontos-fixos.json
+git commit -m "feat: atualiza pontos fixos do mapa"
+git push
+```
+
+Com o Git conectado e deploy automático ativo na Vercel, o push inicia a republicação. Os visitantes passam a receber os pontos pela base pública, com categoria, descrição e “Verificado em dd/mm/aaaa”; eles aparecem na área e categoria escolhidas e são mesclados com o OpenStreetMap. `horta` entra em Hortas e áreas verdes; `outro` em Outros. Óleo de cozinha e Pilhas e eletrônicos têm filtros próprios. Os dados são declarações do curador, não certificação independente.
+
+Offline após o primeiro acesso: formulário, lista fixa em cache, prévia e geração de arquivo. Tiles do mapa e busca de endereços exigem rede; a alternativa são lista e coordenadas manuais. Cache PWA v40 inclui a ferramenta. `npm test` cobre geração, validação, preservação, IDs, duplicados, categorias, ordenação e renderização com texto seguro. Mapa com provedores reais, clipboard do celular, leitura por tecnologia assistiva e deploy da Vercel não foram verificados nesta rodada.

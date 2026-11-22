@@ -8,6 +8,9 @@ const categoriasOSM = {
   verde: {nome:'Hortas e áreas verdes', tags:[['leisure','garden'],['leisure','park'],['landuse','allotments']]},
   outros: {nome:'Outros', tags:[['amenity','public_bookcase'],['amenity','community_centre']]}
 };
+categoriasOSM['oleo-de-cozinha']={nome:'Óleo de cozinha',tags:[['recycling:cooking_oil','yes']]};
+categoriasOSM['pilhas-eletronicos']={nome:'Pilhas e eletrônicos',tags:[['recycling:batteries','yes'],['recycling:small_electrical_appliances','yes']]};
+function categoriaMapaOSM(c){return ({horta:'verde',outro:'outros'})[c]||c;}
 const servidoresOSM = ['https://overpass-api.de/api/interpreter','https://overpass.private.coffee/api/interpreter'];
 const abortadoOSM = () => new DOMException('Cancelado','AbortError');
 function areaOSM(b) {
@@ -20,7 +23,7 @@ function montarConsultaOSM(categoria,bbox) {
   if(b[2]-b[0]>.3||b[3]-b[1]>.3)throw Error('Aproxime o mapa para ver pontos.');
   return `/* Ecoa - pontos na cidade */[out:json][timeout:20];(${categoriasOSM[categoria].tags.map(([k,v])=>`nwr["${k}"="${v}"](${b.join(',')});`).join('')});out center tags 200;`;
 }
-function pontoValidoOSM(p) {return p&&typeof p.id==='string'&&typeof p.nome==='string'&&Object.hasOwn(categoriasOSM,p.categoria)&&Number.isFinite(p.latitude)&&Number.isFinite(p.longitude)&&Math.abs(p.latitude)<=90&&Math.abs(p.longitude)<=180;}
+function pontoValidoOSM(p) {return p&&typeof p.id==='string'&&typeof p.nome==='string'&&Object.hasOwn(categoriasOSM,categoriaMapaOSM(p.categoria))&&Number.isFinite(p.latitude)&&Number.isFinite(p.longitude)&&Math.abs(p.latitude)<=90&&Math.abs(p.longitude)<=180;}
 function converterPontosOSM(dados,categoria) {
   if(!dados||!Array.isArray(dados.elements)||dados.remark)throw Error('Resposta incompleta do servidor.');
   const texto=v=>typeof v==='string'?v.slice(0,1000):'';
@@ -106,5 +109,15 @@ function criarBuscaOSM({consultar,receber,estado,relogio=globalThis}) {
   }
   return {agendar,cancelar};
 }
-const apiPontosOSM={categoriasOSM,servidoresOSM,areaOSM,montarConsultaOSM,converterPontosOSM,validarFixosOSM,distanciaOSM,nomesParecidosOSM,mesclarPontosOSM,dentroAreaOSM,criarClienteOSM,criarBuscaOSM};
+function preencherCartaoPonto(doc,item,p){
+ const texto=(tag,t)=>{const el=doc.createElement(tag);el.textContent=String(t);item.append(el);};
+ texto('p',categoriasOSM[categoriaMapaOSM(p.categoria)].nome);texto('h3',p.nome);
+ if(p.origem==='fixo')texto('p','Verificado em '+p.dataVerificacao.split('-').reverse().join('/'));
+ for(const t of [p.descricao,[p.endereco,p.bairro,p.cidade,p.UF].filter(Boolean).join(' · '),p.horario&&'Horário: '+p.horario,p.aceita&&'O que aceita / informações: '+p.aceita,p.telefone&&'Telefone: '+p.telefone])if(t)texto('p',t);
+ texto('p',p.origem==='fixo'?'Verificado pelo Ecoa':'Fonte: OpenStreetMap');texto('p','Dados da comunidade. Confirme antes de ir');
+ for(const [rotulo,valor] of [['Site do local',p.site],['Consultar fonte',p.fonte],['Como chegar',`https://www.google.com/maps/dir/?api=1&destination=${p.latitude},${p.longitude}`]]){
+  try{const u=new URL(valor);if(u.protocol!=='https:'||u.username||u.password)continue;const a=doc.createElement('a');a.textContent=rotulo;a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';a.className='ecoa-button secondary';item.append(a);}catch{}
+ }
+}
+const apiPontosOSM={categoriaMapaOSM,preencherCartaoPonto,categoriasOSM,servidoresOSM,areaOSM,montarConsultaOSM,converterPontosOSM,validarFixosOSM,distanciaOSM,nomesParecidosOSM,mesclarPontosOSM,dentroAreaOSM,criarClienteOSM,criarBuscaOSM};
 if(typeof module!=='undefined')module.exports=apiPontosOSM;else window.EcoaPontosOSM=apiPontosOSM;

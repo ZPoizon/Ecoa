@@ -1036,11 +1036,12 @@ function validarRotasFase1() {
   const link=el('link');link.attrs.href='#/aprender';let impediu=false;
   docEventos.click({target:{closest:()=>link},button:0,preventDefault(){impediu=true;}});assert.ok(impediu);assert.equal(janela.location.hash,'#/aprender');
   link.attrs.href='#conteudo';docEventos.click({target:{closest:()=>link},button:0,preventDefault(){}});assert.equal(foco,'tela-aprender-titulo');
+  let curadorDestino;janela.location.replace=url=>{curadorDestino=url;};router.navegar('#/curador');assert.equal(curadorDestino,'curador.html#/curador');
   const html=fs.readFileSync('public/index.html','utf8');
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v39'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v40'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1404,3 +1405,31 @@ function validarVidaFase4(){
  console.log('OK Fase 4: sorteio sem repetição, anel vazio/parcial/completo, sequência, comemoração e movimento reduzido');
 }
 validarVidaFase4();
+
+function validarCurador(){
+ const c=require('./public/curador'),api=require('./public/pontos-osm'),fs=require('node:fs');
+ const base=JSON.parse(fs.readFileSync('public/pontos-fixos.json','utf8'));
+ const entrada={nome:'Horta São José',categoria:'horta',descricao:'Horta comunitária',endereco:'Rua A, 10',bairro:'Centro',cidade:'Capão Bonito',UF:'sp',latitude:'-24.01',longitude:'-48.35',horario:'9h às 17h',aceita:'Mudas',telefone:'',site:'https://example.org',fonte:'https://example.org/fonte',dataVerificacao:'2026-01-01'};
+ const antes=JSON.stringify(base),r=c.gerarPontosCurador(base,entrada,api,'2026-02-01');
+ assert.equal(r.ponto.id,'horta-sao-jose');assert.equal(r.ponto.UF,'SP');assert.equal(r.pontos.length,base.length+1);assert.equal(JSON.stringify(base),antes);
+ assert.deepEqual(JSON.parse(r.json),r.pontos);assert.deepEqual(JSON.parse(r.trecho),r.ponto);
+ assert.equal(r.pontos.filter(p=>p.exemplo).length,2);
+ const idIgual=c.gerarPontosCurador(r.pontos,{...entrada,latitude:-24.1},api,'2026-02-01');assert.equal(idIgual.ponto.id,'horta-sao-jose-2');
+ const duplicado=c.gerarPontosCurador(r.pontos,{...entrada,nome:'Horta Sao Jose',latitude:-24.01001},api,'2026-02-01');assert.equal(duplicado.duplicado,true);assert.equal(duplicado.pontos.length,r.pontos.length);
+ assert.deepEqual(r.pontos,[...r.pontos].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')||a.id.localeCompare(b.id,'pt-BR')));
+ for(const dados of [{nome:''},{descricao:''},{nome:'a'.repeat(121)},{categoria:'invalida'},{latitude:''},{latitude:91},{longitude:Infinity},{UF:'XX'},{fonte:'javascript:alert(1)'},{site:'https://user:pass@example.org'},{dataVerificacao:'2026-02-30'},{dataVerificacao:'2099-01-01'}])assert.throws(()=>c.validarPontoCurador({...entrada,...dados},'2026-02-01'));
+ for(const categoria of Object.keys(c.categoriasCurador)){const x=c.gerarPontosCurador(base,{...entrada,categoria},api,'2026-02-01');assert.equal(api.validarFixosOSM(x.pontos).length,1);}
+ assert.equal(api.categoriaMapaOSM('horta'),'verde');assert.equal(api.categoriaMapaOSM('outro'),'outros');
+ const fixo=api.validarFixosOSM(r.pontos)[0];assert.equal(api.mesclarPontosOSM([fixo],[{...fixo,id:'osm/1',origem:'osm'}]).length,1);
+ assert.throws(()=>c.gerarPontosCurador([...base,base[0]],entrada,api));
+ const xss='<img src=x onerror=alert(1)>',novo=c.gerarPontosCurador(base,{...entrada,nome:xss,descricao:xss},api,'2026-02-01');
+ const criar=tag=>({tag,children:[],append(el){this.children.push(el);},set innerHTML(v){throw Error('HTML inseguro');}});
+ const card=criar('article');api.preencherCartaoPonto({createElement:criar},card,{...novo.ponto,origem:'fixo'});
+ assert.ok(card.children.some(el=>el.textContent===xss));assert.ok(card.children.every(el=>el.tag!=='img'));assert.ok(card.children.some(el=>el.textContent==='Verificado em 01/01/2026'));
+ assert.equal(require('./public/rotas').resolverRotaEcoa('#/curador').tela,'curador');
+ const html=fs.readFileSync('public/curador.html','utf8');assert.match(html,/<meta name="robots" content="noindex">/);assert.match(html,/data-autocomplete-endereco/);
+ assert.doesNotMatch(fs.readFileSync('public/curador-ui.js','utf8'),/localStorage|sessionStorage|innerHTML/);
+ assert.match(fs.readFileSync('public/sw.js','utf8'),/'curador.html'/);
+ console.log('OK Curador: JSON completo, exemplos, limites, URLs, IDs únicos, duplicidade, categorias, ordenação, XSS e rota');
+}
+validarCurador();
