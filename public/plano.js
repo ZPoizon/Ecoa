@@ -55,9 +55,14 @@ function atualizarPlano() {
     concluida.checked = plano.get(chave);
     concluida.setAttribute('aria-label', 'Concluir: ' + acao.titulo);
     concluida.addEventListener('change', () => {
+      const estavaConcluida=plano.get(chave);
       plano.set(chave, concluida.checked);
       guardarPlano();
       atualizarProgressoPlano(plano);
+      if(typeof window!=='undefined'){
+        if(concluida.checked&&!estavaConcluida)window.ecoaVida?.celebrar([...plano.values()].filter(Boolean).length);
+        else window.ecoaVida?.limpar();
+      }
       planoResumo.textContent = `${[...plano.values()].filter(Boolean).length} de ${plano.size} ações concluídas. Seu plano fica neste navegador.`;
     });
     rotulo.append(concluida, acao.titulo);

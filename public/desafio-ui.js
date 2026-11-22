@@ -15,6 +15,7 @@ try {
 if(desafioAtual) selecionarDesafio.value=desafioAtual.ods;
 
 function renderizarDesafio() {
+  if(typeof window!=='undefined')window.ecoaVida?.atualizar();
   listaDesafio.replaceChildren();
   if(!desafioAtual) {resumoDesafio.textContent='Escolha um objetivo e comece hoje.';return;}
   const hoje=dataLocalDesafio();

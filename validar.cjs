@@ -1040,7 +1040,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v38'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v39'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1374,3 +1374,33 @@ function validarPolimentoFase3(){
  console.log('OK Fase 3: 17 identidades ODS, links da ação diária, SVGs decorativos, chips e CSS offline');
 }
 validarPolimentoFase3();
+
+function validarVidaFase4(){
+ const {sortearAcaoEcoa:sortear,iniciarVidaEcoa}=require('./public/vida');
+ const a={ods:1,titulo:'Uma ação'},b={ods:2,titulo:'Outra ação'};
+ assert.equal(sortear([]),null);assert.equal(sortear([a], '1:Uma ação'),a);
+ assert.equal(sortear([a,b],'1:Uma ação',()=>0),b);
+ assert.equal(sortear([a,b],'',()=>.99),b);
+ assert.equal(sortear([a,b],'',()=>NaN),a);
+ const eventos={},elementos=new Map();let animadas=0,canceladas=0,fecharTimer,rota,sequencia=1;
+ let dados={salvas:2,concluidas:1};
+ const el=id=>{if(!elementos.has(id))elementos.set(id,{hidden:false,attrs:{},eventos:{},textContent:'',setAttribute(k,v){this.attrs[k]=v;},addEventListener(k,f){this.eventos[k]=f;},animate(){animadas++;return {cancel(){canceladas++;}};}});return elementos.get(id);};
+ const media={matches:false,addEventListener(k,f){this.mudar=f;}};
+ const doc={getElementById:el,querySelectorAll:()=>[el('animacao')],addEventListener(k,f){eventos[k]=f;}};
+ const ambiente={matchMedia:()=>media,setTimeout(f){fecharTimer=f;return 1;},clearTimeout(){},addEventListener(k,f){eventos[k]=f;}};
+ const ui=iniciarVidaEcoa(doc,ambiente,{catalogo:[a,b],progresso:()=>dados,sequencia:()=>sequencia,aleatorio:()=>0,abrir:r=>rota=r});
+ assert.equal(el('inicio-anel').attrs['aria-valuenow'],'50');assert.equal(el('inicio-anel-traco').attrs['stroke-dasharray'],'50 100');assert.match(el('inicio-sequencia').textContent,/1 dia\./);assert.equal(animadas,0);
+ el('surpreenda-me').eventos.click();assert.equal(rota,'#/agir?acao='+encodeURIComponent('1:Uma ação'));
+ el('surpreenda-me').eventos.click();assert.equal(rota,'#/agir?acao='+encodeURIComponent('2:Outra ação'));
+ dados={salvas:2,concluidas:2};sequencia=2;ui.celebrar(2);
+ assert.equal(animadas,1);assert.equal(el('vida-celebracao').hidden,false);assert.equal(el('vida-contador').textContent,'2');assert.match(el('vida-mensagem').textContent,/2 ações concluídas/);assert.equal(el('inicio-anel-valor').textContent,'100%');assert.match(el('inicio-sequencia').textContent,/2 dias/);
+ media.matches=true;media.mudar();assert.equal(canceladas,1);
+ ui.celebrar(1);assert.equal(animadas,1);assert.match(el('vida-mensagem').textContent,/1 ação concluída/);
+ fecharTimer();assert.equal(el('vida-celebracao').hidden,true);
+ dados={salvas:2,concluidas:0};ui.atualizar();assert.equal(el('inicio-anel-valor').textContent,'0%');assert.equal(animadas,1);
+ dados={salvas:0,concluidas:0};sequencia=null;eventos.storage();assert.equal(el('inicio-anel').hidden,true);assert.match(el('inicio-sequencia').textContent,/indisponível/);
+ eventos['ecoa-rota']();assert.equal(el('vida-celebracao').hidden,true);
+ const css=require('node:fs').readFileSync('public/vida.css','utf8');assert.match(css,/prefers-reduced-motion:reduce/);
+ console.log('OK Fase 4: sorteio sem repetição, anel vazio/parcial/completo, sequência, comemoração e movimento reduzido');
+}
+validarVidaFase4();

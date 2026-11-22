@@ -525,3 +525,11 @@ Validação: npm test (inclui datas locais, virada de ano, ano bissexto, foco po
 Cartões preenchidos com as superfícies dos temas e sombra discreta; botões principais de largura total e altura mínima de 52 px no celular; ícones SVG nos atalhos e assuntos. O hero tem uma faixa com as 17 cores oficiais; Ação do dia e resultado recebem o detalhe do ODS correspondente. As cores oficiais são decorativas, sem substituir as cores de texto acessíveis. Tokens em design-system.css; apresentação em polimento.css. Referência: https://www.un.org/sustainabledevelopment/wp-content/uploads/2023/09/E_SDG_Guidelines_Sep20238.pdf.
 
 Ilustrações SVG inline no Início e nos cinco estados vazios, sem CDN, sem novas bibliotecas e sem animações adicionais. Páginas curtas não têm mais altura mínima forçada; a reserva dos botões e da navegação fixa permanece. Cache v38 inclui polimento.css. Nenhuma chave de armazenamento foi alterada. Testes: npm test e npm run build; verificação visual em dispositivos e Lighthouse pendentes.
+
+## Polimento — Fase 4
+
+`vida.js` e `vida.css` adicionam uma comemoração breve ao marcar uma ação pendente como concluída: check, ondas e contador. Recarregar, importar ou apenas atualizar o plano não dispara a comemoração. Desmarcar encerra o efeito. Movimento reduzido mantém só a confirmação textual; mudar essa preferência interrompe animações em andamento.
+
+O Início mostra o anel de conclusão do plano e a sequência do **Desafio de 7 dias**, explicitamente identificada, apenas quando há plano. São projeções dos dados existentes: nenhuma chave nova ou migração. “Surpreenda-me”, em Agir, sorteia entre todas as ações sem usar os filtros, evita repetição imediata quando há alternativas e abre o passo a passo pelo roteador existente. A ação diária continua determinística.
+
+Cache v39. `npm test` cobre sorteio vazio/único/múltiplo, anel e sequência, confirmação, cancelamento e movimento reduzido; `npm run build` gera os arquivos estáticos. A validação visual em aparelhos, anúncios com leitor de tela real e Lighthouse seguem pendentes.

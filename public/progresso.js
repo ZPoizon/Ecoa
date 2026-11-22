@@ -62,5 +62,6 @@ function atualizarProgressoPlano(planoAtual) {
   const dados=calcularProgressoPlano(planoAtual,acoes);
   renderizarProgressoPlano(document,dados,objetivos);
   if(typeof window!=='undefined')window.ecoaInicio?.atualizar(dados);
+  if(typeof window!=='undefined')window.ecoaVida?.atualizar();
 }
 if(typeof module!=='undefined') module.exports={calcularProgressoPlano,renderizarProgressoPlano,atualizarProgressoPlano};
