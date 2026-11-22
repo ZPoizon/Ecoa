@@ -39,6 +39,7 @@ function iniciarGradeDesafio(doc,nomes) {
 function iniciarAcaoDiaria(doc,catalogo,agora=()=>new Date()) {
   function atualizar(){
     const acao=escolherAcaoDoDia(catalogo,agora());doc.getElementById('acao-do-dia').hidden=!acao;if(!acao)return;
+    doc.getElementById('acao-do-dia').setAttribute('data-ods-cor',String(acao.ods));
     doc.getElementById('acao-dia-titulo').textContent=acao.titulo;
     doc.getElementById('acao-dia-resumo').textContent=`ODS ${acao.ods} · ${acao.tempo} min · ${acao.custo?'Até R$ '+acao.custo:'Sem gastar'}`;
     doc.getElementById('acao-dia-link').href='#/agir?acao='+encodeURIComponent(acao.ods+':'+acao.titulo);

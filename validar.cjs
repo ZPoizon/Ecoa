@@ -1040,7 +1040,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v37'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v38'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1348,3 +1348,29 @@ function validarCorrecoesFase2(){
  console.log('OK Fase 2: datas locais, viradas de ano, mapa padrão, categoria ativa e consulta só na tela');
 }
 validarCorrecoesFase2();
+
+function validarPolimentoFase3(){
+ const fs=require('node:fs'),html=fs.readFileSync('public/index.html','utf8');
+ const css=fs.readFileSync('public/polimento.css','utf8'),tokens=fs.readFileSync('public/design-system.css','utf8');
+ for(let ods=1;ods<=17;ods++){
+   assert.ok(css.includes(`[data-ods-cor="${ods}"]`));
+   assert.match(tokens,new RegExp(`--ods-${ods}:#[0-9A-F]{6}`));
+   const nodes=new Map(),el=id=>{if(!nodes.has(id))nodes.set(id,{setAttribute(k,v){this[k]=v;}});return nodes.get(id);};
+   const doc={getElementById:el,addEventListener(){}};
+   const acao={ods,titulo:'Ação teste '+ods,tempo:5,custo:0};
+   require('./public/rotina').iniciarAcaoDiaria(doc,[acao],()=>new Date(2026,10,21));
+   assert.equal(el('acao-do-dia')['data-ods-cor'],String(ods));
+   assert.equal(el('acao-dia-titulo').textContent,acao.titulo);
+   assert.ok(el('acao-dia-link').href.includes(encodeURIComponent(ods+':'+acao.titulo)));
+ }
+ assert.equal((html.match(/class="ilustracao-vazio"/g)||[]).length,5);
+ assert.equal((html.match(/class="chip-icone"/g)||[]).length,10);
+ for(const svg of html.matchAll(/<svg class="(?:ilustracao-inicio|ilustracao-vazio|chip-icone)"[^>]*>/g)){
+   assert.ok(svg[0].includes('aria-hidden="true"'));assert.ok(svg[0].includes('focusable="false"'));
+ }
+ assert.match(css,/min-height:52px/);assert.match(css,/width:100%/);
+ assert.match(css,/\.tela\{min-height:0/);
+ assert.match(fs.readFileSync('public/sw.js','utf8'),/'polimento.css'/);
+ console.log('OK Fase 3: 17 identidades ODS, links da ação diária, SVGs decorativos, chips e CSS offline');
+}
+validarPolimentoFase3();

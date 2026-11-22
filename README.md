@@ -519,3 +519,9 @@ Interface com uma folha modal de filtros (campos originais, Escape nativo, aplic
 `public/cidade-config.js` centraliza centro, zoom e categoria inicial do mapa: Capão Bonito-SP, zoom 14, Reciclagem. A consulta continua sob demanda, ao entrar em Na cidade, com debounce/cancelamento/cache existentes. Meus lugares não altera o centro inicial nem é regravado. Lembretes oferecem atalhos de horário e edição manual no fuso local. Navegação por toque mantém foco sem moldura; teclado preserva foco visível. Formulários empilham em telas estreitas; texto mínimo de 16 px e navegação inferior de 12 px. Cache v37.
 
 Validação: npm test (inclui datas locais, virada de ano, ano bissexto, foco por modalidade e mapa/categoria padrão); npm run build. Mapa ao vivo, verificação visual em aparelhos e notificações do sistema não foram verificados nesta rodada.
+
+## Polimento — Fase 3
+
+Cartões preenchidos com as superfícies dos temas e sombra discreta; botões principais de largura total e altura mínima de 52 px no celular; ícones SVG nos atalhos e assuntos. O hero tem uma faixa com as 17 cores oficiais; Ação do dia e resultado recebem o detalhe do ODS correspondente. As cores oficiais são decorativas, sem substituir as cores de texto acessíveis. Tokens em design-system.css; apresentação em polimento.css. Referência: https://www.un.org/sustainabledevelopment/wp-content/uploads/2023/09/E_SDG_Guidelines_Sep20238.pdf.
+
+Ilustrações SVG inline no Início e nos cinco estados vazios, sem CDN, sem novas bibliotecas e sem animações adicionais. Páginas curtas não têm mais altura mínima forçada; a reserva dos botões e da navegação fixa permanece. Cache v38 inclui polimento.css. Nenhuma chave de armazenamento foi alterada. Testes: npm test e npm run build; verificação visual em dispositivos e Lighthouse pendentes.

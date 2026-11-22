@@ -186,3 +186,6 @@ body input:disabled,body select:disabled,body textarea:disabled { background:var
 #cidade-cadastro[hidden],#cidade-vazio-acao[hidden] { display:none!important; }
 #lembrete-form .hint { display:block; font-weight:400; line-height:1.5; }
 #plano-pdf-ajuda,#lembrete-salvar-ajuda { margin-top:.6rem; }
+
+/* Cores oficiais: https://www.un.org/sustainabledevelopment/wp-content/uploads/2023/09/E_SDG_Guidelines_Sep20238.pdf */
+:root{--ods-1:#E5243B;--ods-2:#DDA63A;--ods-3:#4C9F38;--ods-4:#C5192D;--ods-5:#FF3A21;--ods-6:#26BDE2;--ods-7:#FCC30B;--ods-8:#A21942;--ods-9:#FD6925;--ods-10:#DD1367;--ods-11:#FD9D24;--ods-12:#BF8B2E;--ods-13:#3F7E44;--ods-14:#0A97D9;--ods-15:#56C02B;--ods-16:#00689D;--ods-17:#19486A;}

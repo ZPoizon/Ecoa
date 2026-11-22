@@ -1,0 +1,45 @@
+/* Fase 3: decoração somente; textos mantêm as cores acessíveis dos temas. */
+.inicio-porta,.acao-diaria,#resultado,.quiz-card,.osm-card,.cidade-lista>li,.estado-vazio,#progresso-selos .selo{
+ background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-card);color:var(--text)
+}
+.estado-vazio{padding:clamp(1rem,3vw,1.5rem);margin-block:1rem}
+.inicio-porta{padding:1.25rem}.inicio-porta p{color:var(--muted)}
+#progresso-selos .conquistado{background:var(--color-accent-bg);border-color:var(--color-accent)}
+.inicio-hero{border-bottom:0}
+.inicio-hero::after{content:'';display:block;height:7px;background:linear-gradient(to right,var(--ods-1) 0.0000%,var(--ods-1) 5.8824%,var(--ods-2) 5.8824%,var(--ods-2) 11.7647%,var(--ods-3) 11.7647%,var(--ods-3) 17.6471%,var(--ods-4) 17.6471%,var(--ods-4) 23.5294%,var(--ods-5) 23.5294%,var(--ods-5) 29.4118%,var(--ods-6) 29.4118%,var(--ods-6) 35.2941%,var(--ods-7) 35.2941%,var(--ods-7) 41.1765%,var(--ods-8) 41.1765%,var(--ods-8) 47.0588%,var(--ods-9) 47.0588%,var(--ods-9) 52.9412%,var(--ods-10) 52.9412%,var(--ods-10) 58.8235%,var(--ods-11) 58.8235%,var(--ods-11) 64.7059%,var(--ods-12) 64.7059%,var(--ods-12) 70.5882%,var(--ods-13) 70.5882%,var(--ods-13) 76.4706%,var(--ods-14) 76.4706%,var(--ods-14) 82.3529%,var(--ods-15) 82.3529%,var(--ods-15) 88.2353%,var(--ods-16) 88.2353%,var(--ods-16) 94.1176%,var(--ods-17) 94.1176%,var(--ods-17) 100.0000%)}
+.ilustracao-inicio{width:clamp(5rem,13vw,8rem);height:auto;color:var(--green);margin-bottom:.75rem;flex:none}
+.ilustracao-vazio{display:block;width:5rem;height:auto;color:var(--green);margin:0 0 .75rem}
+.chip-icone{width:1.15em;height:1.15em;flex:none;vertical-align:middle}
+.atalhos button{display:inline-flex;align-items:center;justify-content:center;gap:.5rem}
+.acao-diaria,#resultado{border-inline-start:6px solid var(--ods-cor,var(--green));position:relative}
+.acao-diaria .eyebrow::before{content:'';display:inline-block;width:.75rem;height:.75rem;border-radius:50%;background:var(--ods-cor,var(--green));margin-inline-end:.5rem}
+#resultado .tags{color:var(--text)}
+.tela{min-height:0;padding-block:var(--space-6) var(--space-8)}
+.inicio-apresentacao{padding-block:clamp(1.75rem,4vw,3rem)}
+.inicio-conteudo{padding-block:clamp(1.5rem,4vw,2.5rem)}
+.tela-titulo{margin-bottom:var(--space-4)}
+.tela .descoberta{margin-block:var(--space-6)}
+@media(max-width:40rem){
+ .inicio-cta,#acao-dia-link,#abrir-filtros,.aplicar-filtros,#salvar-acao,#quiz-comecar,#quiz-avancar,#estimativa-calcular,#cidade-adicionar,#cidade-form button[type=submit],#osm-sug-form button[type=submit],#lembrete-salvar,.calendario-principal,#baixar-plano,#desafio-iniciar,#desafio-substituir,#instalar-ecoa,.estado-vazio>.ecoa-button,.estado-vazio>button,.agir-barra-fixa button{box-sizing:border-box;width:100%;min-height:52px;padding:.9rem 1rem;font-size:1rem;white-space:normal;text-align:center}
+ .agir-acoes{display:flex;flex-wrap:wrap}.agir-acoes #salvar-acao{flex-basis:100%}
+ .inicio-porta{padding:1rem}.ilustracao-inicio{width:5rem}
+}
+@media(forced-colors:active){.inicio-hero::after{background:CanvasText}.acao-diaria,#resultado{border-color:CanvasText}.ilustracao-inicio,.ilustracao-vazio{color:CanvasText}}
+
+[data-ods-cor="1"]{--ods-cor:var(--ods-1);}
+[data-ods-cor="2"]{--ods-cor:var(--ods-2);}
+[data-ods-cor="3"]{--ods-cor:var(--ods-3);}
+[data-ods-cor="4"]{--ods-cor:var(--ods-4);}
+[data-ods-cor="5"]{--ods-cor:var(--ods-5);}
+[data-ods-cor="6"]{--ods-cor:var(--ods-6);}
+[data-ods-cor="7"]{--ods-cor:var(--ods-7);}
+[data-ods-cor="8"]{--ods-cor:var(--ods-8);}
+[data-ods-cor="9"]{--ods-cor:var(--ods-9);}
+[data-ods-cor="10"]{--ods-cor:var(--ods-10);}
+[data-ods-cor="11"]{--ods-cor:var(--ods-11);}
+[data-ods-cor="12"]{--ods-cor:var(--ods-12);}
+[data-ods-cor="13"]{--ods-cor:var(--ods-13);}
+[data-ods-cor="14"]{--ods-cor:var(--ods-14);}
+[data-ods-cor="15"]{--ods-cor:var(--ods-15);}
+[data-ods-cor="16"]{--ods-cor:var(--ods-16);}
+[data-ods-cor="17"]{--ods-cor:var(--ods-17);}

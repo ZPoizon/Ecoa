@@ -226,6 +226,7 @@ function mostrar() {
   if(typeof window!=='undefined')window.EcoaRouter?.abrirBusca();
   if(typeof window!=='undefined')window.EcoaAgir?.resultado(false);
   const acao = encontradas[indice];
+  resultado.setAttribute('data-ods-cor',String(acao.ods));
   titulo.textContent = acao.titulo;
   const materiais = acao.titulo === 'Experimente comprar a granel'
     ? 'Lista de compras e um local que venda a granel'
