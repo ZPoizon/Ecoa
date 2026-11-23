@@ -14,6 +14,7 @@ function iniciarMapaPublico(doc, ambiente) {
   // Busca única: um ponto encontrado abre o cartão; endereço só move o mapa.
   doc.addEventListener('cidade-busca-selecionada', e => {
     const item = e.detail;
+    if (item?.jaTratado) return;
     const p = item?.tipo === 'ponto' ? item.ponto : item?.endereco;
     if (!p || !Number.isFinite(p.latitude) || !Number.isFinite(p.longitude)) return;
     centralizar(p, item.tipo === 'ponto' ? 16 : 15);

@@ -1,18 +1,15 @@
-// Configure um ou ambos antes de receber sugestões. Nunca inventar destinatários.
-const CONTATO_PONTOS_EMAIL = '';
-const CONTATO_PONTOS_WHATSAPP = ''; // Somente dígitos: país + DDD + número.
-function linksSugestaoOSM(texto,email=CONTATO_PONTOS_EMAIL,numero=CONTATO_PONTOS_WHATSAPP) {
-  return {email:/^[^\s@?&#]+@[^\s@?&#]+\.[^\s@?&#]+$/.test(email)?`mailto:${encodeURIComponent(email)}?subject=Ecoa%20-%20sugest%C3%A3o%20de%20ponto&body=${encodeURIComponent(texto)}`:'',whatsapp:/^\d{10,15}$/.test(numero)?`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`:''};
-}
+// Integra mapa, lista, cartão e filtros. Uma só origem de categorias e um só critério
+// geográfico: a área visível do mapa. A busca principal é o único seletor de destino.
 function iniciarPontosOSM(doc,ambiente,api) {
   const $=id=>doc.getElementById(id),criar=(tag,texto)=>{const e=doc.createElement(tag);if(texto!==undefined)e.textContent=String(texto);return e;};
+  const categoriasComuns=typeof module!=='undefined'?require('./categorias-pontos'):window.EcoaCategoriasPontos;
   const inicial=ambiente.EcoaMapaInicial||(typeof module!=='undefined'?require('./cidade-config'):ECOA_MAPA_INICIAL);
   const normalizar=texto=>String(texto||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().trim().replace(/\s+/g,' ');
-  let mapa,camada,categoria='',fixos=[],salvos=[],pontos=[],visiveis=[],compartilhados=[],cidadesRemotas=[],posicaoPendente,focoAnteriorCartao;
-  let cidadeAtual=null,enquadrarCidade=false,pontoFocado=null,ativo=false,basePronta=false,fixosFalharam=false;
-  let consultaBanco=0,timerBanco,controleBanco,cidadesCarregadas=false,buscaConectada=false;
-  let cartaoPonto=null,ultimoMarcador=null,limiteAtingido=false;
-  const itensLista=new WeakMap();
+  let mapa,camada,categoria='',fixos=[],salvos=[],pontos=[],visiveis=[],compartilhados=[],posicaoPendente,focoAnteriorCartao;
+  let pontoFocado=null,ativo=false,basePronta=false;
+  let consultaBanco=0,timerBanco,controleBanco,buscaConectada=false;
+  let cartaoPonto=null,ultimoMarcador=null,limiteAtingido=false,areaAtual='';
+  const marcadores=new Map();
   const compartilhadoAPI=ambiente.EcoaCompartilhados;
   const config=ambiente.EcoaConfig||{};
   const clienteBanco=compartilhadoAPI&&ambiente.EcoaConfig?compartilhadoAPI.criarClientePontosCompartilhados(config,{fetcher:ambiente.fetch.bind(ambiente)}):null;
@@ -23,16 +20,14 @@ function iniciarPontosOSM(doc,ambiente,api) {
   const bbox=()=>{if(!mapa)return null;const b=mapa.getBounds();return [b.getSouth(),b.getWest(),b.getNorth(),b.getEast()];};
   const online=()=>ambiente.navigator.onLine!==false;
   const link=(texto,url)=>{const a=criar('a',texto);a.className='ecoa-button secondary';a.href=url;a.target='_blank';a.rel='noopener noreferrer';return a;};
+  const vazioTexto='Ainda não encontramos pontos nesta região.';
+  try{const paragrafo=doc.querySelector?.('#osm-vazio p');if(paragrafo)paragrafo.textContent=vazioTexto;}catch{}
   function estado(texto,tipo='inicial') {
-    $('osm-status').textContent=tipo==='erro'?'Mostrando pontos salvos':texto;
+    if(tipo==='erro'||tipo==='salvos')texto=visiveis.length?'Não foi possível atualizar. Mostrando pontos salvos.':'Não foi possível atualizar nesta região.';
+    else if(tipo==='pronto')texto=!visiveis.length?vazioTexto:limiteAtingido||visiveis.length>=200?'Exibindo até 200 pontos; aproxime para refinar.':`${visiveis.length} ${visiveis.length===1?'ponto encontrado':'pontos encontrados'}.`;
+    $('osm-status').textContent=texto;
     $('osm-lista').setAttribute('aria-busy',String(tipo==='carregando'));
     $('osm-tentar').hidden=!['erro','salvos'].includes(tipo);
-    if(tipo==='pronto')$('osm-status').textContent=limiteAtingido?'Exibindo até 200 pontos; aproxime para refinar.':visiveis.length===200?'Exibindo até 200 pontos; aproxime para refinar.':visiveis.length?`${visiveis.length} ${visiveis.length===1?'ponto encontrado':'pontos encontrados'}.`:'Nenhum ponto por aqui ainda.';
-  }
-  function sugerir(p) {
-    $('osm-sugerir').hidden=false;$('osm-vazio-sugerir').setAttribute('aria-expanded','true');
-    if(p){$('osm-sug-nome').value=p.nome;$('osm-sug-endereco').value=[p.endereco,p.cidade,p.UF].filter(Boolean).join(', ');$('osm-sug-detalhes').value=`Correção do ponto: ${p.fonte}\nPosição: ${p.latitude}, ${p.longitude}\nO que precisa mudar: `;}
-    $('osm-sug-nome').focus();
   }
   function fecharCartao(devolverFoco=false) {
     if(!$('ponto-cartao')||$('ponto-cartao').hidden)return;
@@ -45,6 +40,10 @@ function iniciarPontosOSM(doc,ambiente,api) {
     }
     focoAnteriorCartao=null;
   }
+  function destacar(marker) {
+    for(const m of marcadores.values())m?.getElement?.()?.classList?.remove?.('osm-marker--selecionado');
+    marker?.getElement?.()?.classList?.add?.('osm-marker--selecionado');
+  }
   function abrirCartao(p,marker) {
     if(!p||!$('ponto-cartao')||!$('ponto-cartao-conteudo'))return;
     const anterior=doc.activeElement,util=anterior&&anterior!==doc.body?anterior:$('cidade-busca-unica');
@@ -52,31 +51,28 @@ function iniciarPontosOSM(doc,ambiente,api) {
     cartaoPonto=p;ultimoMarcador=marker||null;
     const conteudo=$('ponto-cartao-conteudo');conteudo.replaceChildren();
     $('ponto-cartao-titulo').textContent=String(p.nome);
-    api.preencherCartaoPonto(doc,conteudo,p);
-    const acoes=criar('div');acoes.className='buttons';
+    api.preencherCartaoPonto(doc,conteudo,p,{idTitulo:'ponto-cartao-titulo'});
     if(p.origem==='supabase'&&p.bancoId){
+      const acoes=criar('div');acoes.className='buttons';
       const denunciar=criar('button','Denunciar este ponto');denunciar.type='button';denunciar.className='secondary';
       denunciar.addEventListener('click',()=>ambiente.ecoaCadastro?.denunciar(p));acoes.append(denunciar);
-    }else{
-      const corrigir=criar('button','Sugerir correção');corrigir.type='button';corrigir.className='secondary';
-      corrigir.addEventListener('click',()=>sugerir(p));acoes.append(corrigir);
+      conteudo.append(acoes);
     }
-    conteudo.append(acoes);
+    destacar(marker);
     $('ponto-cartao').hidden=false;
     $('ponto-cartao-titulo').focus?.({preventScroll:true});
   }
   function selecionar(item,marker) {
-    for(const el of $('osm-lista').children)el.removeAttribute('data-selecionado');
+    for(const el of $('osm-lista').children)el.removeAttribute?.('data-selecionado');
     item.dataset.selecionado='true';item.focus({preventScroll:true});item.scrollIntoView({block:'nearest',behavior:'instant'});
     abrirCartao(itensLista.get(item),marker);
   }
+  const itensLista=new WeakMap();
   function renderizar() {
-    const b=(cidadeAtual||pontoFocado)?null:bbox();
-    const filtros={cidade:cidadeAtual?.cidade||'',uf:cidadeAtual?.uf||'',nome:$('osm-nome')?.value||''};
-    const filtrar=lista=>compartilhadoAPI?compartilhadoAPI.filtrarPontosCompartilhados(lista,filtros):lista;
-    visiveis=api.pontosDisponiveisOSM(filtrar([...fixos,...compartilhados]),filtrar(salvos),filtrar(pontos),categoria,b);
+    // Nenhum filtro de cidade: a área visível é o único recorte geográfico.
+    visiveis=api.pontosDisponiveisOSM([...fixos,...compartilhados],salvos,pontos,categoria,bbox());
     if(pontoFocado&&!visiveis.some(x=>x.id===pontoFocado.id))visiveis=[pontoFocado,...visiveis];
-    $('osm-lista').replaceChildren();camada?.clearLayers();
+    $('osm-lista').replaceChildren();camada?.clearLayers();marcadores.clear();
     $('osm-vazio').hidden=visiveis.length>0;
     for(const p of visiveis){
       const item=criar('li');item.tabIndex=-1;item.className='osm-card';itensLista.set(item,p);
@@ -87,45 +83,48 @@ function iniciarPontosOSM(doc,ambiente,api) {
       if(camada){
         const icon=ambiente.L.divIcon({className:'osm-marker',html:'<span aria-hidden="true">●</span>',iconSize:[44,44],iconAnchor:[22,22]});
         const marker=ambiente.L.marker([p.latitude,p.longitude],{icon,title:p.nome,alt:p.nome,keyboard:true}).addTo(camada);
+        marcadores.set(p.id,marker);
         marker.on('click',()=>abrirCartao(p,marker));
         const ver=criar('button','Ver detalhes');ver.type='button';ver.className='secondary';
         ver.addEventListener('click',()=>selecionar(item,marker));botoes.prepend(ver);
       }
-      const corrigir=criar('button',p.origem==='supabase'?'Denunciar ponto':'Sugerir correção');corrigir.type='button';corrigir.className='secondary';
-      corrigir.addEventListener('click',()=>p.origem==='supabase'&&p.bancoId?ambiente.ecoaCadastro?.denunciar(p):sugerir(p));botoes.append(corrigir);
+      if(p.origem==='supabase'&&p.bancoId){
+        const denunciar=criar('button','Denunciar ponto');denunciar.type='button';denunciar.className='secondary';
+        denunciar.addEventListener('click',()=>ambiente.ecoaCadastro?.denunciar(p));botoes.append(denunciar);
+      }
       item.append(botoes);$('osm-lista').append(item);
     }
     if(cartaoPonto&&!visiveis.some(x=>x.id===cartaoPonto.id))fecharCartao();
+    else if(cartaoPonto)destacar(marcadores.get(cartaoPonto.id));
   }
   const busca=api.criarBuscaOSM({consultar:cliente.consultar,receber:lista=>{pontos=lista;renderizar();},estado});
   function atualizar() {
     busca.cancelar();
     if(!ativo)return;
     agendarBanco();
-    if(!online()){estado('Mostrando pontos salvos — offline','salvos');return;}
-    if(!mapa){estado('Abra o mapa ou busque um endereço para escolher a área.');return;}
+    if(!online()){estado('Mostrando pontos salvos — offline','inicial');return;}
+    if(!mapa){estado('Abra o mapa ou busque um lugar para escolher a área.');return;}
     if(!basePronta)return;
-    // Overpass é complemento opcional: só uma categoria, nunca todas de uma vez.
+    // Overpass é complemento opcional: uma categoria por vez, nunca todas de uma vez.
     if(categoria)busca.agendar(categoria,bbox(),mapa.getZoom());
-  }
-  function cidadesOpcoes(){
-    if(!clienteBanco)return;
-    const locais=[...fixos,...salvos].filter(p=>p.cidade&&p.UF).map(p=>({cidade:p.cidade,uf:p.UF}));
-    const lista=[...new Map([...locais,...cidadesRemotas].map(p=>[p.cidade+' / '+p.uf,p])).values()].sort((a,b)=>a.cidade.localeCompare(b.cidade,'pt-BR'));
-    const selecionada=$('osm-cidade').value;
-    $('osm-cidade').replaceChildren();const todas=criar('option','Área visível no mapa');todas.value='';$('osm-cidade').append(todas);
-    for(const p of lista){const op=criar('option',p.cidade+' / '+p.uf);op.value=JSON.stringify(p);$('osm-cidade').append(op);}
-    $('osm-cidade').value=selecionada||'';
   }
   function cancelarBanco(){consultaBanco++;clearTimeout(timerBanco);controleBanco?.abort();}
   function agendarBanco(){
     cancelarBanco();
     if(!clienteBanco||!basePronta||!ativo)return;
     const geracao=consultaBanco;
-    const filtros={cidade:cidadeAtual?.cidade||'',uf:cidadeAtual?.uf||'',categoria,nome:$('osm-nome')?$('osm-nome').value:'',bbox:bbox()};
-    const chaveCache={...filtros};
-    const emCache=cacheBanco?.ler(chaveCache);
-    if(emCache){compartilhados=emCache;renderizar();$('osm-banco-status').textContent='Mostrando pontos salvos';$('osm-tentar').hidden=false;}
+    const filtros={categoria,bbox:bbox()};
+    const chave=JSON.stringify([categoria,(filtros.bbox||[]).map(n=>Number(n).toFixed(3))]);
+    const emCache=cacheBanco?.ler(filtros);
+    const mudouRegiao=chave!==areaAtual;
+    if(mudouRegiao)areaAtual=chave;
+    if(emCache){
+      compartilhados=emCache;renderizar();
+      $('osm-banco-status').textContent='Mostrando pontos salvos';$('osm-tentar').hidden=false;
+    }else if(mudouRegiao){
+      // Pontos da área anterior não podem ser apresentados como se fossem do novo destino.
+      compartilhados=[];renderizar();
+    }
     if(!online()){if(!emCache)$('osm-banco-status').textContent='Mostrando pontos salvos';return;}
     controleBanco=new AbortController();
     const signal=controleBanco.signal;
@@ -135,18 +134,16 @@ function iniciarPontosOSM(doc,ambiente,api) {
         if(clienteBanco.consultarComLimite){const resposta=await clienteBanco.consultarComLimite({...filtros,limite:200},{signal});lista=resposta.pontos;atingiu=resposta.limiteAtingido;}
         else lista=await clienteBanco.consultar(filtros,{signal});
         if(geracao!==consultaBanco)return;
-        compartilhados=lista;pontoFocado=null;limiteAtingido=atingiu;
-        cacheBanco?.gravar(chaveCache,lista);
-        renderizar();estado('Pontos atualizados.','pronto');
-        if(enquadrarCidade&&mapa&&visiveis.length){enquadrarCidade=false;mapa.fitBounds(visiveis.map(p=>[p.latitude,p.longitude]),{padding:[30,30],maxZoom:15,animate:false});}
+        // Resposta válida vazia substitui a anterior; falha nunca apaga o que já estava na área.
+        compartilhados=lista;limiteAtingido=atingiu;
+        cacheBanco?.gravar(filtros,lista);
         $('osm-banco-status').textContent='';
-      }catch(e){if(geracao===consultaBanco&&e.name!=='AbortError'){$('osm-banco-status').textContent='Mostrando pontos salvos';$('osm-tentar').hidden=false;}}
+        renderizar();estado('Pontos atualizados.','pronto');
+      }catch(e){if(geracao===consultaBanco&&e.name!=='AbortError'){
+        $('osm-banco-status').textContent='Não foi possível atualizar; pontos salvos mantidos.';
+        $('osm-tentar').hidden=false;estado('Não foi possível atualizar. Mostrando pontos salvos.','salvos');
+      }}
     },600);
-    if(!cidadesCarregadas){cidadesCarregadas=true;clienteBanco.cidades().then(lista=>{cidadesRemotas=lista;cidadesOpcoes();}).catch(()=>{cidadesCarregadas=false;});}
-  }
-  if(clienteBanco){
-    $('osm-cidade').addEventListener('change',()=>{cidadeAtual=$('osm-cidade').value?JSON.parse($('osm-cidade').value):null;enquadrarCidade=!!cidadeAtual;atualizar();});
-    $('osm-nome').addEventListener('input',atualizar);
   }
   function conectar(m) {
     mapa=m;camada=ambiente.L.layerGroup().addTo(mapa);
@@ -155,46 +152,41 @@ function iniciarPontosOSM(doc,ambiente,api) {
     if(posicaoPendente){mapa.setView(posicaoPendente,15,{animate:false});posicaoPendente=null;}
     conectarBusca();atualizar();
   }
+  categoriasComuns.preencherFiltrosCategoriaPontos(doc);
   for(const chip of doc.querySelectorAll('[data-categoria-osm]'))chip.addEventListener('click',()=>{
-    categoria=chip.dataset.categoriaOsm||'';ativo=true;
+    const nova=chip.dataset.categoriaOsm||'';
+    // O ponto em foco continua visível enquanto a rede responde; ao trocar de tipo,
+    // ele só fica se pertencer ao novo filtro.
+    if(nova&&pontoFocado&&api.categoriaMapaOSM(pontoFocado.categoria)!==nova){pontoFocado=null;fecharCartao();}
+    categoria=nova;ativo=true;
     for(const c of doc.querySelectorAll('[data-categoria-osm]'))c.setAttribute('aria-pressed',String(c===chip));
-    $('osm-categoria-ajuda').textContent=categoria==='doacao'?'Lojas beneficentes podem aceitar doações; confirme o que recebem.':categoria==='verde'?'Parques, jardins e hortas podem ter restrições de acesso; confira antes de visitar.':categoria==='outros'?'Bibliotecas de rua e centros comunitários: confira as atividades e condições.':'';
+    $('osm-categoria-ajuda').textContent=orientacao(categoria);
     atualizar();if(!mapa&&online())$('cidade-carregar').click();
   });
+  function orientacao(cat){return categoriasComuns.orientacaoCategoriaPontos(cat);}
   $('osm-tentar').addEventListener('click',()=>{if(!mapa)$('cidade-carregar').click();atualizar();});
   $('osm-vazio-marcar')?.addEventListener('click',()=>$('cadastro-abrir').click());
-  $('osm-vazio-sugerir').addEventListener('click',()=>sugerir());
-  $('osm-fechar-sugestao').addEventListener('click',()=>{$('osm-sugerir').hidden=true;$('osm-vazio-sugerir').setAttribute('aria-expanded','false');$('osm-vazio-sugerir').focus();});
   $('osm-perto').addEventListener('click',()=>{
-    if(!ambiente.navigator.geolocation){estado('Este navegador não oferece localização. Digite um endereço.','erro');return;}
+    if(!ambiente.navigator.geolocation){estado('Este navegador não oferece localização. Digite um lugar.','erro');return;}
     $('osm-perto').disabled=true;estado('Aguardando sua permissão de localização…');
     ambiente.navigator.geolocation.getCurrentPosition(p=>{
       $('osm-perto').disabled=false;const pos=[p.coords.latitude,p.coords.longitude];
       if(mapa)mapa.setView(pos,15,{animate:false});else{posicaoPendente=pos;$('cidade-carregar').click();}
       estado('Área localizada. Buscando pontos…');
-    },()=>{$('osm-perto').disabled=false;estado('Não foi possível obter sua localização. Você pode digitar um endereço.','erro');},{enableHighAccuracy:false,maximumAge:0,timeout:10000});
+    },()=>{$('osm-perto').disabled=false;estado('Não foi possível obter sua localização. Você pode digitar um lugar.','erro');},{enableHighAccuracy:false,maximumAge:0,timeout:10000});
   });
-  $('osm-sug-form').addEventListener('submit',e=>{
-    e.preventDefault();
-    const texto=`Sugestão para o Ecoa\nNome: ${$('osm-sug-nome').value}\nEndereço: ${$('osm-sug-endereco').value}\nDetalhes: ${$('osm-sug-detalhes').value}`;
-    $('osm-sug-texto').value=texto;$('osm-sug-resultado').hidden=false;
-    const links=linksSugestaoOSM(texto);
-    for(const tipo of ['email','whatsapp']){$('osm-enviar-'+tipo).hidden=!links[tipo];if(links[tipo])$('osm-enviar-'+tipo).href=links[tipo];}
-    $('osm-contato-aviso').textContent=links.email||links.whatsapp?'Revise a sugestão e escolha como enviar. Nenhum envio é automático.':'O contato do projeto ainda não foi configurado. Você pode copiar a sugestão; ela não foi enviada.';
-    $('osm-sug-texto').focus();
-  });
-  $('osm-copiar').addEventListener('click',async()=>{try{await ambiente.navigator.clipboard.writeText($('osm-sug-texto').value);$('osm-contato-aviso').textContent='Sugestão copiada.';}catch{$('osm-sug-texto').focus();$('osm-sug-texto').select();$('osm-contato-aviso').textContent='Selecione e copie o texto acima.';}});
   function aoPonto(p) {
-    cidadeAtual=null;enquadrarCidade=false;pontoFocado=p;
+    pontoFocado=p;
     compartilhados=[p,...compartilhados.filter(x=>x.id!==p.id)];
     if(mapa)mapa.setView([p.latitude,p.longitude],16,{animate:false});else posicaoPendente=[p.latitude,p.longitude];
     renderizar();abrirCartao(p);estado('Ponto encontrado.','pronto');
   }
   function aoEndereco(p) {
+    // Cidade e endereço são o mesmo controle: trocar o destino redefine a área visível.
     const ehCidade=!p.cep&&!p.bairro&&normalizar(p.nome)===normalizar(p.cidade)&&p.cidade&&p.uf;
-    cidadeAtual=ehCidade?{cidade:p.cidade,uf:p.uf}:null;
-    enquadrarCidade=!!ehCidade;pontoFocado=null;fecharCartao();
-    if(mapa)mapa.setView([p.latitude,p.longitude],ehCidade?12:16,{animate:false});else posicaoPendente=[p.latitude,p.longitude];
+    pontoFocado=null;fecharCartao();
+    const pos=[p.latitude,p.longitude];
+    if(mapa)mapa.setView(pos,ehCidade?13:16,{animate:false});else posicaoPendente=pos;
     atualizar();
   }
   function conectarBusca(){
@@ -218,8 +210,8 @@ function iniciarPontosOSM(doc,ambiente,api) {
   const pronto=Promise.all([
     carregar('pontos-osm.json',api.validarBaseOSM).then(lista=>{salvos=lista;renderizar();}),
     carregar('pontos-fixos.json',api.validarFixosOSM).then(lista=>{fixos=lista;renderizar();})
-  ]).then(()=>{basePronta=true;cidadesOpcoes();atualizar();});
+  ]).then(()=>{basePronta=true;atualizar();});
   return {conectar,atualizar,pronto,abrirCartao,fecharCartao,todos:()=>[...fixos,...salvos,...pontos,...compartilhados]};
 }
-if(typeof module!=='undefined')module.exports={iniciarPontosOSM,linksSugestaoOSM};
+if(typeof module!=='undefined')module.exports={iniciarPontosOSM};
 else window.ecoaPontosMapa=iniciarPontosOSM(document,window,window.EcoaPontosOSM);

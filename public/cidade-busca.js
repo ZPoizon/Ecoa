@@ -179,7 +179,10 @@ function iniciarBuscaCidade(doc, ambiente, api = {}) {
         callbacks.aoEndereco?.(p);
       }
     }
-    input.dispatchEvent(new ambiente.CustomEvent('cidade-busca-selecionada', { bubbles: true, detail: item }));
+    // Quando o mapa já recebeu a seleção pelos callbacks, o evento serve apenas
+    // para preencher o cadastro (se estiver aberto), sem centralizar o mapa de novo.
+    const jaTratado = typeof callbacks.aoPonto === 'function' || typeof callbacks.aoEndereco === 'function';
+    input.dispatchEvent(new ambiente.CustomEvent('cidade-busca-selecionada', { bubbles: true, detail: { ...item, jaTratado } }));
   }
   async function confirmar() {
     const resultados = await controle.executar(input.value);
