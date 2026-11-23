@@ -1,16 +1,10 @@
 /* Ecoa: provedores isolados. Servidores públicos compartilhados: consultas pequenas,
    uma categoria por vez; respeitar Retry-After e aguardar ao menos 30 s após 429.
    O navegador controla User-Agent; o comentário da consulta identifica o projeto. */
-const categoriasOSM = {
-  reciclagem: {nome:'Reciclagem', tags:[['amenity','recycling']]},
-  doacao: {nome:'Doação', tags:[['shop','charity']]},
-  agua: {nome:'Água potável', tags:[['amenity','drinking_water']]},
-  verde: {nome:'Hortas e áreas verdes', tags:[['leisure','garden'],['leisure','park'],['landuse','allotments']]},
-  outros: {nome:'Outros', tags:[['amenity','public_bookcase'],['amenity','community_centre']]}
-};
-categoriasOSM['oleo-de-cozinha']={nome:'Óleo de cozinha',tags:[['recycling:cooking_oil','yes']]};
-categoriasOSM['pilhas-eletronicos']={nome:'Pilhas e eletrônicos',tags:[['recycling:batteries','yes'],['recycling:small_electrical_appliances','yes']]};
-function categoriaMapaOSM(c){return ({horta:'verde',outro:'outros'})[c]||c;}
+const categoriasPontosComunsOSM = typeof module!=='undefined'?require('./categorias-pontos'):window.EcoaCategoriasPontos;
+// Os mesmos valores do filtro e do cadastro alimentam as consultas e os cartões.
+const categoriasOSM = Object.fromEntries(categoriasPontosComunsOSM.CATEGORIAS_PONTOS.map(c=>[c.valor,{nome:c.nome,tags:c.tagsOSM}]));
+function categoriaMapaOSM(c){return categoriasPontosComunsOSM.categoriaPontosCanonica(c);}
 const servidoresOSM = ['https://overpass-api.de/api/interpreter','https://overpass.private.coffee/api/interpreter'];
 const abortadoOSM = () => new DOMException('Cancelado','AbortError');
 function areaOSM(b) {
@@ -18,19 +12,20 @@ function areaOSM(b) {
   return b.map((v,i)=>(i<2?Math.floor(v*100):Math.ceil(v*100))/100);
 }
 function montarConsultaOSM(categoria,bbox) {
-  if(!Object.hasOwn(categoriasOSM,categoria))throw Error('Escolha uma categoria.');
+  const cat=categoriaMapaOSM(categoria);
+  if(!Object.hasOwn(categoriasOSM,cat))throw Error('Escolha uma categoria.');
   const b=areaOSM(bbox);
   if(b[2]-b[0]>.3||b[3]-b[1]>.3)throw Error('Aproxime o mapa para ver pontos.');
-  return `/* Ecoa - pontos na cidade */[out:json][timeout:45];(${categoriasOSM[categoria].tags.map(([k,v])=>`nwr["${k}"="${v}"](${b.join(',')});`).join('')});out center tags 200;`;
+  return `/* Ecoa - pontos na cidade */[out:json][timeout:45];(${categoriasOSM[cat].tags.map(([k,v])=>`nwr["${k}"="${v}"](${b.join(',')});`).join('')});out center tags 200;`;
 }
 function pontoValidoOSM(p) {return p&&typeof p.id==='string'&&typeof p.nome==='string'&&Object.hasOwn(categoriasOSM,categoriaMapaOSM(p.categoria))&&Number.isFinite(p.latitude)&&Number.isFinite(p.longitude)&&Math.abs(p.latitude)<=90&&Math.abs(p.longitude)<=180;}
 function converterPontosOSM(dados,categoria) {
   if(!dados||!Array.isArray(dados.elements)||dados.remark)throw Error('Resposta incompleta do servidor.');
-  const texto=v=>typeof v==='string'?v.slice(0,1000):'';
+  const cat=categoriaMapaOSM(categoria),texto=v=>typeof v==='string'?v.slice(0,1000):'';
   return dados.elements.slice(0,200).flatMap(e=>{
     const t=e.tags||{},latitude=e.lat??e.center?.lat,longitude=e.lon??e.center?.lon;
     if(!['node','way','relation'].includes(e.type)||!Number.isSafeInteger(e.id))return [];
-    const p={id:`osm-${e.type}-${e.id}`,nome:texto(t.name)||categoriasOSM[categoria].nome,categoria,latitude,longitude,
+    const p={id:`osm-${e.type}-${e.id}`,nome:texto(t.name)||categoriasOSM[cat].nome,categoria:cat,latitude,longitude,
       endereco:[t['addr:street'],t['addr:housenumber'],t['addr:suburb']].map(texto).filter(Boolean).join(', '),cidade:texto(t['addr:city']),UF:texto(t['addr:state']),horario:texto(t.opening_hours),aceita:texto(t.description),telefone:texto(t.phone||t['contact:phone']),fonte:`https://www.openstreetmap.org/${e.type}/${e.id}`,origem:'osm',semNome:!texto(t.name)};
     return pontoValidoOSM(p)?[p]:[];
   });
@@ -65,7 +60,7 @@ function criarClienteOSM({fetcher=fetch,storage,agora=Date.now,esperar=esperarOS
   const chave='ecoa-osm-cache-v1',ttl=900000,cache=new Map();let liberar=0,falhas=0,inicio=0;
   try{for(const [k,v] of JSON.parse(storage?.getItem(chave)||'[]').slice(-20))if(typeof k==='string'&&v&&Number.isFinite(v.em)&&v.em<=agora()&&agora()-v.em<ttl&&Array.isArray(v.pontos)&&v.pontos.length<=200&&v.pontos.every(p=>pontoValidoOSM(p)&&p.origem==='osm'))cache.set(k,v);}catch{}
   async function consultar(categoria,bbox,{signal,ocupado=()=>{}}={}) {
-    const query=montarConsultaOSM(categoria,bbox),key=categoria+':'+areaOSM(bbox).join(',');
+    const query=montarConsultaOSM(categoria,bbox),key=categoriaMapaOSM(categoria)+':'+areaOSM(bbox).join(',');
     if(signal?.aborted)throw abortadoOSM();
     const c=cache.get(key);if(c&&agora()-c.em<ttl)return c.pontos;
     for(let tentativa=0;tentativa<servidores.length;tentativa++) {
@@ -98,8 +93,9 @@ function criarBuscaOSM({consultar,receber,estado,relogio=globalThis}) {
   function cancelar(){geracao++;relogio.clearTimeout(timer);controller?.abort();}
   function agendar(cat,bbox,zoom) {
     cancelar();if(!cat){estado('Escolha uma categoria para buscar pontos.','inicial');return;}
-    if(zoom<13){receber([]);estado('Aproxime o mapa para ver pontos.','zoom');return;}
-    try{montarConsultaOSM(cat,bbox);}catch(e){receber([]);estado(e.message,'zoom');return;}
+    // Área grande não é resposta vazia: mantém os pontos já carregados.
+    if(zoom<13){estado('Aproxime o mapa para ver mais pontos.','zoom');return;}
+    try{montarConsultaOSM(cat,bbox);}catch(e){estado(e.message,'zoom');return;}
     const atual=geracao;controller=new AbortController();const signal=controller.signal;
     timer=relogio.setTimeout(async()=>{
       estado('Buscando pontos nesta área…','carregando');
@@ -112,15 +108,18 @@ function criarBuscaOSM({consultar,receber,estado,relogio=globalThis}) {
 // A base distribuída é lida antes da busca ao vivo e funciona no cache offline.
 function validarBaseOSM(dados) {
  if(dados?.versao!==1||!dados.categorias)throw Error('Base regional inválida');
- return Object.entries(categoriasOSM).flatMap(([cat])=>{
-  const pontos=dados.categorias[cat];
-  if(!Array.isArray(pontos)||!pontos.every(p=>pontoValidoOSM(p)&&p.categoria===cat&&p.origem==='osm'))throw Error('Base regional inválida');
-  return pontos;
+ return categoriasPontosComunsOSM.CATEGORIAS_PONTOS.flatMap(c=>{
+  const cat=c.valor;
+  const aliases=Object.entries(categoriasPontosComunsOSM.ALIASES_CATEGORIA_PONTOS).filter(([,canonica])=>canonica===cat).map(([alias])=>alias);
+  const brutos=[cat,...aliases].map(chave=>dados.categorias[chave]).find(Array.isArray)||[];
+  if(!brutos.every(p=>pontoValidoOSM({...p,categoria:cat})&&categoriaMapaOSM(p.categoria)===cat&&p.origem==='osm'))throw Error('Base regional inválida');
+  return brutos.map(p=>({...p,categoria:cat}));
  });
 }
 function pontosDisponiveisOSM(fixos,salvos,vivos,categoria,bbox){
- const todos=!categoria||categoria==='todos';
- const filtrar=lista=>lista.filter(p=>(todos||categoriaMapaOSM(p.categoria)===categoria)&&dentroAreaOSM(p,bbox));
+ const cat=categoriaMapaOSM(categoria);
+ const todos=!cat||cat==='todos';
+ const filtrar=lista=>lista.filter(p=>(todos||categoriaMapaOSM(p.categoria)===cat)&&dentroAreaOSM(p,bbox));
  // Curadoria tem prioridade; dados ao vivo atualizam a cópia pelo mesmo ID.
  return mesclarPontosOSM(filtrar(fixos),[...filtrar(vivos),...filtrar(salvos)]);
 }
@@ -129,7 +128,8 @@ function preencherCartaoPonto(doc,item,p,opcoes={}){
  texto('p',(categoriasOSM[categoriaMapaOSM(p.categoria)]||{nome:'Outro'}).nome);
  const titulo=doc.createElement('h3');titulo.textContent=String(p.nome);if(opcoes.idTitulo)titulo.id=opcoes.idTitulo;item.append(titulo);
  if(p.origem==='fixo')texto('p','Verificado em '+p.dataVerificacao.split('-').reverse().join('/'));
- for(const t of [p.descricao,[p.endereco,p.bairro,p.cidade,p.UF].filter(Boolean).join(' · '),p.horario&&'Horário: '+p.horario,p.aceita&&'O que aceita / informações: '+p.aceita,p.telefone&&'Telefone: '+p.telefone])if(t)texto('p',t);
+ if(p.descricao)texto('p','O que dá para fazer aqui? '+p.descricao);
+ for(const t of [[p.endereco,p.bairro,p.cidade,p.UF].filter(Boolean).join(' · '),p.horario&&'Horário: '+p.horario,p.aceita&&'O que aceita / informações: '+p.aceita,p.telefone&&'Telefone: '+p.telefone])if(t)texto('p',t);
  texto('p',p.origem==='supabase'?'Origem: cadastro da comunidade':p.origem==='fixo'?'Origem: curadoria do Ecoa':'Origem: OpenStreetMap');
  texto('p',p.origem==='supabase'?(p.verificado?'Verificado':'Aprovado pela comunidade'):p.origem==='fixo'?'Verificado pelo Ecoa':'Fonte: OpenStreetMap — não verificado presencialmente');
  texto('p','Dados da comunidade. Confirme antes de ir');

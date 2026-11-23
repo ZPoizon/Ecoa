@@ -1,7 +1,8 @@
 // Cache local SOMENTE de pontos aprovados, isolado por projeto Supabase.
 // Nunca guarda pendentes, denúncias, contadores nem chaves privilegiadas.
 const CHAVE_CACHE_PONTOS = 'ecoa:pontos:cache-v1';
-const TIPOS_CACHE_PONTOS = ['reciclagem', 'doacao', 'agua', 'horta', 'oleo-de-cozinha', 'pilhas-eletronicos', 'outro'];
+const categoriasCachePontos = typeof module !== 'undefined' ? require('./categorias-pontos') : window.EcoaCategoriasPontos;
+const TIPOS_CACHE_PONTOS = categoriasCachePontos.CATEGORIAS_PONTOS.map(c => c.valor);
 
 function projetoCachePontos(config) {
   try {

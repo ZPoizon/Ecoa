@@ -1,7 +1,8 @@
 // Adaptador REST do Supabase: sem SDK, sem HTML e sem chave privilegiada.
-const categoriasCompartilhadas=['reciclagem','doacao','agua','horta','oleo-de-cozinha','pilhas-eletronicos','outro'];
+const categoriasPontosComunsBanco=typeof module!=='undefined'?require('./categorias-pontos'):window.EcoaCategoriasPontos;
+const categoriasCompartilhadas=categoriasPontosComunsBanco.CATEGORIAS_PONTOS.map(c=>c.valor);
 function normalizarPontoBusca(t){return String(t).normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().trim();}
-function categoriaBanco(c){return ({verde:'horta',outros:'outro'})[c]||c;}
+function categoriaBanco(c){return categoriasPontosComunsBanco.categoriaPontosCanonica(c);}
 function montarConsultaPontos(config,{cidade='',uf='',categoria='',nome='',bbox,limite=200}={}){
  const url=new URL('/rest/v1/pontos',config.SUPABASE_URL);
  if(url.protocol!=='https:')throw Error('Configuração inválida');
