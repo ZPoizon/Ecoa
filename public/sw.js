@@ -1,8 +1,10 @@
 // Incremente a versão ao atualizar arquivos armazenados para uso offline.
 const prefixo = 'oqdpf:' + self.registration.scope + ':';
-const versao = prefixo + 'v47';
+const versao = prefixo + 'v48';
+const cacheBases = prefixo + 'bases-v1';
+const LIMITE_BASES = 6;
 const arquivos = [
-  'cadastro-pontos.js', 'cadastro-pontos-ui.js', 'cadastro-pontos.css', 'config.js', 'categorias-pontos.js', 'pontos-compartilhados.js', 'pontos-cache.js', 'cidade-busca.js', 'pontos-osm.json', 'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css', 'cidade-publica.js', 'curador.html', 'curador.js', 'curador-ui.js', 'curador.css', 'vida.js', 'vida.css', 'polimento.css', 'cidade-config.js', 'limpeza.js', 'limpeza.css',
+  'cadastro-pontos.js', 'cadastro-pontos-ui.js', 'cadastro-pontos.css', 'config.js', 'categorias-pontos.js', 'bases-regiao.js', 'bases-regiao-indice.json', 'pontos-compartilhados.js', 'pontos-cache.js', 'cidade-busca.js', 'pontos-osm.json', 'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css', 'cidade-publica.js', 'curador.html', 'curador.js', 'curador-ui.js', 'curador.css', 'vida.js', 'vida.css', 'polimento.css', 'cidade-config.js', 'limpeza.js', 'limpeza.css',
   'rotina.js', 'rotina.css', 'refino-visual.css', 'estrutura.js', 'estrutura.css',
   'pontos-osm.js', 'pontos-osm-ui.js', 'pontos-osm.css', 'pontos-fixos.json', 'cidade-layout.css', 'aprender.js', 'aprender.css', 'agir.js', 'agir.css', 'atividades.js', 'inicio.js', 'inicio.css', 'rotas.js', 'design-system.css', 'acessibilidade.js', 'acessibilidade.css', 'index.html', 'sobre.html', 'style.css', 'manifest.json', 'pwa.js', 'acoes.js', 'app.js',
   'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'compartilhar.js', 'compartilhar-ui.js', 'onu.js', 'plano.js', 'progresso.js', 'plano-json.js', 'plano-pdf.js', 'guias.js', 'vendor/pdf-lib.min.js',
@@ -41,6 +43,25 @@ self.addEventListener('fetch', evento => {
   const sobre = new URL('sobre.html', inicio).href;
   const navegacaoSobre = pedido.mode === 'navigate' && new URL(pedido.url).origin + new URL(pedido.url).pathname === sobre;
   const destino = navegacaoInicial ? paginaInicial : navegacaoSobre ? sobre : pedido.url;
+  // Bases por cidade NÃO entram no precache: são buscadas sob demanda e o cache é limitado.
+  const caminho = new URL(pedido.url).pathname;
+  if (caminho.startsWith(new URL('bases/', inicio).pathname) && caminho.endsWith('.json')) {
+    evento.respondWith((async () => {
+      const cache = await caches.open(cacheBases);
+      try {
+        const resposta = await fetch(pedido);
+        if (resposta.ok) {
+          await cache.put(pedido, resposta.clone());
+          const chaves = await cache.keys();
+          for (const antiga of chaves.slice(0, Math.max(0, chaves.length - LIMITE_BASES))) await cache.delete(antiga);
+        }
+        return resposta;
+      } catch (erro) {
+        return await cache.match(pedido) || Response.error();
+      }
+    })());
+    return;
+  }
   if (!arquivos.includes(destino)) return;
 
   evento.respondWith((async () => {

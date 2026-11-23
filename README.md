@@ -560,6 +560,8 @@ Offline após o primeiro acesso: formulário, lista fixa em cache, prévia e ger
 
 ## Base regional offline e limpeza do mapa
 
+A base antiga de Capão Bonito e arredores continua em `public/pontos-osm.json` apenas para compatibilidade e testes. A navegação atual usa o índice `public/bases-regiao-indice.json` e os arquivos de `public/bases/`, carregados sob demanda quando a pessoa escolhe uma cidade; nenhum deles é buscado no build.
+
 A base OSM de Capão Bonito e arredores é distribuída em `public/pontos-osm.json`, copiada para `dist/` no build. O importador Node (sem dependências) faz uma consulta reunindo as categorias, com fallback de servidor, e só substitui os arquivos depois de uma resposta completa. Raio padrão: 25 km, configurável de 1 a 100 km. Não roda no build nem a cada visita. Execute manualmente para atualizar os dados da comunidade; eles não equivalem a pontos verificados pelo curador. Atribuição: © OpenStreetMap contributors, licença ODbL, https://www.openstreetmap.org/copyright.
 
 ```powershell
@@ -574,6 +576,28 @@ git push
 Atualize também a versão em `public/sw.js` ao publicar uma base nova. O site combina base regional, pontos curados e consulta ao vivo, preservando os salvos quando a rede falha. A consulta ao vivo usa timeout de 45 s no servidor, 60 s no cliente, mirrors, cache e backoff. O mapa/lista abre com a base local antes da consulta remota. Sem rede, marcadores e lista continuam disponíveis após o primeiro acesso; o fundo de ruas exige rede e não é baixado em massa. Leaflet 1.9.4 (a biblioteca já usada), CSS e ícones estão locais, sob licença BSD em `public/vendor/leaflet/LICENSE`.
 
 A interface de Meus lugares foi retirada; nenhum dado antigo do localStorage foi apagado. Há uma única entrada Sugerir ao Ecoa. Cache v41. Validação automatizada cobre fallback, resposta incompleta, categorias, mesclagem, limite de raio e ausência de erro bloqueante.
+
+### Cobertura regional por cidade
+
+O mapa passou a distinguir **cidade encontrada**, **base importada**, **falha de consulta** e **filtro que esconde registros**. Escolher uma cidade carrega somente a base daquele município; arrastar o mapa volta a consultar a área visível. A categoria escolhida continua ativa nos dois modos. A lista não é cortada pela área visível quando o escopo é a cidade, e uma resposta tardia da cidade anterior não sobrescreve a atual.
+
+As seis cidades iniciais, com os códigos IBGE oficiais, são Capão Bonito (`3510203`), Itapetininga (`3522307`), Sorocaba (`3552205`), Itapeva (`3522406`), Buri (`3508009`) e São Miguel Arcanjo (`3550209`). Capão Bonito usa a base antiga de **cidade e arredores** (raio de 25 km, que pode alcançar outros municípios); as demais usam a abrangência **município**. Cada ponto traz fonte, cidade/UF e, quando a localização veio de uma geometria ou trecho de rua, uma ressalva de precisão. Registros antigos ou sem confirmação presencial estão marcados como `reconfirmar`; o cartão não afirma serviço, horário, aceitação de materiais, plantio ou potabilidade sem fonte explícita. Buri não tem ecoponto, água, doação ou horta confirmados com coordenada pública: só aparecem áreas verdes identificadas no OpenStreetMap.
+
+Fora dessas cidades, a interface continua consultando os pontos aprovados no Supabase e tenta complementos externos com limite e cache. Se não houver base importada, ela diz isso explicitamente e oferece o cadastro de um local público; nunca inventa ponto nem apresenta a ausência da base como erro de rede. A última base válida fica em `sessionStorage` (no máximo seis bases e 600 KB) e em cache do service worker separado, também limitado; uma recarga inválida ou sem rede preserva a cópia anterior. O service worker incrementou para **v48**.
+
+O índice é pequeno e validado: cada entrada traz cidade, UF, IBGE, relation OSM, centro, abrangência, quantidade, data, cobertura e caminho do arquivo. Para atualizar uma cidade já coberta:
+
+```powershell
+node scripts/importar-osm.mjs --cidade "Itapetininga" --uf SP --ibge 3522307 --osm-relacao 298289
+npm test
+npm run build
+git add public/bases-regiao-indice.json public/bases/3522307.json public/sw.js README.md
+git commit -m "data: atualiza base regional de Itapetininga"
+```
+
+O comando usa a área administrativa da `relation`, não um raio atribuído à cidade central, e só substitui o arquivo depois de uma resposta completa; a base anterior é preservada em caso de falha. Para **cidade e arredores**, acrescente `--lat`, `--lng`, `--raio-km` e `--abrangencia "cidade e arredores"`. Nenhuma chamada Overpass/Photon/Supabase acontece no build.
+
+Para acrescentar outra cidade: confirme o código IBGE na API do IBGE e a relation do município no OpenStreetMap; rode o importador com esses valores; confira quantidade, cobertura, fontes e registros `reconfirmar`; incremente a versão em `public/sw.js`; rode `node validar.cjs`, `npm test` e `npm run build`. Se quiser revisar pontos oficiais manualmente, siga o mesmo formato dos arquivos em `public/bases/`: `id` no padrão `base-<IBGE>-<categoria>-<número>`, coordenadas válidas, `fonte` HTTPS, `origem: "base"` e `cidade`/`UF` coerentes com o índice. `scripts/converter-base-antiga.mjs` converteu a base legada de Capão Bonito; é uma conversão pontual, não uma consulta automática de fontes oficiais.
 
 ## Pontos compartilhados — Supabase, fase 1
 

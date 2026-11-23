@@ -1,0 +1,86 @@
+{
+  "versao": 1,
+  "atualizadoEm": "2026-11-23",
+  "fonte": "Importação manual e curadoria; nenhuma consulta externa acontece no build.",
+  "cidades": [
+    {
+      "id": "3510203",
+      "cidade": "Capão Bonito",
+      "uf": "SP",
+      "ibge": "3510203",
+      "osmRelation": 298192,
+      "centro": [-24.0048759, -48.3489848],
+      "raioKm": 25,
+      "abrangencia": "cidade e arredores",
+      "quantidade": 69,
+      "geradoEm": "2026-11-23",
+      "arquivo": "bases/3510203.json",
+      "cobertura": "Base OSM anterior (raio de 25 km) convertida em 23/11/2026, mais um parque confirmado por notícia municipal. O raio pode alcançar municípios vizinhos; a fonte nem sempre informa o município de cada elemento."
+    },
+    {
+      "id": "3522307",
+      "cidade": "Itapetininga",
+      "uf": "SP",
+      "ibge": "3522307",
+      "osmRelation": 298289,
+      "centro": [-23.588607, -48.048326],
+      "abrangencia": "municipio",
+      "quantidade": 6,
+      "geradoEm": "2026-11-23",
+      "arquivo": "bases/3522307.json",
+      "cobertura": "Pontos com fonte municipal e coordenada aproximada; dois registros são de 2018-2020 e precisam de reconfirmação."
+    },
+    {
+      "id": "3552205",
+      "cidade": "Sorocaba",
+      "uf": "SP",
+      "ibge": "3552205",
+      "osmRelation": 298424,
+      "centro": [-23.469278, -47.442145],
+      "abrangencia": "municipio",
+      "quantidade": 7,
+      "geradoEm": "2026-11-23",
+      "arquivo": "bases/3552205.json",
+      "cobertura": "Ecopontos, cooperativas, espaço solidário e parque com fonte municipal; o Espaço Solidário é da campanha de 2025 e precisa de reconfirmação."
+    },
+    {
+      "id": "3522406",
+      "cidade": "Itapeva",
+      "uf": "SP",
+      "ibge": "3522406",
+      "osmRelation": 298034,
+      "centro": [-23.9849105, -48.8803886],
+      "abrangencia": "municipio",
+      "quantidade": 6,
+      "geradoEm": "2026-11-23",
+      "arquivo": "bases/3522406.json",
+      "cobertura": "Ecopontos, adoção animal, horta, educação ambiental e praça com fonte municipal; endereços e coordenadas são aproximados."
+    },
+    {
+      "id": "3508009",
+      "cidade": "Buri",
+      "uf": "SP",
+      "ibge": "3508009",
+      "osmRelation": 298489,
+      "centro": [-23.79849, -48.598924],
+      "abrangencia": "municipio",
+      "quantidade": 5,
+      "geradoEm": "2026-11-23",
+      "arquivo": "bases/3508009.json",
+      "cobertura": "Apenas áreas verdes identificadas no OpenStreetMap e menção municipal a uma praça. Não há ecoponto, água, doação ou horta confirmados com coordenada em Buri."
+    },
+    {
+      "id": "3550209",
+      "cidade": "São Miguel Arcanjo",
+      "uf": "SP",
+      "ibge": "3550209",
+      "osmRelation": 298522,
+      "centro": [-23.8807771, -47.9963492],
+      "abrangencia": "municipio",
+      "quantidade": 5,
+      "geradoEm": "2026-11-23",
+      "arquivo": "bases/3550209.json",
+      "cobertura": "Parque, espaços ecológicos e praças com origem em contrato/lei municipal e coordenada aproximada do OpenStreetMap."
+    }
+  ]
+}

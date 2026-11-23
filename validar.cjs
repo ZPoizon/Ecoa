@@ -1050,7 +1050,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v47'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v48'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1573,11 +1573,11 @@ async function validarIntegracaoBancoMapa(){
  assert.match(JSON.stringify(el('osm-lista').children),/Ponto 3/);
  // Falha de rede não apaga os pontos disponíveis da região atual.
   falhar=true;ui.atualizar();await esperar();assert.equal(el('osm-lista').children.length,1);
-  assert.match(el('osm-status').textContent,/Mostrando os pontos salvos disponíveis/);
+  assert.match(el('osm-status').textContent,/Mostrando pontos salvos/);
   falhar=false;
   // Resposta vazia válida limpa a área; falha posterior não ressuscita registros antigos.
  vazio=true;handlers.moveend();await esperar();assert.equal(el('osm-lista').children.length,0);
- assert.match(el('osm-status').textContent,/Ainda não encontramos pontos nesta região\./);
+ assert.match(el('osm-status').textContent,/Ainda não temos pontos cadastrados nesta região\./);
  falhar=true;ui.atualizar();await esperar();assert.equal(el('osm-lista').children.length,0);
  assert.match(el('osm-banco-status').textContent,/pontos salvos/);assert.equal(el('osm-tentar').hidden,false);
  falhar=false;vazio=false;handlers.moveend();await esperar();assert.equal(el('osm-lista').children.length,1);
@@ -1683,7 +1683,7 @@ async function validarTelaNaCidade(){
   'Conhece um lugar útil? Marque no mapa para ajudar outras pessoas a fazer a diferença.',
   'placeholder="Busque um lugar, endereço, CEP ou cidade"','>Marcar um ponto</button>','<summary>Filtros</summary>',
   '<summary>Ver lista</summary>','<summary>Mais informações (opcional)</summary>','<summary>Ajustar coordenadas</summary>',
-  'Ainda não encontramos pontos nesta região.',
+  'Ainda não temos pontos cadastrados nesta região.',
   'Cadastre apenas locais públicos. Não informe endereço de casa nem dados pessoais.',
   'Este é um local público','>Enviar ponto</button>',
   'O que dá para fazer aqui?','pontos-cache.js','cidade-busca.js','categorias-pontos.js']){
@@ -1883,3 +1883,99 @@ async function validarTelaNaCidade(){
  console.log('OK Tela Na cidade: interface, cache validado/vazio, bbox, categoria única, textos, busca e endereço sem criar ponto');
 }
 validarTelaNaCidade().catch(e=>{console.error(e);process.exitCode=1;});
+
+async function validarBasesRegionais(){
+ const fs=require('node:fs'),bases=require('./public/bases-regiao');
+ const indice=bases.validarIndiceBases(JSON.parse(fs.readFileSync('public/bases-regiao-indice.json','utf8')));
+ const quantidades={'Capão Bonito':69,'Itapetininga':6,'Sorocaba':7,'Itapeva':6,'Buri':5,'São Miguel Arcanjo':5};
+ assert.deepEqual(indice.cidades.map(c=>c.cidade),Object.keys(quantidades));
+ const entradas=new Map(indice.cidades.map(c=>[c.cidade,c]));
+ assert.equal(entradas.get('Capão Bonito').abrangencia,'cidade e arredores');
+ assert.equal(entradas.get('Capão Bonito').ibge,'3510203');
+ assert.equal(entradas.get('Itapetininga').ibge,'3522307');
+ assert.equal(entradas.get('Sorocaba').ibge,'3552205');
+ assert.equal(entradas.get('São Miguel Arcanjo').ibge,'3550209');
+ for(const entrada of indice.cidades){
+  const base=bases.validarBaseCidade(JSON.parse(fs.readFileSync('public/'+entrada.arquivo,'utf8')),entrada);
+  assert.equal(base.pontos.length,quantidades[entrada.cidade]);
+  assert.equal(base.pontos.length,entrada.quantidade);
+  assert.ok(base.pontos.every(p=>p.origem==='base'&&!/EXEMPLO|FICT[ÍI]CIO/i.test(p.nome)));
+  assert.ok(base.pontos.every(p=>!/^https:/.test(p.fonte)||p.fonte.startsWith('https://')));
+  assert.ok(base.pontos.every(p=>p.categoria!=='verde'&&p.categoria!=='outros'));
+ }
+ const mem=new Map();
+ const storage={getItem:k=>mem.get(k)||null,setItem:(k,v)=>mem.set(k,v)};
+ let falhar=false,dadosInvalidos=false;
+ const jsonIndice=fs.readFileSync('public/bases-regiao-indice.json','utf8');
+ const fetcher=async url=>{
+  if(String(url).includes('indice'))return {ok:true,json:async()=>JSON.parse(jsonIndice)};
+  if(falhar)throw Error('sem rede');
+  const caminho='public/'+String(url);
+  const conteudo=fs.readFileSync(caminho,'utf8');
+  return {ok:true,json:async()=>dadosInvalidos?{...JSON.parse(conteudo),pontos:[]}:JSON.parse(conteudo)};
+ };
+ const gerente=bases.criarGerenciadorBasesRegiao({fetcher,storage});
+ assert.equal((await gerente.listar()).cidades.length,6);
+ assert.equal(gerente.encontrar('itapetininga','sp').id,'3522307');
+ assert.equal(gerente.encontrar('Itapetininga','MG'),null);
+ const carregada=await gerente.carregar('3522307');
+ assert.equal(carregada.pontos.length,6);assert.equal(carregada.origemCache,false);
+ falhar=true;
+ const preservada=await gerente.carregar('3522307',{revalidar:true});
+ assert.equal(preservada.origemCache,true);assert.equal(preservada.pontos.length,6);
+ falhar=false;dadosInvalidos=true;
+ await assert.rejects(gerente.carregar('3522406'),/Base regional/);
+ assert.equal(gerente.emCache('3522406'),false);
+ dadosInvalidos=false;
+ const segunda=await gerente.carregar('3522406');assert.equal(segunda.pontos.length,6);
+ const outro=bases.criarGerenciadorBasesRegiao({fetcher,storage});
+ assert.equal(outro.emCache('3522307'),true);
+
+ // Fluxo completo no mapa: a base local aparece mesmo com Supabase/Overpass falhando.
+ const osm=require('./public/pontos-osm'),sup=require('./public/pontos-compartilhados');
+ const criar=()=>({children:[],eventos:{},dataset:{},value:'',hidden:false,textContent:'',append(...x){this.children.push(...x);},prepend(...x){this.children.unshift(...x);},replaceChildren(...x){this.children=x;},setAttribute(k,v){this[k]=v;},removeAttribute(k){delete this[k];},addEventListener(k,f){this.eventos[k]=f;},focus(){},scrollIntoView(){},click(){this.eventos.click?.();},set innerHTML(v){throw Error('XSS');}});
+ const els=new Map(),el=id=>{if(!els.has(id))els.set(id,criar());return els.get(id);};
+ const chips=['','reciclagem','horta'].map(c=>{const e=criar();e.dataset.categoriaOsm=c;return e;});
+ const doc={getElementById:el,createElement:criar,querySelectorAll:()=>chips,addEventListener(){}};
+ const handlers={};
+ const mapa={on(n,f){handlers[n]=f;return this;},getZoom:()=>13,fitBounds(){return this;},
+  getBounds:()=>({getSouth:()=>-24.02,getWest:()=>-48.36,getNorth:()=>-24,getEast:()=>-48.34}),
+  getCenter:()=>({lat:-24.01,lng:-48.35}),setView(){return this;}};
+ let callbacks={};
+ const env={EcoaMapaInicial:{},EcoaConfig:{},EcoaBasesRegiao:bases,
+  EcoaBuscaCidade:{conectar:cb=>{callbacks=cb;}},
+  fetch:fetcher,navigator:{onLine:false},addEventListener(){},
+  L:{layerGroup:()=>({addTo(){return this;},clearLayers(){}}),divIcon:()=>({}),
+    latLngBounds:coords=>({pad(){return this;}}),marker:()=>({addTo(){return this;},on(){},getElement:()=>({isConnected:false})})}};
+ const ui=require('./public/pontos-osm-ui').iniciarPontosOSM(doc,env,{...osm,criarBuscaOSM:()=>({cancelar(){},agendar(){}}),validarBaseOSM:()=>[],validarFixosOSM:()=>[]});
+ await ui.pronto;ui.conectar(mapa);
+ const esperar=()=>new Promise(r=>setTimeout(r,80));
+ callbacks.aoCidade({cidade:'Itapetininga',uf:'SP'});await esperar();
+ const texto=()=>JSON.stringify(el('osm-lista').children);
+ assert.match(texto(),/COOPERITA/);assert.doesNotMatch(texto(),/Parque das Águas/);
+ assert.match(el('osm-filtro-ajuda').textContent,/Base importada: 6 registros/);
+ assert.match(el('osm-status').textContent,/6 pontos encontrados/);
+ callbacks.aoCidade({cidade:'Capão Bonito',uf:'SP'});await esperar();
+ assert.match(texto(),/Parque das Águas/);assert.doesNotMatch(texto(),/COOPERITA/);
+ assert.match(el('osm-filtro-ajuda').textContent,/cidade e arredores/);
+ chips[1].click();await esperar();
+ const sobraram=el('osm-lista').children;
+ assert.ok(sobraram.length>0&&sobraram.length<69);
+ assert.ok(sobraram.every(p=>p.children[0]?.textContent==='Reciclagem'));
+ chips[0].click();await esperar();
+ callbacks.aoCidade({cidade:'Buri',uf:'SP'});await esperar();
+ assert.match(texto(),/Praça 9 de Julho/);assert.doesNotMatch(texto(),/COOPERITA/);
+ // Cidade fora da cobertura não herda base de outra cidade e não alega erro de rede.
+ callbacks.aoCidade({cidade:'Presidente Prudente',uf:'SP'});await esperar();
+ assert.equal(el('osm-lista').children.length,0);
+ assert.match(el('osm-filtro-ajuda').textContent,/Ainda não há base importada/);
+ assert.match(el('osm-status').textContent,/Ainda não temos pontos cadastrados/);
+ callbacks.aoCidade({cidade:'Capão Bonito',uf:'SP'});await esperar();
+ assert.match(texto(),/Parque das Águas/);
+ handlers.moveend();await esperar();
+ assert.doesNotMatch(el('osm-filtro-ajuda').textContent,/Base importada/);
+ const build=fs.readFileSync('build.cjs','utf8');
+ assert.doesNotMatch(build,/overpass|importar-osm/);
+ console.log('OK Bases regionais: índice, seis cidades, carregamento sob demanda, cache válido, falha preservada e cartões no mapa');
+}
+validarBasesRegionais().catch(e=>{console.error(e);process.exitCode=1;});
