@@ -1,12 +1,15 @@
 // Busca única: pontos aprovados no Supabase + endereços/CEP/cidades (Photon/ViaCEP).
 // Nenhum resultado de geocodificador vira ponto; textos externos sempre via textContent.
-function criarServicoBuscaCidade({ buscarPontos, provedorEnderecos, criarServico = globalThis.criarServicoEnderecos, normalizar = globalThis.normalizarBuscaEndereco, relogio = globalThis } = {}) {
+function criarServicoBuscaCidade({ buscarPontos, buscarCidades, provedorEnderecos, criarServico = globalThis.criarServicoEnderecos, normalizar = globalThis.normalizarBuscaEndereco, relogio = globalThis } = {}) {
   const servicoEnderecos = (typeof criarServico === 'function' && provedorEnderecos)
     ? criarServico(provedorEnderecos) : null;
   const cache = new Map();
+  const norm = texto => typeof normalizar === 'function'
+    ? normalizar(String(texto || '')) : String(texto || '').trim().toLowerCase();
+  const chaveCidade = p => [norm(p.cidade || ''), String(p.uf || '').toUpperCase()].join('|');
 
   async function buscar(texto, opcoes = {}) {
-    const termo = (typeof normalizar === 'function' ? normalizar(String(texto || '')) : String(texto || '').trim().toLowerCase());
+    const termo = norm(texto);
     if (termo.length < 3) return [];
     const chave = JSON.stringify([termo, opcoes.vies || null]);
     if (cache.has(chave)) {
@@ -27,6 +30,19 @@ function criarServicoBuscaCidade({ buscarPontos, provedorEnderecos, criarServico
           subtitulo: [p.categoria, p.cidade, p.UF].filter(Boolean).join(' · '), ponto: p
         })))
         .catch(() => []);
+      // A RPC do banco apenas acrescenta cidades com cadastros aprovados. Ela nunca
+      // substitui o geocodificador: cidades sem pontos no Ecoa continuam encontráveis.
+      const promessaCidades = Promise.resolve()
+        .then(() => buscarCidades ? buscarCidades(termo, { signal: controle.signal }) : [])
+        .then(lista => (Array.isArray(lista) ? lista : []).flatMap(c => {
+          const cidade = String(c?.cidade || '').trim().slice(0, 100);
+          const uf = String(c?.uf || '').toUpperCase();
+          if (!cidade || !/^[A-Z]{2}$/.test(uf)) return [];
+          return [{ tipo: 'endereco', id: 'cidade-' + norm(cidade) + '-' + uf,
+            nome: cidade, subtitulo: uf + ' · pontos no Ecoa',
+            cidade, uf, origemCidade: true, endereco: { nome: cidade, cidade, uf, origemCidade: true } }];
+        }))
+        .catch(() => []);
       const promessaEnderecos = Promise.resolve()
         .then(() => servicoEnderecos ? servicoEnderecos(termo, { signal: controle.signal, vies: opcoes.vies }) : [])
         .then(lista => (Array.isArray(lista) ? lista : []).map(p => ({
@@ -34,9 +50,25 @@ function criarServicoBuscaCidade({ buscarPontos, provedorEnderecos, criarServico
           nome: p.rotulo || p.nome, subtitulo: p.subtitulo || '', endereco: p
         })))
         .catch(() => []);
-      const [pontos, enderecos] = await Promise.all([promessaPontos, promessaEnderecos]);
+      const [pontos, cidadesBanco, enderecos] = await Promise.all([promessaPontos, promessaCidades, promessaEnderecos]);
       if (controle.signal.aborted) throw Object.assign(Error('Cancelado'), { name: 'AbortError' });
-      const itens = [...pontos.slice(0, 8), ...enderecos.slice(0, 5)];
+      const vistas = new Set();
+      const cidadesUnicas = cidadesBanco.filter(c => {
+        if (vistas.has(chaveCidade(c))) return false;
+        vistas.add(chaveCidade(c)); return true;
+      });
+      const enderecosAjustados = enderecos.map(e => {
+        if (!e.endereco?.cidade || !e.endereco?.uf) return e;
+        const chave = chaveCidade(e.endereco);
+        if (!cidadesUnicas.some(c => chaveCidade(c) === chave)) return e;
+        // Um endereço/cidade do geocodificador já traz coordenadas: mantém a única
+        // entrada e sinaliza que também há pontos aprovados no banco.
+        vistas.delete(chave);
+        return { ...e, subtitulo: [e.subtitulo, 'pontos no Ecoa'].filter(Boolean).join(' · '),
+          endereco: { ...e.endereco, temPontos: true } };
+      });
+      const cidadesNovas = cidadesUnicas.filter(c => vistas.has(chaveCidade(c))).slice(0, 5);
+      const itens = [...pontos.slice(0, 8), ...cidadesNovas, ...enderecosAjustados.slice(0, 5)];
       cache.set(chave, itens.map(x => ({ ...x })));
       if (cache.size > 30) cache.delete(cache.keys().next().value);
       return itens;
@@ -105,6 +137,7 @@ function iniciarBuscaCidade(doc, ambiente, api = {}) {
   const servico = api.criarServicoBuscaCidade
     ? api.criarServicoBuscaCidade({
         buscarPontos: (termo, opcoes) => callbacks.buscarPontos?.(termo, opcoes) || [],
+        buscarCidades: (termo, opcoes) => callbacks.buscarCidades?.(termo, opcoes) || [],
         provedorEnderecos: (texto, opcoes) => (typeof api.consultarProvedor === 'function'
           ? api.consultarProvedor(texto, { ...opcoes, fetcher: ambiente.fetch.bind(ambiente) }) : []),
         criarServico: api.criarServico, normalizar: api.normalizar, relogio: ambiente
@@ -163,7 +196,7 @@ function iniciarBuscaCidade(doc, ambiente, api = {}) {
       lista.append(bloco);
     }
   }
-  function selecionar(item) {
+  async function selecionar(item) {
     if (!item) return;
     input.value = item.tipo === 'ponto' ? item.ponto.nome : (item.endereco.rotulo || item.nome);
     fechar();
@@ -172,16 +205,29 @@ function iniciarBuscaCidade(doc, ambiente, api = {}) {
       callbacks.aoPonto?.(item.ponto);
     } else {
       const p = item.endereco;
-      if (!Number.isFinite(p.latitude) || !Number.isFinite(p.longitude)) {
-        status.textContent = 'Endereço encontrado, mas sem posição confirmada. Nenhum ponto foi criado.';
-      } else {
+      if (Number.isFinite(p.latitude) && Number.isFinite(p.longitude)) {
         status.textContent = 'Local encontrado: ' + input.value;
         callbacks.aoEndereco?.(p);
+      } else if (p.origemCidade && p.cidade && p.uf) {
+        // Cidade vinda da RPC não tem coordenadas: localiza pelo nome/UF antes de
+        // consultar os pontos. Sem posição confirmada, consulta pelo nome mesmo assim.
+        status.textContent = 'Localizando ' + p.cidade + '…';
+        let resolvida = null;
+        try { resolvida = (await (api.resolverCidade?.(p.cidade, p.uf, { fetcher: ambiente.fetch.bind(ambiente) }) || []))[0]; } catch {}
+        if (resolvida && Number.isFinite(resolvida.latitude) && Number.isFinite(resolvida.longitude)) {
+          status.textContent = 'Local encontrado: ' + p.cidade;
+          callbacks.aoEndereco?.({ ...resolvida, cidade: p.cidade, uf: p.uf, origemCidade: true });
+        } else {
+          status.textContent = 'Cidade encontrada, mas sem posição confirmada no mapa. Consultando os pontos cadastrados.';
+          callbacks.aoCidade?.({ cidade: p.cidade, uf: p.uf });
+        }
+      } else {
+        status.textContent = 'Endereço encontrado, mas sem posição confirmada. Nenhum ponto foi criado.';
       }
     }
     // Quando o mapa já recebeu a seleção pelos callbacks, o evento serve apenas
     // para preencher o cadastro (se estiver aberto), sem centralizar o mapa de novo.
-    const jaTratado = typeof callbacks.aoPonto === 'function' || typeof callbacks.aoEndereco === 'function';
+    const jaTratado = typeof callbacks.aoPonto === 'function' || typeof callbacks.aoEndereco === 'function' || typeof callbacks.aoCidade === 'function';
     input.dispatchEvent(new ambiente.CustomEvent('cidade-busca-selecionada', { bubbles: true, detail: { ...item, jaTratado } }));
   }
   async function confirmar() {
@@ -221,11 +267,26 @@ function iniciarBuscaCidade(doc, ambiente, api = {}) {
     cancelar: fechar
   };
 }
-const apiBuscaCidade = { criarServicoBuscaCidade, criarControleBuscaCidade, iniciarBuscaCidade };
+// A RPC devolve só cidade/UF: a posição usada para centralizar o mapa vem do
+// geocodificador, com o mesmo nome e UF, sem criar ponto nem inventar coordenadas.
+async function resolverCidadeBusca(cidade, uf, { signal, fetcher = globalThis.fetch } = {}) {
+  if (typeof consultarProvedorEndereco !== 'function') return [];
+  const norm = normalizarBuscaEndereco;
+  const lista = await consultarProvedorEndereco(`${cidade}, ${uf}, Brasil`, { signal, fetcher });
+  const itens = (Array.isArray(lista) ? lista : []).filter(p =>
+    p && Number.isFinite(p.latitude) && Number.isFinite(p.longitude));
+  const alvo = norm(String(cidade || ''));
+  // Sem correspondência exata de cidade/UF, não centraliza no primeiro resultado:
+  // um rio ou uma rua com o mesmo nome não é a região da cidade pedida.
+  const compativeis = itens.filter(p => norm(p.cidade || '') === alvo && (!p.uf || p.uf === uf));
+  return compativeis.slice(0, 1);
+}
+const apiBuscaCidade = { criarServicoBuscaCidade, criarControleBuscaCidade, iniciarBuscaCidade, resolverCidadeBusca };
 if (typeof module !== 'undefined') module.exports = apiBuscaCidade;
 else window.EcoaBuscaCidade = iniciarBuscaCidade(document, window, {
   criarServicoBuscaCidade, criarControleBuscaCidade,
   criarServico: criarServicoEnderecos,
   normalizar: normalizarBuscaEndereco,
-  consultarProvedor: consultarProvedorEndereco
+  consultarProvedor: consultarProvedorEndereco,
+  resolverCidade: resolverCidadeBusca
 });

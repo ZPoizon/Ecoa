@@ -1050,7 +1050,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v46'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v47'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1537,7 +1537,9 @@ async function validarIntegracaoBancoMapa(){
  const bboxA=[-24.02,-48.36,-24,-48.34],bboxB=[-23.99,-48.87,-23.97,-48.85];
  let bboxAtual=bboxA.slice(),falhar=false,vazio=false,pendente=null;
  const queries=[],handlers={};
- const pontoEm=(b,id,nome)=>({id,bancoId:id,nome,categoria:'agua',latitude:(b[0]+b[2])/2,longitude:(b[1]+b[3])/2,origem:'supabase',verificado:true});
+  const cidadesBanco=[{cidade:'Capão Bonito',uf:'SP'},{cidade:'Itapetininga',uf:'SP'},{cidade:'Sorocaba',uf:'SP'}];
+  const centroCidade={'Capão Bonito':[-24.01,-48.35],'Itapetininga':[-23.49,-48.01],'Sorocaba':[-23.5,-47.26]};
+ const pontoEm=(b,id,nome,cidade='',uf='SP')=>({id,bancoId:id,nome,categoria:'agua',cidade,UF:uf,latitude:(b[0]+b[2])/2,longitude:(b[1]+b[3])/2,origem:'supabase',verificado:true});
  const mapa={on(n,f){handlers[n]=f;return this;},getZoom:()=>14,
   getBounds:()=>({getSouth:()=>bboxAtual[0],getWest:()=>bboxAtual[1],getNorth:()=>bboxAtual[2],getEast:()=>bboxAtual[3]}),
   getCenter:()=>({lat:(bboxAtual[0]+bboxAtual[2])/2,lng:(bboxAtual[1]+bboxAtual[3])/2}),
@@ -1546,8 +1548,10 @@ async function validarIntegracaoBancoMapa(){
    queries.push({...filtros,bbox:filtros.bbox?.slice()});
    if(falhar)throw Error('503');
    if(pendente)return new Promise(resolve=>{pendente.resolve=resolve;});
-   return Promise.resolve({pontos:vazio?[]:[pontoEm(filtros.bbox,'db-'+queries.length,'Ponto '+queries.length)],limiteAtingido:false});
-  },async cidades(){return [];}};
+   const c=centroCidade[filtros.cidade]||[0,0];
+    const area=filtros.bbox||[c[0]-.01,c[1]-.01,c[0]+.01,c[1]+.01];
+    return Promise.resolve({pontos:vazio?[]:[pontoEm(area,'db-'+queries.length,'Ponto '+queries.length+(filtros.cidade?' em '+filtros.cidade:''),filtros.cidade||'',filtros.uf||'SP')],limiteAtingido:false});
+  },async cidades(){return cidadesBanco;}};
  const chips=['','agua','reciclagem'].map(c=>{const e=criar();e.dataset.categoriaOsm=c;return e;});
  let callbacks={};
  const env={EcoaMapaInicial:{},EcoaConfig:{},EcoaCompartilhados:{...sup,criarClientePontosCompartilhados:()=>clienteFake},
@@ -1567,16 +1571,43 @@ async function validarIntegracaoBancoMapa(){
  bboxAtual=bboxB.slice();handlers.moveend();assert.equal(el('osm-lista').children.length,0);await esperar();
  assert.equal(queries.length,3);assert.deepEqual(queries[2].bbox,bboxB);
  assert.match(JSON.stringify(el('osm-lista').children),/Ponto 3/);
- // Resposta vazia válida limpa a área; falha posterior não ressuscita registros antigos.
+ // Falha de rede não apaga os pontos disponíveis da região atual.
+  falhar=true;ui.atualizar();await esperar();assert.equal(el('osm-lista').children.length,1);
+  assert.match(el('osm-status').textContent,/Mostrando os pontos salvos disponíveis/);
+  falhar=false;
+  // Resposta vazia válida limpa a área; falha posterior não ressuscita registros antigos.
  vazio=true;handlers.moveend();await esperar();assert.equal(el('osm-lista').children.length,0);
  assert.match(el('osm-status').textContent,/Ainda não encontramos pontos nesta região\./);
  falhar=true;ui.atualizar();await esperar();assert.equal(el('osm-lista').children.length,0);
  assert.match(el('osm-banco-status').textContent,/pontos salvos/);assert.equal(el('osm-tentar').hidden,false);
  falhar=false;vazio=false;handlers.moveend();await esperar();assert.equal(el('osm-lista').children.length,1);
- // Trocar cidade usa só a área visível: nenhum filtro geográfico da cidade anterior.
- callbacks.aoEndereco({nome:'Itapetininga',cidade:'Itapetininga',uf:'SP',latitude:-23.49,longitude:-48.01});
- await esperar();assert.equal(queries.length,7);assert.deepEqual(queries.at(-1).bbox.map(n=>Number(n.toFixed(2))),[-23.5,-48.02,-23.48,-48]);
- assert.ok(queries.every(q=>!('cidade' in q)&&!('nome' in q)));
+ // Trocar cidade consulta por cidade/UF e centraliza o mapa; o arraste depois usa a área visível.
+ const qAntes=queries.length;
+  callbacks.aoEndereco({nome:'Itapetininga',cidade:'Itapetininga',uf:'SP',latitude:-23.49,longitude:-48.01});
+  assert.match(el('osm-filtro-ajuda').textContent,/Itapetininga\/SP/);
+ await esperar();assert.equal(queries.length,qAntes+1);
+  assert.equal(queries.at(-1).cidade,'Itapetininga');assert.equal(queries.at(-1).uf,'SP');
+  assert.equal(queries.at(-1).categoria,'agua');assert.equal(queries.at(-1).bbox,undefined);
+  assert.match(JSON.stringify(el('osm-lista').children),/em Itapetininga/);
+  bboxAtual=bboxA.slice();handlers.moveend();
+  assert.doesNotMatch(el('osm-filtro-ajuda').textContent,/Itapetininga/);
+  await esperar();assert.equal(queries.at(-1).cidade,undefined);assert.deepEqual(queries.at(-1).bbox,bboxA);
+ // A RPC acrescenta cidades com cadastros aprovados; sem coordenadas, aoCidade não move o mapa.
+  assert.deepEqual(await callbacks.buscarCidades('itap'),cidadesBanco.filter(c=>/itap/i.test(c.cidade)));
+  const centroAntes=bboxAtual.slice();
+  callbacks.aoCidade({cidade:'Sorocaba',uf:'SP'});
+  await esperar();assert.equal(queries.at(-1).cidade,'Sorocaba');assert.equal(queries.at(-1).categoria,'agua');
+  assert.deepEqual(bboxAtual,centroAntes);assert.match(el('osm-filtro-ajuda').textContent,/Sorocaba\/SP/);
+  callbacks.aoEndereco({nome:'Capão Bonito',cidade:'Capão Bonito',uf:'SP',latitude:-24.01,longitude:-48.35});
+  await esperar();assert.equal(queries.at(-1).cidade,'Capão Bonito');
+  chips[2].click();await esperar();assert.equal(queries.at(-1).categoria,'reciclagem');assert.equal(queries.at(-1).cidade,'Capão Bonito');
+  pendente={};callbacks.aoCidade({cidade:'Itapetininga',uf:'SP'});await esperar();
+  const antiga=pendente;pendente=null;
+  callbacks.aoCidade({cidade:'Sorocaba',uf:'SP'});await esperar();
+  antiga.resolve({pontos:[pontoEm([0,0,1,1],'atrasado','Ponto atrasado')],limiteAtingido:false});
+  await new Promise(r=>setTimeout(r,0));
+  assert.doesNotMatch(JSON.stringify(el('osm-lista').children),/Ponto atrasado/);
+  chips[1].click();await esperar();
  // Um ponto buscado permanece visível mesmo se a REST tardia chegar vazia.
  const foco={id:'supabase-foco',bancoId:'foco',nome:'Ponto da busca',categoria:'agua',latitude:-23.49,longitude:-48.01,origem:'supabase',verificado:true};
  pendente={};callbacks.aoPonto(foco);await esperar();
@@ -1589,7 +1620,7 @@ async function validarIntegracaoBancoMapa(){
  eventos['ecoa-rota']({detail:{tela:'inicio'}});
  const html=fs.readFileSync('public/index.html','utf8');
  assert.doesNotMatch(html,/id="osm-cidade"|id="osm-nome"/);
- console.log('OK Integração banco/mapa: área visível, mesma área preservada, arraste, vazio válido, falha sem ressurreição, cidade sem filtro antigo e ponto em foco');
+ console.log('OK Integração banco/mapa: área visível, cidade por nome/UF e pela RPC, categoria preservada, arraste sem filtro oculto, vazio válido, falha sem apagar marcadores, resposta tardia e ponto em foco');
 }
 validarIntegracaoBancoMapa().catch(e=>{console.error(e);process.exitCode=1;});
 
@@ -1737,6 +1768,19 @@ async function validarTelaNaCidade(){
  });
  const itens=await servico.buscar('HÓRTA');
  assert.equal(termos[0][0],'horta');assert.equal(itens[0].tipo,'ponto');assert.equal(itens[0].ponto.latitude,-23.98);
+  // RPC de cidades acrescenta entradas, sem apagar cidades do geocodificador.
+  const servicoCidades=buscaApi.criarServicoBuscaCidade({
+    buscarPontos:async()=>[],
+    buscarCidades:async termo=>String(termo).includes('itape')?[{cidade:'Itapetininga',uf:'SP'}]:[],
+    provedorEnderecos:async()=>[{nome:'Itapetininga',cidade:'Itapetininga',uf:'SP',latitude:-23.49,longitude:-48.01,rotulo:'Itapetininga — SP'},
+      {nome:'Sorocaba',cidade:'Sorocaba',uf:'SP',latitude:-23.5,longitude:-47.26,rotulo:'Sorocaba — SP'}],
+    criarServico:provedor=>provedor,normalizar:end.normalizarBuscaEndereco,relogio
+  });
+  const itensCidades=await servicoCidades.buscar('itapetininga');
+  assert.equal(itensCidades.length,2);
+  assert.equal(itensCidades.filter(x=>x.tipo==='endereco').length,2);
+  assert.equal(itensCidades.filter(x=>x.endereco.temPontos===true).length,1);
+  assert.ok(itensCidades.some(x=>x.endereco.cidade==='Sorocaba'));
 
  function noSimples(tag){
   const no={tagName:tag,children:[],attrs:{},dataset:{},value:'',hidden:false,textContent:'',eventos:{},parentNode:null,
@@ -1782,6 +1826,40 @@ async function validarTelaNaCidade(){
  const lista2=inputBusca.parentNode.children.find(x=>x.id==='cidade-sugestoes');
  const opcaoCidade=lista2.querySelectorAll('[role="option"]').find(x=>x.dataset.tipoBusca==='endereco');
  opcaoCidade.click();assert.equal(aoEndereco,1);assert.equal(pontoCriado,0);
+  // Cidade da RPC não tem coordenadas: resolve pelo geocodificador e, na falha,
+  // consulta os pontos pelo nome sem inventar posição.
+  function uiCidadeRpc(resolver){
+    const form=noSimples('form'),input=noSimples('input');form.append(input);
+    const nos={'cidade-busca-endereco':form,'cidade-busca-unica':input};
+    const d={getElementById:id=>nos[id]||null,createElement:noSimples,activeElement:null,addEventListener(){}};
+    const ui=buscaApi.iniciarBuscaCidade(d,ambienteBusca,{
+      criarServicoBuscaCidade:buscaApi.criarServicoBuscaCidade,criarControleBuscaCidade:buscaApi.criarControleBuscaCidade,
+      criarServico:provedor=>provedor,normalizar:end.normalizarBuscaEndereco,consultarProvedor:async()=>[],resolverCidade:resolver
+    });
+    const chamadas={endereco:[],cidade:[]};
+    ui.conectar({buscarPontos:async()=>[],buscarCidades:async()=>[{cidade:'Sorocaba',uf:'SP'}],
+      aoEndereco:p=>chamadas.endereco.push(p),aoCidade:p=>chamadas.cidade.push(p)});
+    return {ui,input,chamadas};
+  }
+  const comPosicao=uiCidadeRpc(async(cidade,uf)=>[{nome:cidade,cidade,uf,latitude:-23.5,longitude:-47.26}]);
+  const itensRpc=await comPosicao.ui.buscar('sorocaba');
+  assert.equal(itensRpc[0].origemCidade,true);
+  const listaRpc=comPosicao.input.parentNode.children.find(x=>x.id==='cidade-sugestoes');
+  listaRpc.querySelectorAll('[role="option"]')[0].click();
+  await new Promise(r=>setTimeout(r,0));
+  assert.equal(comPosicao.chamadas.endereco.length,1);
+  assert.equal(comPosicao.chamadas.endereco[0].cidade,'Sorocaba');
+  assert.equal(comPosicao.chamadas.endereco[0].latitude,-23.5);
+  assert.equal(comPosicao.chamadas.cidade.length,0);
+  const semPosicao=uiCidadeRpc(async()=>[]);
+  const itensSemPos=await semPosicao.ui.buscar('sorocaba');
+  const listaSemPos=semPosicao.input.parentNode.children.find(x=>x.id==='cidade-sugestoes');
+  listaSemPos.querySelectorAll('[role="option"]')[0].click();
+  await new Promise(r=>setTimeout(r,0));
+  assert.equal(itensSemPos[0].origemCidade,true);
+  assert.equal(semPosicao.chamadas.cidade.length,1);
+  assert.equal(semPosicao.chamadas.cidade[0].cidade,'Sorocaba');
+  assert.equal(semPosicao.chamadas.endereco.length,0);
 
  // Categoria única para filtro, cadastro, filtros de consulta e cartões.
  const cats=require('./public/categorias-pontos');

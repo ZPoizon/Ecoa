@@ -1,6 +1,6 @@
 // Incremente a versão ao atualizar arquivos armazenados para uso offline.
 const prefixo = 'oqdpf:' + self.registration.scope + ':';
-const versao = prefixo + 'v46';
+const versao = prefixo + 'v47';
 const arquivos = [
   'cadastro-pontos.js', 'cadastro-pontos-ui.js', 'cadastro-pontos.css', 'config.js', 'categorias-pontos.js', 'pontos-compartilhados.js', 'pontos-cache.js', 'cidade-busca.js', 'pontos-osm.json', 'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css', 'cidade-publica.js', 'curador.html', 'curador.js', 'curador-ui.js', 'curador.css', 'vida.js', 'vida.css', 'polimento.css', 'cidade-config.js', 'limpeza.js', 'limpeza.css',
   'rotina.js', 'rotina.css', 'refino-visual.css', 'estrutura.js', 'estrutura.css',

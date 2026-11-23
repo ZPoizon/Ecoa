@@ -1,14 +1,15 @@
-// Integra mapa, lista, cartão e filtros. Uma só origem de categorias e um só critério
-// geográfico: a área visível do mapa. A busca principal é o único seletor de destino.
+// Integra mapa, lista, cartão e filtros. Uma só origem de categorias e um critério
+// geográfico por vez: a cidade escolhida na busca ou a área visível do mapa.
 function iniciarPontosOSM(doc,ambiente,api) {
   const $=id=>doc.getElementById(id),criar=(tag,texto)=>{const e=doc.createElement(tag);if(texto!==undefined)e.textContent=String(texto);return e;};
   const categoriasComuns=typeof module!=='undefined'?require('./categorias-pontos'):window.EcoaCategoriasPontos;
   const inicial=ambiente.EcoaMapaInicial||(typeof module!=='undefined'?require('./cidade-config'):ECOA_MAPA_INICIAL);
   const normalizar=texto=>String(texto||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().trim().replace(/\s+/g,' ');
   let mapa,camada,categoria='',fixos=[],salvos=[],pontos=[],visiveis=[],compartilhados=[],posicaoPendente,focoAnteriorCartao;
-  let pontoFocado=null,ativo=false,basePronta=false;
+  let pontoFocado=null,ativo=false,basePronta=false,cidadeFiltro=null,movimentoProgramado=false;
   let consultaBanco=0,timerBanco,controleBanco,buscaConectada=false;
   let cartaoPonto=null,ultimoMarcador=null,limiteAtingido=false,areaAtual='';
+  let promessaCidades=null,cidadesEm=0;
   const marcadores=new Map();
   const compartilhadoAPI=ambiente.EcoaCompartilhados;
   const config=ambiente.EcoaConfig||{};
@@ -21,10 +22,33 @@ function iniciarPontosOSM(doc,ambiente,api) {
   const online=()=>ambiente.navigator.onLine!==false;
   const link=(texto,url)=>{const a=criar('a',texto);a.className='ecoa-button secondary';a.href=url;a.target='_blank';a.rel='noopener noreferrer';return a;};
   const vazioTexto='Ainda não encontramos pontos nesta região.';
-  try{const paragrafo=doc.querySelector?.('#osm-vazio p');if(paragrafo)paragrafo.textContent=vazioTexto;}catch{}
+  const rotuloCidade=()=>cidadeFiltro?[cidadeFiltro.nome,cidadeFiltro.uf].filter(Boolean).join('/'):'';
+  const textoVazio=()=>cidadeFiltro?`Ainda não encontramos pontos aprovados em ${rotuloCidade()}.`:vazioTexto;
+  // O escopo atual decide o que pode aparecer; filtros antigos nunca ficam escondidos.
+  function dentroEscopo(p){
+    if(cidadeFiltro){
+      if(normalizar(p.cidade||'')!==normalizar(cidadeFiltro.nome))return false;
+      return !cidadeFiltro.uf||!p.UF||String(p.UF).toUpperCase()===cidadeFiltro.uf;
+    }
+    return api.dentroAreaOSM(p,bbox());
+  }
+  function filtrosBanco(){
+    return cidadeFiltro
+      ? {categoria,uf:cidadeFiltro.uf,cidade:cidadeFiltro.nome}
+      : {categoria,bbox:bbox()};
+  }
+  function atualizarIndicador(){
+    const ajuda=$('osm-filtro-ajuda');
+    if(ajuda)ajuda.textContent=cidadeFiltro
+      ? `Consultando pontos aprovados em ${rotuloCidade()} e a base OSM disponível. A categoria escolhida continua ativa; arraste o mapa para consultar a área visível.`
+      : 'A busca acima escolhe o lugar. Aqui você escolhe só o tipo de ponto; a lista e o mapa mostram os mesmos lugares da área visível, até 200 resultados. Arrastar o mapa redefine a área consultada.';
+    const paragrafo=doc.querySelector?.('#osm-vazio p');
+    if(paragrafo)paragrafo.textContent=textoVazio();
+  }
+  atualizarIndicador();
   function estado(texto,tipo='inicial') {
-    if(tipo==='erro'||tipo==='salvos')texto=visiveis.length?'Não foi possível atualizar. Mostrando pontos salvos.':'Não foi possível atualizar nesta região.';
-    else if(tipo==='pronto')texto=!visiveis.length?vazioTexto:limiteAtingido||visiveis.length>=200?'Exibindo até 200 pontos; aproxime para refinar.':`${visiveis.length} ${visiveis.length===1?'ponto encontrado':'pontos encontrados'}.`;
+    if(tipo==='erro'||tipo==='salvos')texto=visiveis.length?'Não foi possível atualizar. Mostrando os pontos salvos disponíveis.':'Não foi possível atualizar. Tente novamente.';
+    else if(tipo==='pronto')texto=!visiveis.length?textoVazio():limiteAtingido||visiveis.length>=200?'Exibindo até 200 pontos; aproxime para refinar.':`${visiveis.length} ${visiveis.length===1?'ponto encontrado':'pontos encontrados'}.`;
     $('osm-status').textContent=texto;
     $('osm-lista').setAttribute('aria-busy',String(tipo==='carregando'));
     $('osm-tentar').hidden=!['erro','salvos'].includes(tipo);
@@ -69,8 +93,9 @@ function iniciarPontosOSM(doc,ambiente,api) {
   }
   const itensLista=new WeakMap();
   function renderizar() {
-    // Nenhum filtro de cidade: a área visível é o único recorte geográfico.
-    visiveis=api.pontosDisponiveisOSM([...fixos,...compartilhados],salvos,pontos,categoria,bbox());
+    // Pontos do banco só aparecem no escopo atual: cidade escolhida ou área visível.
+    const emEscopo=compartilhados.filter(dentroEscopo);
+    visiveis=api.pontosDisponiveisOSM([...fixos,...emEscopo],salvos,pontos,categoria,bbox());
     if(pontoFocado&&!visiveis.some(x=>x.id===pontoFocado.id))visiveis=[pontoFocado,...visiveis];
     $('osm-lista').replaceChildren();camada?.clearLayers();marcadores.clear();
     $('osm-vazio').hidden=visiveis.length>0;
@@ -113,8 +138,10 @@ function iniciarPontosOSM(doc,ambiente,api) {
     cancelarBanco();
     if(!clienteBanco||!basePronta||!ativo)return;
     const geracao=consultaBanco;
-    const filtros={categoria,bbox:bbox()};
-    const chave=JSON.stringify([categoria,(filtros.bbox||[]).map(n=>Number(n).toFixed(3))]);
+    const filtros=filtrosBanco();
+    const chave=JSON.stringify([categoria,cidadeFiltro
+      ? ['cidade',normalizar(cidadeFiltro.nome),cidadeFiltro.uf]
+      : ['area',...(filtros.bbox||[]).map(n=>Number(n).toFixed(3))]]);
     const emCache=cacheBanco?.ler(filtros);
     const mudouRegiao=chave!==areaAtual;
     if(mudouRegiao)areaAtual=chave;
@@ -122,8 +149,9 @@ function iniciarPontosOSM(doc,ambiente,api) {
       compartilhados=emCache;renderizar();
       $('osm-banco-status').textContent='Mostrando pontos salvos';$('osm-tentar').hidden=false;
     }else if(mudouRegiao){
-      // Pontos da área anterior não podem ser apresentados como se fossem do novo destino.
-      compartilhados=[];renderizar();
+      // Não descarta a lista: só deixa de mostrar pontos fora do escopo atual.
+      // Se a rede falhar, os pontos disponíveis da região permanecem na tela.
+      renderizar();
     }
     if(!online()){if(!emCache)$('osm-banco-status').textContent='Mostrando pontos salvos';return;}
     controleBanco=new AbortController();
@@ -148,8 +176,18 @@ function iniciarPontosOSM(doc,ambiente,api) {
   function conectar(m) {
     mapa=m;camada=ambiente.L.layerGroup().addTo(mapa);
     mapa.on('movestart',()=>{busca.cancelar();cancelarBanco();});
-    mapa.on('moveend',atualizar);
-    if(posicaoPendente){mapa.setView(posicaoPendente,15,{animate:false});posicaoPendente=null;}
+    mapa.on('moveend',()=>{
+      // O reposicionamento feito pela busca já define o escopo; só o arraste do
+      // usuário volta a consultar a área visível.
+      if(movimentoProgramado){movimentoProgramado=false;return;}
+      if(cidadeFiltro){cidadeFiltro=null;atualizarIndicador();}
+      atualizar();
+    });
+    if(posicaoPendente){
+      movimentoProgramado=true;
+      mapa.setView(posicaoPendente.pos,posicaoPendente.zoom||15,{animate:false});
+      movimentoProgramado=false;posicaoPendente=null;
+    }
     conectarBusca();atualizar();
   }
   categoriasComuns.preencherFiltrosCategoriaPontos(doc);
@@ -171,31 +209,67 @@ function iniciarPontosOSM(doc,ambiente,api) {
     $('osm-perto').disabled=true;estado('Aguardando sua permissão de localização…');
     ambiente.navigator.geolocation.getCurrentPosition(p=>{
       $('osm-perto').disabled=false;const pos=[p.coords.latitude,p.coords.longitude];
-      if(mapa)mapa.setView(pos,15,{animate:false});else{posicaoPendente=pos;$('cidade-carregar').click();}
-      estado('Área localizada. Buscando pontos…');
+      cidadeFiltro=null;atualizarIndicador();
+      if(mapa){movimentoProgramado=true;mapa.setView(pos,15,{animate:false});movimentoProgramado=false;}
+      else{posicaoPendente={pos,zoom:15};$('cidade-carregar').click();}
+      estado('Área localizada. Buscando pontos…');atualizar();
     },()=>{$('osm-perto').disabled=false;estado('Não foi possível obter sua localização. Você pode digitar um lugar.','erro');},{enableHighAccuracy:false,maximumAge:0,timeout:10000});
   });
   function aoPonto(p) {
+    cidadeFiltro=null;atualizarIndicador();
     pontoFocado=p;
     compartilhados=[p,...compartilhados.filter(x=>x.id!==p.id)];
-    if(mapa)mapa.setView([p.latitude,p.longitude],16,{animate:false});else posicaoPendente=[p.latitude,p.longitude];
-    renderizar();abrirCartao(p);estado('Ponto encontrado.','pronto');
+    const pos=[p.latitude,p.longitude];
+    if(mapa){movimentoProgramado=true;mapa.setView(pos,16,{animate:false});movimentoProgramado=false;}
+    else posicaoPendente={pos,zoom:16};
+    renderizar();abrirCartao(p);estado('Ponto encontrado.','pronto');atualizar();
+  }
+  function definirCidade(cidade,pos,zoom){
+    const nome=String(cidade?.nome||'').trim().slice(0,100);
+    if(!nome)return;
+    cidadeFiltro={nome,uf:String(cidade.uf||'').toUpperCase()};
+    // Nenhum filtro/cancelamento da cidade anterior pode chegar à nova consulta.
+    busca.cancelar();cancelarBanco();
+    pontos=[];compartilhados=[];pontoFocado=null;limiteAtingido=false;areaAtual='';
+    fecharCartao();renderizar();atualizarIndicador();
+    if(pos&&Number.isFinite(pos[0])&&Number.isFinite(pos[1])){
+      if(mapa){movimentoProgramado=true;mapa.setView(pos,zoom,{animate:false});movimentoProgramado=false;}
+      else posicaoPendente={pos,zoom};
+    }
   }
   function aoEndereco(p) {
-    // Cidade e endereço são o mesmo controle: trocar o destino redefine a área visível.
-    const ehCidade=!p.cep&&!p.bairro&&normalizar(p.nome)===normalizar(p.cidade)&&p.cidade&&p.uf;
-    pontoFocado=null;fecharCartao();
+    // Cidade e endereço compartilham o controle: reconhece cidade pelo nome/UF.
+    const ehCidade=!!(p?.cidade&&p.uf)&&(!p.cep&&!p.bairro)&&
+      (p.origemCidade===true||normalizar(p.nome)===normalizar(p.cidade)||!p.nome);
+    if(ehCidade){definirCidade({nome:p.cidade,uf:p.uf},[p.latitude,p.longitude],13);atualizar();return;}
+    cidadeFiltro=null;atualizarIndicador();pontoFocado=null;fecharCartao();
     const pos=[p.latitude,p.longitude];
-    if(mapa)mapa.setView(pos,ehCidade?13:16,{animate:false});else posicaoPendente=pos;
+    if(mapa){movimentoProgramado=true;mapa.setView(pos,16,{animate:false});movimentoProgramado=false;}
+    else posicaoPendente={pos,zoom:16};
     atualizar();
+  }
+  function aoCidade(p){
+    if(!p?.cidade)return;
+    definirCidade({nome:p.cidade,uf:p.uf},null,null);atualizar();
+  }
+  async function listarCidades(termo){
+    if(!clienteBanco)return [];
+    const agora=Date.now();
+    if(!promessaCidades||agora-cidadesEm>300000){
+      cidadesEm=agora;
+      promessaCidades=clienteBanco.cidades().catch(e=>{promessaCidades=null;cidadesEm=0;throw e;});
+    }
+    const cidades=await promessaCidades,alvo=normalizar(termo);
+    return cidades.filter(c=>normalizar(c.cidade).includes(alvo)).slice(0,20);
   }
   function conectarBusca(){
     if(buscaConectada||!ambiente.EcoaBuscaCidade?.conectar)return;
     buscaConectada=true;
     ambiente.EcoaBuscaCidade.conectar({
-      aoPonto,aoEndereco,
+      aoPonto,aoEndereco,aoCidade,
       vies:()=>{const c=mapa?.getCenter?.();return c?{latitude:c.lat,longitude:c.lng}:null;},
-      buscarPontos:(termo,opcoes)=>clienteBanco?clienteBanco.consultar({nome:termo},{signal:opcoes?.signal}):[]
+      buscarPontos:(termo,opcoes)=>clienteBanco?clienteBanco.consultar({nome:termo},{signal:opcoes?.signal}):[],
+      buscarCidades:termo=>listarCidades(termo)
     });
   }
   $('ponto-cartao-fechar')?.addEventListener('click',()=>fecharCartao(true));
