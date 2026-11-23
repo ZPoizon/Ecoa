@@ -1,5 +1,9 @@
 function iniciarCadastroPontos(doc,ambiente,api){
  const $=id=>doc.getElementById(id);let storage;try{storage=ambiente.localStorage;}catch{}
+ const categorias=typeof module!=='undefined'?require('./categorias-pontos'):window.EcoaCategoriasPontos;
+ categorias.preencherSelectCategoriaPontos(doc);
+ const orientacao=()=>{const campo=$('cadastro-orientacao');if(campo)campo.textContent=categorias.orientacaoCategoriaPontos($('cadastro-categoria')?.value);};
+ $('cadastro-categoria')?.addEventListener('change',orientacao);orientacao();
  const cliente=api.criarEnviosPontos(ambiente.EcoaConfig,{fetcher:ambiente.fetch.bind(ambiente),storage,locks:ambiente.navigator.locks});
  const leitura=ambiente.EcoaCompartilhados.criarClientePontosCompartilhados(ambiente.EcoaConfig,{fetcher:ambiente.fetch.bind(ambiente)});
  let mapa,marcador,selecionando=false,enviando=false,denunciando=false,pontoDenuncia;
@@ -41,10 +45,10 @@ function iniciarCadastroPontos(doc,ambiente,api){
  function aoEscolherEndereco(p){
   preencherEndereco(p,true);
   posicionar(p?.latitude,p?.longitude,{deGeocodificador:true});
-  if(mapa&&Number.isFinite(p?.latitude)&&Number.isFinite(p?.longitude))mapa.setView([p.latitude,p.longitude],16,{animate:false});
+  // Quem move o mapa é a busca única; aqui só preenchemos a posição do cadastro.
  }
  $('cadastro-endereco').addEventListener('endereco-selecionado',e=>aoEscolherEndereco(e.detail));
- doc.addEventListener('cidade-busca-selecionada',e=>{if(e.detail?.tipo==='endereco')aoEscolherEndereco(e.detail.endereco);});
+ doc.addEventListener('cidade-busca-selecionada',e=>{if(e.detail?.tipo==='endereco'&&$('cadastro-painel')?.hidden===false)aoEscolherEndereco(e.detail.endereco);});
  for(const k of ['lat','lng'])$('cadastro-'+k).addEventListener('change',()=>{const a=$('cadastro-lat').value.trim(),b=$('cadastro-lng').value.trim();if(a&&b)posicionar(Number(a.replace(',','.')),Number(b.replace(',','.')));});
  $('cadastro-marcar').addEventListener('click',()=>{if(!mapa){aviso('O mapa ainda não está disponível. Use a busca de endereço ou ajuste as coordenadas.');return;}selecionando=true;aviso('Clique na posição do local no mapa. Pelo teclado, use as setas e depois “Confirmar centro do mapa”.');$('cidade-mapa').scrollIntoView({block:'center'});mapa.getContainer().focus();});
  $('cadastro-centro').addEventListener('click',()=>{if(!mapa){aviso('Use a busca de endereço ou ajuste as coordenadas enquanto o mapa carrega.');return;}const p=mapa.getCenter();posicionar(p.lat,p.lng);selecionando=false;});
