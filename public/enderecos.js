@@ -46,8 +46,11 @@ async function consultarProvedorEndereco(consulta,{signal,vies,fetcher=globalThi
   }
   if(!resposta.ok)throw Error('Serviço de endereços indisponível');
   const dados=await resposta.json();if(!Array.isArray(dados.features))throw Error('Resposta inválida');
+  return formatarEnderecosPhoton(dados);
+}
+function formatarEnderecosPhoton(dados) {
   const texto=x=>typeof x==='string'?x.slice(0,300):'';
-  return dados.features.map(f=>{
+  return (dados.features||[]).map(f=>{
     const p=f.properties||{},coordenadas=f.geometry?.coordinates;
     if(!Array.isArray(coordenadas)||!Number.isFinite(coordenadas[0])||!Number.isFinite(coordenadas[1])||Math.abs(coordenadas[0])>180||Math.abs(coordenadas[1])>90)return null;
     const nome=texto(p.name)||texto(p.street)||texto(p.city)||texto(p.state);
@@ -60,6 +63,21 @@ async function consultarProvedorEndereco(consulta,{signal,vies,fetcher=globalThi
     const subtitulo=[bairro,cidadeUF, String(p.countrycode).toUpperCase()==='BR'?'':texto(p.country)].filter(Boolean).join(' · ');
     return nome?{nome:titulo,bairro,cidade,uf,cidadeUF,rotulo:[titulo,subtitulo].filter(Boolean).join(' — '),subtitulo,latitude:coordenadas[1],longitude:coordenadas[0],brasil:String(p.countrycode).toUpperCase()==='BR'}:null;
   }).filter(Boolean).sort((a,b)=>Number(b.brasil)-Number(a.brasil)).slice(0,5);
+}
+async function reverterEndereco(lat,lng,{signal,fetcher=globalThis.fetch}={}) {
+  if(!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180)return null;
+  const url=new URL('https://photon.komoot.io/reverse');
+  url.searchParams.set('lat',String(lat));url.searchParams.set('lon',String(lng));
+  url.searchParams.set('lang',idiomaPhotonEndereco);url.searchParams.set('limit','1');
+  let resposta=await fetcher(url.href,{signal,cache:'no-store',credentials:'omit'});
+  if(resposta.status===400&&idiomaPhotonEndereco==='pt'){
+    const erro=await resposta.json();
+    if(erro.lang){idiomaPhotonEndereco='default';url.searchParams.set('lang','default');resposta=await fetcher(url.href,{signal,cache:'no-store',credentials:'omit'});}
+  }
+  if(!resposta.ok)throw Error('Serviço de endereços indisponível');
+  const dados=await resposta.json();if(!Array.isArray(dados.features))throw Error('Resposta inválida');
+  const lista=formatarEnderecosPhoton(dados);
+  return lista.find(p=>p.brasil)||lista[0]||null;
 }
 function criarServicoEnderecos(provedor=consultarProvedorEndereco) {
   const cache=new Map();
@@ -128,5 +146,5 @@ function iniciarEnderecos(doc,ambiente,provedor=consultarProvedorEndereco) {
   if(ambiente.MutationObserver)new ambiente.MutationObserver(atualizar).observe(doc.body,{childList:true,subtree:true});
   return {buscar:input=>campos.get(input)?.buscar()};
 }
-if(typeof module!=='undefined')module.exports={normalizarBuscaEndereco,identificarCepEndereco,consultarProvedorEndereco,criarServicoEnderecos,criarControleEndereco,iniciarEnderecos};
+if(typeof module!=='undefined')module.exports={normalizarBuscaEndereco,identificarCepEndereco,consultarProvedorEndereco,formatarEnderecosPhoton,reverterEndereco,criarServicoEnderecos,criarControleEndereco,iniciarEnderecos};
 else window.Enderecos=iniciarEnderecos(document,window);

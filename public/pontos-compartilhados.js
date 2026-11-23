@@ -2,19 +2,20 @@
 const categoriasCompartilhadas=['reciclagem','doacao','agua','horta','oleo-de-cozinha','pilhas-eletronicos','outro'];
 function normalizarPontoBusca(t){return String(t).normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().trim();}
 function categoriaBanco(c){return ({verde:'horta',outros:'outro'})[c]||c;}
-function montarConsultaPontos(config,{cidade='',uf='',categoria='',nome='',bbox}={}){
+function montarConsultaPontos(config,{cidade='',uf='',categoria='',nome='',bbox,limite=200}={}){
  const url=new URL('/rest/v1/pontos',config.SUPABASE_URL);
  if(url.protocol!=='https:')throw Error('Configuração inválida');
+ const limiteSeguro=Number.isInteger(limite)&&limite>=1&&limite<=500?limite:200;
+ // Remove metacaracteres do padrão; URLSearchParams impede injeção de filtros.
+ const termo=normalizarPontoBusca(nome).replace(/[%_*\\]/g,'').slice(0,120);
  url.searchParams.set('select','id,nome,categoria,cidade,uf,bairro,endereco,descricao,horario,aceita,telefone,site,lat,lng,status,verificado');
- url.searchParams.set('status','eq.aprovado');url.searchParams.set('order','verificado.desc,nome.asc,id.asc');url.searchParams.set('limit','200');
+ url.searchParams.set('status','eq.aprovado');url.searchParams.set('order','verificado.desc,nome.asc,id.asc');url.searchParams.set('limit',String(limiteSeguro));
  if(categoria){if(!categoriasCompartilhadas.includes(categoriaBanco(categoria)))throw Error('Categoria inválida');url.searchParams.set('categoria','eq.'+categoriaBanco(categoria));}
  if(cidade){url.searchParams.set('cidade_busca','eq.'+normalizarPontoBusca(cidade).slice(0,100));if(uf)url.searchParams.set('uf','eq.'+uf);}
- else if(bbox){
+ else if(bbox&&!termo){
   if(bbox.length!==4||!bbox.every(Number.isFinite)||bbox[0]>=bbox[2]||bbox[1]>=bbox[3]||Math.abs(bbox[0])>90||Math.abs(bbox[2])>90||Math.abs(bbox[1])>180||Math.abs(bbox[3])>180)throw Error('Área inválida');
   url.searchParams.append('lat','gte.'+bbox[0]);url.searchParams.append('lat','lte.'+bbox[2]);url.searchParams.append('lng','gte.'+bbox[1]);url.searchParams.append('lng','lte.'+bbox[3]);
  }
- // Remove metacaracteres do padrão; URLSearchParams impede injeção de filtros.
- const termo=normalizarPontoBusca(nome).replace(/[%_*\\]/g,'').slice(0,120);
  if(termo)url.searchParams.set('nome_busca','ilike.*'+termo+'*');
  return url;
 }
@@ -43,6 +44,12 @@ function criarClientePontosCompartilhados(config,{fetcher=fetch}={}){
  }
  return {
   async consultar(filtros,opcoes){return converterPontosCompartilhados(await obter(montarConsultaPontos(config,filtros),opcoes));},
+   // Pede um a mais para saber se a área tem mais pontos do que o limite exibido.
+   async consultarComLimite(filtros,opcoes){
+    const limite=Number.isInteger(filtros?.limite)?filtros.limite:200;
+    const todos=converterPontosCompartilhados(await obter(montarConsultaPontos(config,{...filtros,limite:limite+1}),opcoes));
+    return {pontos:todos.slice(0,limite),limiteAtingido:todos.length>limite};
+   },
   async cidades(opcoes){const dados=await obter(new URL('/rest/v1/rpc/cidades_pontos',config.SUPABASE_URL),opcoes);if(!Array.isArray(dados))throw Error('Resposta inválida');return dados.filter(p=>typeof p.cidade==='string'&&p.cidade.length<=100&&/^[A-Z]{2}$/.test(p.uf));}
  };
 }
