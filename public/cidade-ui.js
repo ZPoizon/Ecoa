@@ -110,7 +110,7 @@ function carregarLeafletCidade(doc,ambiente) {
   // Carregamento sob demanda; mapas externos não entram no cache offline do PWA.
   return Promise.allSettled([
     ['link','vendor/leaflet/leaflet.css','sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY='],
-    ['script','vendor/leaflet/leaflet.js','sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=']
+    ['script','vendor/leaflet/leaflet.js','sha256-MQS1JlBNDWH9MJmkUh6H9zLMwxdN7FTgjea6i94+Ff8=']
   ].map(([tag,url,hash])=>new Promise((resolve,reject)=>{
     const el=doc.createElement(tag);el.integrity=hash;el.crossOrigin='anonymous';
     if(tag==='link'){el.rel='stylesheet';el.href=url;}else el.src=url;

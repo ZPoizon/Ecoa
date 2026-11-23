@@ -33,3 +33,14 @@
 .cidade-filtros-publicos label { display:grid;gap:.4rem;min-width:0; }
 .cidade-filtros-publicos input,.cidade-filtros-publicos select { width:100%;min-width:0;font-size:1rem; }
 @media(max-width:40rem){.cidade-filtros-publicos{grid-template-columns:1fr;}}
+
+/* Busca única: o campo ocupa a largura toda e o cartão nunca transborda. */
+#na-minha-cidade{overflow-x:clip}
+#tela-na-cidade .cidade-busca input[type=search]{box-sizing:border-box;width:100%;min-width:0;font-size:1rem}
+#tela-na-cidade .cidade-busca button{white-space:normal}
+#tela-na-cidade .ponto-cartao-cabecalho h3{font-size:1.125rem}
+@media(max-width:40rem){
+ #tela-na-cidade .busca-unica{flex-basis:100%}
+ #tela-na-cidade .cidade-busca>button{margin-top:0}
+}
+@media(prefers-reduced-motion:reduce){#tela-na-cidade *{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
