@@ -119,17 +119,22 @@ function validarBaseOSM(dados) {
  });
 }
 function pontosDisponiveisOSM(fixos,salvos,vivos,categoria,bbox){
- const filtrar=lista=>lista.filter(p=>categoriaMapaOSM(p.categoria)===categoria&&dentroAreaOSM(p,bbox));
+ const todos=!categoria||categoria==='todos';
+ const filtrar=lista=>lista.filter(p=>(todos||categoriaMapaOSM(p.categoria)===categoria)&&dentroAreaOSM(p,bbox));
  // Curadoria tem prioridade; dados ao vivo atualizam a cópia pelo mesmo ID.
  return mesclarPontosOSM(filtrar(fixos),[...filtrar(vivos),...filtrar(salvos)]);
 }
-function preencherCartaoPonto(doc,item,p){
+function preencherCartaoPonto(doc,item,p,opcoes={}){
  const texto=(tag,t)=>{const el=doc.createElement(tag);el.textContent=String(t);item.append(el);};
- texto('p',categoriasOSM[categoriaMapaOSM(p.categoria)].nome);texto('h3',p.nome);
+ texto('p',(categoriasOSM[categoriaMapaOSM(p.categoria)]||{nome:'Outro'}).nome);
+ const titulo=doc.createElement('h3');titulo.textContent=String(p.nome);if(opcoes.idTitulo)titulo.id=opcoes.idTitulo;item.append(titulo);
  if(p.origem==='fixo')texto('p','Verificado em '+p.dataVerificacao.split('-').reverse().join('/'));
  for(const t of [p.descricao,[p.endereco,p.bairro,p.cidade,p.UF].filter(Boolean).join(' · '),p.horario&&'Horário: '+p.horario,p.aceita&&'O que aceita / informações: '+p.aceita,p.telefone&&'Telefone: '+p.telefone])if(t)texto('p',t);
- texto('p',p.origem==='supabase'?(p.verificado?'Verificado':'Aprovado pela comunidade'):p.origem==='fixo'?'Verificado pelo Ecoa':'Fonte: OpenStreetMap');texto('p','Dados da comunidade. Confirme antes de ir');
- for(const [rotulo,valor] of [['Site do local',p.site],['Consultar fonte',p.fonte],['Como chegar',`https://www.google.com/maps/dir/?api=1&destination=${p.latitude},${p.longitude}`]]){
+ texto('p',p.origem==='supabase'?'Origem: cadastro da comunidade':p.origem==='fixo'?'Origem: curadoria do Ecoa':'Origem: OpenStreetMap');
+ texto('p',p.origem==='supabase'?(p.verificado?'Verificado':'Aprovado pela comunidade'):p.origem==='fixo'?'Verificado pelo Ecoa':'Fonte: OpenStreetMap — não verificado presencialmente');
+ texto('p','Dados da comunidade. Confirme antes de ir');
+ const rota=`https://www.openstreetmap.org/directions?to=${encodeURIComponent(p.latitude+','+p.longitude)}`;
+ for(const [rotulo,valor] of [['Como chegar',rota],['Site do local',p.site],['Consultar fonte',p.fonte]]){
   try{const u=new URL(valor);if(u.protocol!=='https:'||u.username||u.password)continue;const a=doc.createElement('a');a.textContent=rotulo;a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';a.className='ecoa-button secondary';item.append(a);}catch{}
  }
 }

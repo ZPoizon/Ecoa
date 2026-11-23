@@ -1,1 +1,61 @@
-.osm-chips{display:flex;flex-wrap:wrap;gap:.65rem;margin:1.25rem 0}.osm-chips button{min-height:44px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-surface);color:var(--color-text);padding:.6rem 1rem;font-size:1rem}.osm-chips button[aria-pressed=true]{background:var(--color-primary);color:var(--color-on-primary);box-shadow:inset 0 0 0 2px var(--color-primary)}.osm-card{min-width:0;overflow-wrap:anywhere}.osm-card[data-selecionado]{outline:3px solid var(--color-focus);outline-offset:3px}.osm-card .buttons{display:flex;flex-wrap:wrap;gap:.6rem}.osm-card a,.osm-card button{min-height:44px;white-space:normal}.osm-marker{display:grid;place-items:center;background:#205B3E;color:white;border:3px solid white;border-radius:50%;box-shadow:0 1px 5px #0008}.osm-marker span{font-size:14px}.osm-legenda{font-size:1rem}#osm-sugerir{margin:1.5rem 0;padding:1rem;background:var(--color-surface-soft);border-radius:var(--radius-md)}#osm-sug-form{display:grid;gap:1rem;margin-top:1rem}#osm-sugerir label{display:grid;gap:.4rem}#osm-sugerir input,#osm-sugerir textarea{box-sizing:border-box;width:100%;min-width:0;font:inherit}#osm-lista[aria-busy=true]{opacity:.7}#osm-status{min-height:1.5em}#cidade-mapa{height:clamp(360px,55vh,640px)}#na-minha-cidade [hidden]{display:none!important}@media(max-width:420px){.osm-chips{gap:.5rem}.osm-chips button{padding:.6rem .8rem}.osm-card .buttons>*{flex:1 1 135px}#osm-sugerir{padding:.85rem}}
+.osm-chips{display:flex;flex-wrap:wrap;gap:.65rem;margin:1.25rem 0}
+.osm-chips button{min-height:44px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-surface);color:var(--color-text);padding:.6rem 1rem;font-size:1rem}
+.osm-chips button[aria-pressed=true]{background:var(--color-primary);color:var(--color-on-primary);box-shadow:inset 0 0 0 2px var(--color-primary)}
+.osm-card{min-width:0;overflow-wrap:anywhere}
+.osm-card[data-selecionado]{outline:3px solid var(--color-focus);outline-offset:3px}
+.osm-card .buttons{display:flex;flex-wrap:wrap;gap:.6rem}
+.osm-card a,.osm-card button{min-height:44px;white-space:normal}
+
+/* Pins vermelhos em todas as origens: um único padrão visual no mapa. */
+.osm-marker{display:grid;place-items:center;background:var(--color-error,#922A25);color:white;border:3px solid white;border-radius:50%;box-shadow:0 1px 5px #0008}
+.osm-marker span{font-size:14px}
+.osm-legenda{font-size:1rem;color:var(--color-error,#922A25);font-weight:650}
+
+/* Cartão único: folha inferior no celular, painel lateral no desktop. */
+#ponto-cartao{position:absolute;z-index:600;inset-inline:1rem;bottom:1rem;max-height:min(70%,32rem);overflow:auto;padding:1rem;background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:0 10px 30px #0005}
+.ponto-cartao-cabecalho{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
+.ponto-cartao-cabecalho h3{margin:0;min-width:0;overflow-wrap:anywhere}
+.ponto-cartao-cabecalho button{flex:none;min-height:44px}
+#ponto-cartao-conteudo p{margin-block:.5rem}
+
+#osm-sugerir{margin:1.5rem 0;padding:1rem;background:var(--color-surface-soft);border-radius:var(--radius-md)}
+#osm-sug-form{display:grid;gap:1rem;margin-top:1rem}
+#osm-sugerir label{display:grid;gap:.4rem}
+#osm-sugerir input,#osm-sugerir textarea{box-sizing:border-box;width:100%;min-width:0;font:inherit}
+#osm-lista[aria-busy=true]{opacity:.7}
+#osm-status{min-height:1.5em}
+#cidade-mapa{height:clamp(360px,55vh,640px)}
+#na-minha-cidade [hidden]{display:none!important}
+
+.cidade-busca{position:relative;display:flex;flex-wrap:wrap;align-items:flex-start;gap:.75rem;margin-block:var(--space-5)}
+.cidade-busca>input[type=search],.cidade-busca>.busca-unica{flex:1 1 20rem;min-width:0}
+.busca-unica{position:relative;flex:1 1 20rem;min-width:0}
+.busca-unica>input[type=search]{width:100%;min-width:0}
+.busca-unica-lista{position:absolute;z-index:700;inset-inline:0;top:100%;max-height:min(24rem,60vh);overflow:auto;padding:.5rem;background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:0 8px 24px #0004}
+.busca-unica-grupo{margin-block:.25rem}
+.busca-unica-grupo-titulo{margin:.5rem .5rem .25rem;font-size:.875rem;font-weight:700;color:var(--color-text-muted)}
+.busca-unica-opcao{display:grid;gap:.15rem;padding:.65rem .75rem;min-height:44px;border-radius:.5rem;cursor:pointer;overflow-wrap:anywhere}
+.busca-unica-opcao:hover,.busca-unica-opcao[aria-selected=true]{background:var(--color-surface-soft);outline:2px solid var(--color-focus);outline-offset:-2px}
+.busca-unica-opcao span{font-size:.875rem;color:var(--color-text-muted)}
+.busca-unica-status{font-size:.875rem;color:var(--color-text-muted);margin:.35rem 0 0}
+.cidade-busca>button{flex:0 0 auto}
+
+.cidade-mapa-frame{position:relative}
+.cidade-painel{margin-block:var(--space-4);padding:.75rem 0}
+.cidade-painel>summary{min-height:44px;display:flex;align-items:center;font-weight:700;cursor:pointer;color:var(--color-primary)}
+#osm-vazio button{min-height:44px}
+
+@media(min-width:64rem){
+ #ponto-cartao{inset-inline:auto 1rem;top:1rem;bottom:auto;width:min(24rem,38vw);max-height:calc(100% - 2rem)}
+}
+@media(max-width:420px){
+ .osm-chips{gap:.5rem}
+ .osm-chips button{padding:.6rem .8rem}
+ .osm-card .buttons>*{flex:1 1 135px}
+ #osm-sugerir{padding:.85rem}
+ .cidade-busca>button{width:100%}
+ .busca-unica-lista{position:static;max-height:none;box-shadow:none;margin-top:.5rem}
+}
+@media(prefers-reduced-motion:reduce){
+ .busca-unica-opcao,.osm-chips button,.cidade-painel>summary{scroll-behavior:auto;transition:none}
+}

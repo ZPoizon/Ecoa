@@ -3,23 +3,51 @@ function iniciarCadastroPontos(doc,ambiente,api){
  const cliente=api.criarEnviosPontos(ambiente.EcoaConfig,{fetcher:ambiente.fetch.bind(ambiente),storage,locks:ambiente.navigator.locks});
  const leitura=ambiente.EcoaCompartilhados.criarClientePontosCompartilhados(ambiente.EcoaConfig,{fetcher:ambiente.fetch.bind(ambiente)});
  let mapa,marcador,selecionando=false,enviando=false,denunciando=false,pontoDenuncia;
+ let consultaEndereco=0,controleEndereco;
  const aviso=t=>{$('cadastro-status').textContent=t;};
  const dados=()=>{const p={};for(const k of ['nome','cidade','uf','bairro','categoria','endereco','descricao','horario','aceita','telefone','site','lat','lng','website_extra'])p[k]=$('cadastro-'+k).value;p.localPublico=$('cadastro-localPublico').checked;return p;};
- function limparPosicao(){marcador?.remove();marcador=null;selecionando=false;}
- function posicionar(lat,lng){
+ function limparPosicao(){marcador?.remove();marcador=null;selecionando=false;consultaEndereco++;controleEndereco?.abort();}
+ function preencherEndereco(p,forcar=false){
+  if(!p)return;
+  const destinos=[['cadastro-cidade',p.cidade],['cadastro-uf',p.uf||p.UF],['cadastro-bairro',p.bairro],['cadastro-endereco',p.endereco||p.nome||p.rotulo]];
+  for(const [id,valor] of destinos){
+   const campo=$(id);if(!campo||!valor)continue;
+   if(!campo.dataset)campo.dataset={};
+   // Nunca sobrescreve algo digitado pela pessoa; apenas campos antes preenchidos automaticamente.
+   if(!forcar&&campo.value&&campo.dataset.autoEndereco!=='1')continue;
+   campo.value=String(valor);campo.dataset.autoEndereco='1';
+  }
+ }
+ async function reverterEndereco(lat,lng){
+  if(typeof ambiente.reverterEndereco!=='function')return;
+  const atual=++consultaEndereco;controleEndereco?.abort();controleEndereco=new AbortController();
+  try{
+   const p=await ambiente.reverterEndereco(lat,lng,{signal:controleEndereco.signal});
+   if(atual!==consultaEndereco)return;
+   if(p){preencherEndereco(p);aviso('Endereço aproximado preenchido. Confira antes de enviar.');}
+  }catch(e){if(atual===consultaEndereco&&e.name!=='AbortError')aviso('Posição selecionada. Confira o endereço antes de enviar.');}
+ }
+ function posicionar(lat,lng,opcoes={}){
   if(!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180){aviso('Endereço sem posição confirmada. Escolha no mapa ou informe as coordenadas.');return;}
   $('cadastro-lat').value=lat.toFixed(6);$('cadastro-lng').value=lng.toFixed(6);$('cadastro-confirmar-duplicado').checked=false;
   if(mapa){if(marcador)marcador.setLatLng([lat,lng]);else marcador=ambiente.L.marker([lat,lng],{title:'Posição do novo ponto',alt:'Posição do novo ponto'}).addTo(mapa);}
   aviso('Posição selecionada. Confira o endereço antes de enviar.');
+  if(!opcoes.deGeocodificador)reverterEndereco(lat,lng);
  }
  $('cadastro-abrir').addEventListener('click',()=>{$('cadastro-painel').hidden=false;$('cadastro-abrir').setAttribute('aria-expanded','true');$('cadastro-nome').focus();});
  $('cadastro-fechar').addEventListener('click',()=>{$('cadastro-painel').hidden=true;$('cadastro-abrir').setAttribute('aria-expanded','false');limparPosicao();$('cadastro-abrir').focus();});
  $('cadastro-form').addEventListener('input',e=>{if(e.target!==$('cadastro-confirmar-duplicado')){$('cadastro-confirmar-duplicado').checked=false;$('cadastro-duplicado').hidden=true;}});
  $('cadastro-endereco').addEventListener('input',()=>{$('cadastro-lat').value='';$('cadastro-lng').value='';limparPosicao();});
- $('cadastro-endereco').addEventListener('endereco-selecionado',e=>{const p=e.detail;$('cadastro-cidade').value=p.cidade||'';$('cadastro-uf').value=p.uf||'';$('cadastro-bairro').value=p.bairro||'';posicionar(p.latitude,p.longitude);if(mapa&&Number.isFinite(p.latitude)&&Number.isFinite(p.longitude))mapa.setView([p.latitude,p.longitude],16,{animate:false});});
+ function aoEscolherEndereco(p){
+  preencherEndereco(p,true);
+  posicionar(p?.latitude,p?.longitude,{deGeocodificador:true});
+  if(mapa&&Number.isFinite(p?.latitude)&&Number.isFinite(p?.longitude))mapa.setView([p.latitude,p.longitude],16,{animate:false});
+ }
+ $('cadastro-endereco').addEventListener('endereco-selecionado',e=>aoEscolherEndereco(e.detail));
+ doc.addEventListener('cidade-busca-selecionada',e=>{if(e.detail?.tipo==='endereco')aoEscolherEndereco(e.detail.endereco);});
  for(const k of ['lat','lng'])$('cadastro-'+k).addEventListener('change',()=>{const a=$('cadastro-lat').value.trim(),b=$('cadastro-lng').value.trim();if(a&&b)posicionar(Number(a.replace(',','.')),Number(b.replace(',','.')));});
- $('cadastro-marcar').addEventListener('click',()=>{if(!mapa){aviso('O mapa ainda não está disponível. Use a busca de endereço ou digite as coordenadas.');return;}selecionando=true;aviso('Clique na posição do local no mapa. Pelo teclado, use as setas e depois “Usar o centro do mapa”.');$('cidade-mapa').scrollIntoView({block:'center'});mapa.getContainer().focus();});
- $('cadastro-centro').addEventListener('click',()=>{if(!mapa){aviso('Use a busca de endereço ou digite as coordenadas enquanto o mapa carrega.');return;}const p=mapa.getCenter();posicionar(p.lat,p.lng);selecionando=false;});
+ $('cadastro-marcar').addEventListener('click',()=>{if(!mapa){aviso('O mapa ainda não está disponível. Use a busca de endereço ou ajuste as coordenadas.');return;}selecionando=true;aviso('Clique na posição do local no mapa. Pelo teclado, use as setas e depois “Confirmar centro do mapa”.');$('cidade-mapa').scrollIntoView({block:'center'});mapa.getContainer().focus();});
+ $('cadastro-centro').addEventListener('click',()=>{if(!mapa){aviso('Use a busca de endereço ou ajuste as coordenadas enquanto o mapa carrega.');return;}const p=mapa.getCenter();posicionar(p.lat,p.lng);selecionando=false;});
  $('cadastro-form').addEventListener('submit',async e=>{
   e.preventDefault();if(enviando)return;enviando=true;$('cadastro-campos').disabled=true;
   try{
@@ -32,7 +60,8 @@ function iniciarCadastroPontos(doc,ambiente,api){
    if(repetidos.length&&!$('cadastro-confirmar-duplicado').checked){$('cadastro-duplicado-texto').textContent='Pode já existir um ponto parecido a até 100 m: '+repetidos[0].nome+'. Confira antes de continuar.';$('cadastro-duplicado').hidden=false;aviso('Confira o possível duplicado e confirme apenas se for outro local.');return;}
    aviso('Enviando para aprovação…');await cliente.cadastrar(entrada);
    $('cadastro-form').reset();$('cadastro-duplicado').hidden=true;limparPosicao();
-   aviso('Recebemos! O ponto aparece depois de aprovado.');
+   for(const id of ['cadastro-cidade','cadastro-uf','cadastro-bairro','cadastro-endereco'])if($(id).dataset)delete $(id).dataset.autoEndereco;
+   aviso('Recebemos! Seu ponto aparecerá depois da aprovação.');
   }catch(e){aviso(e.status?api.mensagemErroEnvioPonto(e.status,e.codigo):['TypeError','AbortError'].includes(e.name)?api.mensagemErroEnvioPonto():e.message);}finally{enviando=false;$('cadastro-campos').disabled=false;$('cadastro-status').focus();}
  });
  function denunciar(p){if(denunciando)return;pontoDenuncia=p;$('denuncia-enviar').disabled=false;$('denuncia-local').textContent=p.nome;$('denuncia-status').textContent='';$('denuncia-form').reset();$('denuncia-dialogo').showModal();}
