@@ -1867,8 +1867,11 @@ async function validarTelaNaCidade(){
  assert.match(sw,/pathname\.startsWith\('\/rest\/v1\/'\)/);
  const crypto=require('node:crypto');
  const uiMapa=fs.readFileSync('public/cidade-ui.js','utf8');
- for(const [arquivo,hash] of [['leaflet.js','MQS1JlBNDWH9MJmkUh6H9zLMwxdN7FTgjea6i94+Ff8='],['leaflet.css','p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=']]){
-  const esperado='sha256-'+crypto.createHash('sha256').update(fs.readFileSync('public/vendor/leaflet/'+arquivo)).digest('base64');
+ for(const [arquivo,hash] of [['leaflet.js','20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo='],['leaflet.css','p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=']]){
+  const {execFileSync}=require('node:child_process');
+  // O navegador recebe o blob do Git; o arquivo de trabalho pode ter CRLF no Windows.
+  const conteudo=execFileSync('git',['show','HEAD:public/vendor/leaflet/'+arquivo],{maxBuffer:10*1024*1024});
+  const esperado='sha256-'+crypto.createHash('sha256').update(conteudo).digest('base64');
   assert.equal(esperado,'sha256-'+hash);
   assert.ok(uiMapa.includes(esperado),'SRI de '+arquivo);
  }
