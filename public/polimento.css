@@ -21,7 +21,7 @@
 .tela-titulo{margin-bottom:var(--space-4)}
 .tela .descoberta{margin-block:var(--space-6)}
 @media(max-width:40rem){
- .inicio-cta,#acao-dia-link,#abrir-filtros,.aplicar-filtros,#salvar-acao,#quiz-comecar,#quiz-avancar,#estimativa-calcular,#cidade-adicionar,#cidade-form button[type=submit],#osm-sug-form button[type=submit],#lembrete-salvar,.calendario-principal,#baixar-plano,#desafio-iniciar,#desafio-substituir,#instalar-ecoa,.estado-vazio>.ecoa-button,.estado-vazio>button,.agir-barra-fixa button{box-sizing:border-box;width:100%;min-height:52px;padding:.9rem 1rem;font-size:1rem;white-space:normal;text-align:center}
+ .inicio-cta,#acao-dia-link,.aplicar-filtros,#salvar-acao,#quiz-comecar,#quiz-avancar,#estimativa-calcular,#cidade-adicionar,#cidade-form button[type=submit],#osm-sug-form button[type=submit],#lembrete-salvar,.calendario-principal,#baixar-plano,#desafio-iniciar,#desafio-substituir,#instalar-ecoa,.estado-vazio>.ecoa-button,.estado-vazio>button,.agir-barra-fixa button{box-sizing:border-box;width:100%;min-height:52px;padding:.9rem 1rem;font-size:1rem;white-space:normal;text-align:center}
  .agir-acoes{display:flex;flex-wrap:wrap}.agir-acoes #salvar-acao{flex-basis:100%}
  .inicio-porta{padding:1rem}.ilustracao-inicio{width:5rem}
 }

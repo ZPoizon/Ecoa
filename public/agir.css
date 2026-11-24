@@ -1,5 +1,10 @@
 /* Escopo da fase 3: as outras telas mantêm seus componentes. */
 #tela-agir .finder { padding:clamp(1rem,3vw,2rem); }
+#tela-agir .finder { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-3); }
+#tela-agir .finder > h2,#tela-agir .finder > #surpresa-ajuda,#tela-agir .finder > :not(h2):not(#abrir-filtros):not(#surpreenda-me):not(#surpresa-ajuda) { grid-column:1/-1; }
+#tela-agir .finder > h2 { margin:0; }
+#tela-agir .finder > #abrir-filtros,#tela-agir .finder > #surpreenda-me { justify-self:start; max-width:100%; width:auto; margin:0; }
+#tela-agir #surpresa-ajuda { margin:0; }
 #tela-agir .busca-barra { grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr)); gap:var(--space-4); border:0; padding:0; background:transparent; }
 #tela-agir .busca-campo { padding:0; border:0; }
 #tela-agir .busca-campo input,#tela-agir .busca-campo select { min-height:48px; padding:var(--space-2); }

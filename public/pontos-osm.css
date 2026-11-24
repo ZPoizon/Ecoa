@@ -1,10 +1,10 @@
 .osm-chips{display:flex;flex-wrap:wrap;gap:.65rem;margin:1.25rem 0}
 .osm-chips button{min-height:44px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-surface);color:var(--color-text);padding:.6rem 1rem;font-size:1rem}
 .osm-chips button[aria-pressed=true]{background:var(--color-primary);color:var(--color-on-primary);box-shadow:inset 0 0 0 2px var(--color-primary)}
-.osm-card{min-width:0;overflow-wrap:anywhere}
+.osm-card{min-width:0;overflow-wrap:anywhere;container-type:inline-size}
 .osm-card[data-selecionado]{outline:3px solid var(--color-focus);outline-offset:3px}
-.osm-card .buttons,#ponto-cartao-conteudo .ponto-botoes{display:flex;flex-wrap:wrap;align-items:stretch;gap:var(--space-3)}
-.osm-card a,.osm-card button,#ponto-cartao-conteudo .ponto-botoes>*{min-height:44px;white-space:normal;overflow-wrap:anywhere}
+.osm-card .buttons,#ponto-cartao-conteudo .ponto-botoes{display:grid;grid-template-columns:minmax(0,1fr);align-items:stretch;gap:var(--space-3)}
+.osm-card a,.osm-card button,#ponto-cartao-conteudo .ponto-botoes>*{box-sizing:border-box;min-width:0;min-height:48px;width:100%;white-space:normal;overflow-wrap:anywhere}
 .ponto-categoria{font-size:.875rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--color-text-muted)}
 .ponto-procedencia,.ponto-confirmacao{font-size:.875rem;color:var(--color-text-muted)}
 #ponto-cartao-conteudo .ponto-botoes{margin-top:var(--space-4)}
@@ -33,9 +33,7 @@
 #osm-status{min-height:1.5em}
 #na-minha-cidade [hidden]{display:none!important}
 
-.cidade-busca{position:relative;display:flex;flex-wrap:wrap;align-items:flex-start;gap:var(--space-3);margin-block:var(--space-6)}
-.cidade-busca>input[type=search],.cidade-busca>.busca-unica{flex:1 1 20rem;min-width:0}
-.busca-unica{position:relative;flex:1 1 20rem;min-width:0}
+.busca-unica{position:relative;min-width:0}
 .busca-unica>input[type=search]{width:100%;min-width:0}
 .busca-unica-lista{position:absolute;z-index:700;inset-inline:0;top:100%;max-height:min(24rem,60vh);overflow:auto;padding:.5rem;background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:0 8px 24px #0004}
 .busca-unica-grupo{margin-block:.25rem}
@@ -44,7 +42,8 @@
 .busca-unica-opcao:hover,.busca-unica-opcao[aria-selected=true]{background:var(--color-surface-soft);outline:2px solid var(--color-focus);outline-offset:-2px}
 .busca-unica-opcao span{font-size:.875rem;color:var(--color-text-muted)}
 .busca-unica-status{font-size:.875rem;color:var(--color-text-muted);margin:.35rem 0 0}
-.cidade-busca>button{flex:0 0 auto}
+.busca-unica-status:empty{display:none}
+
 
 .cidade-mapa-frame{position:relative}
 .cidade-painel{margin-block:var(--space-4);padding:.75rem 0}
@@ -58,9 +57,11 @@
 @media(max-width:420px){
  .osm-chips{gap:.5rem}
  .osm-chips button{padding:.6rem .8rem}
- .osm-card .buttons>*{flex:1 1 135px}
- .cidade-busca>button{width:100%}
  .busca-unica-lista{position:static;max-height:none;box-shadow:none;margin-top:.5rem}
+}
+@container (min-width:20rem){
+ .osm-card .ponto-botoes{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .osm-card .ponto-botoes>:last-child:nth-child(odd){grid-column:1/-1}
 }
 @media(prefers-reduced-motion:reduce){
  .busca-unica-opcao,.osm-chips button,.cidade-painel>summary{scroll-behavior:auto;transition:none}

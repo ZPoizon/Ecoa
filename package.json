@@ -6,7 +6,7 @@
     "start": "node scripts/dev.cjs",
     "preview": "node scripts/dev.cjs --preview",
     "build": "node build.cjs",
-    "test": "node validar.cjs && node --test tests/deploy.test.cjs",
+    "test": "node validar.cjs && node --test tests/deploy.test.cjs tests/layout-regression.test.cjs",
     "build:worker": "node worker/build.mjs"
   },
   "engines": {

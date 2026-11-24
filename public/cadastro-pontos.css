@@ -1,13 +1,15 @@
-#cadastro-abrir { margin-block:1rem; }
 #cadastro-painel { padding:var(--space-4);margin-block:var(--space-4);background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md); }
-#cadastro-painel fieldset { border:0;padding:0;min-width:0; }
-.cadastro-grade { display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4); }
+#cadastro-painel fieldset { border:0;padding:0;min-width:0;container-type:inline-size; }
+.cadastro-grade { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr));gap:var(--space-4);margin-block:var(--space-4); }
 .cadastro-cep { display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-2);align-items:end;margin-block:var(--space-3); }
 .cadastro-cep>label { margin:0; }
 .cadastro-cep #cadastro-cep-status { grid-column:1/-1;margin:0; }
 .cadastro-posicao-confirmacao { min-height:48px;padding:var(--space-2) var(--space-3);border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface-soft); }
-#cadastro-painel label,#denuncia-dialogo label { display:grid;gap:.4rem;margin-block:.75rem;min-width:0; }
-#cadastro-painel input:not([type=checkbox]),#cadastro-painel select,#cadastro-painel textarea,#denuncia-dialogo select { width:100%;min-width:0;font:inherit;box-sizing:border-box; }
+#cadastro-painel label,#denuncia-dialogo label { display:grid;gap:var(--space-2);margin:0;min-width:0;line-height:1.4; }
+#cadastro-painel fieldset>label:not(.cadastro-check) { margin-block:var(--space-4); }
+#cadastro-painel .cadastro-cep { margin-block:var(--space-4); }
+#cadastro-painel .cadastro-grade + .hint { margin-top:var(--space-2); }
+#cadastro-painel input:not([type=checkbox]),#cadastro-painel select,#cadastro-painel textarea,#denuncia-dialogo select { width:100%;min-width:0;font:inherit;line-height:1.25;box-sizing:border-box; }
 #cadastro-painel .cadastro-check { display:flex;align-items:center;gap:.75rem;min-height:44px; }
 .cadastro-check input { flex:0 0 auto;width:24px;height:24px; }
 #cadastro-painel .cadastro-honeypot { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%); }
@@ -18,4 +20,5 @@
 #cadastro-painel .cadastro-detalhes{margin-block:1rem;border-block:1px solid var(--color-border);padding-block:.5rem}
 #cadastro-painel .cadastro-detalhes>summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700;color:var(--color-primary)}
 #cadastro-painel .cadastro-detalhes[open]>summary{margin-bottom:.75rem}
-@media(max-width:40rem){.cadastro-grade,.cadastro-cep{grid-template-columns:1fr;}#cadastro-abrir,#cadastro-enviar,#cadastro-marcar,#cadastro-centro,#cadastro-cep-buscar{width:100%;}}
+@container (max-width:32rem){#cadastro-painel .cadastro-cep{grid-template-columns:minmax(0,1fr)}#cadastro-painel #cadastro-cep-buscar{width:100%}}
+@media(max-width:40rem){.cadastro-cep{grid-template-columns:1fr}#cadastro-abrir,#cadastro-enviar,#cadastro-marcar,#cadastro-centro,#cadastro-cep-buscar{width:100%;}}

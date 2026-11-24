@@ -1141,7 +1141,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v59'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v60'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -2217,7 +2217,7 @@ function validarAcoesNosPontos(){
  const sw=fs.readFileSync('public/sw.js','utf8');
  assert.ok(html.includes('acoes-pontos.js'));
  assert.match(sw,/acoes-pontos\.js/);
- assert.match(sw,/prefixo \+ 'v59'/);
+ assert.match(sw,/prefixo \+ 'v60'/);
  console.log('OK Ações por ponto: regras por categoria, ODS existentes, passos curtos e texto educativo');
 }
 validarAcoesNosPontos();

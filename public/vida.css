@@ -8,8 +8,7 @@
 .vida-celebracao svg{width:4rem;height:4rem;flex:none;overflow:visible}
 .vida-celebracao p{margin:0}.vida-contador{display:block;font-size:1.5rem;font-weight:700;font-variant-numeric:tabular-nums}
 [data-vida-animar]{transform-box:fill-box;transform-origin:center}
-#surpreenda-me{margin-top:1rem}#surpresa-ajuda{margin:.4rem 0 0;color:var(--muted)}
-@media(max-width:40rem){#surpreenda-me{width:100%;min-height:52px}}
+#surpresa-ajuda{color:var(--muted)}
 @media(prefers-reduced-motion:reduce){#inicio-anel-traco,[data-vida-animar]{animation:none!important;transition:none!important}}
 @media(forced-colors:active){#inicio-anel-traco{stroke:Highlight}.anel-fundo{stroke:CanvasText}}
 /* Mantém a barra anterior disponível a leitores de tela sem duplicar o gráfico visual. */

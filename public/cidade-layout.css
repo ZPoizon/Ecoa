@@ -2,9 +2,9 @@
 #tela-na-cidade .cidade { padding:clamp(1rem,3vw,2rem); }
 .cidade-cabecalho { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-4); }
 .cidade-cabecalho > div { flex:1 1 20rem; }
-#cidade-busca-endereco { margin-block:var(--space-6); }
-.cidade-busca-linha { display:flex; flex-wrap:wrap; align-items:start; gap:var(--space-3); }
-.cidade-busca-linha > input,.cidade-busca-linha > .endereco-autocomplete { flex:1 1 18rem; min-width:0; }
+#tela-na-cidade .cidade-busca { display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:start; gap:var(--space-3); margin-block:var(--space-6); }
+#tela-na-cidade .cidade-busca > .busca-unica,#tela-na-cidade .cidade-busca > input[type=search] { grid-column:1; min-width:0; width:100%; }
+#tela-na-cidade .cidade-busca > button { min-width:0; margin:0; white-space:normal; }
 #cidade-mapa-abertura { min-height:20rem; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:var(--space-6); background:var(--soft); border:1px solid var(--line); border-radius:var(--radius-md); text-align:center; }
 #cidade-mapa-abertura[hidden] { display:none; }
 #tela-na-cidade #cidade-mapa { height:clamp(24rem,60svh,40rem); min-height:24rem; width:100%; }
@@ -19,9 +19,8 @@
 #cidade-status:empty { display:none; }
 @media(max-width:40rem){
  #tela-na-cidade #cidade-mapa { height:60svh; min-height:24rem; }
- .cidade-busca-linha { display:block; }
- .cidade-busca-linha button { margin-top:var(--space-3); width:100%; }
- #cidade-adicionar { width:100%; }
+ #tela-na-cidade .cidade-busca { grid-template-columns:repeat(auto-fit,minmax(min(100%,8rem),1fr)); }
+ #tela-na-cidade .cidade-busca > .busca-unica,#tela-na-cidade .cidade-busca > input[type=search] { grid-column:1/-1; }
 }
 
 /* Sobreposição de 1px elimina fissuras por arredondamento de tiles fracionários. */
@@ -42,7 +41,6 @@
   #tela-na-cidade .ponto-botoes>*{flex:1 1 100%}
 }
 @media(max-width:40rem){
- #tela-na-cidade .busca-unica{flex-basis:100%}
- #tela-na-cidade .cidade-busca>button{margin-top:0}
+ #tela-na-cidade .cidade-busca>button{width:auto}
 }
 @media(prefers-reduced-motion:reduce){#tela-na-cidade *{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
