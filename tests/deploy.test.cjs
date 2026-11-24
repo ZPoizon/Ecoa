@@ -57,6 +57,16 @@ for (const preview of [false, true]) {
       assert.match(inicio.headers.get('content-type'), /text\/html/);
       const html = await inicio.text();
       assert.match(html, /Ecoa/);
+      for (const exigido of [
+        'Busque uma cidade, endereço, CEP ou local',
+        'Nenhum local encontrado com estes filtros.',
+        'Buscar outra cidade',
+        'Ampliar a área'
+      ]) assert.ok(html.includes(exigido), exigido);
+      for (const proibido of [
+        'cadastro-pontos-ui.js', 'Marcar um ponto', 'Enviar ponto',
+        'id="cadastro-abrir"', 'id="cadastro-painel"', 'Ainda não temos pontos cadastrados'
+      ]) assert.ok(!html.includes(proibido), proibido);
       const recursos = [...html.matchAll(/(?:src|href)=["']([^"'#]+)["']/g)].map(m => m[1]).filter(u => !/^(https?:|data:|mailto:)/.test(u));
       for (const recurso of new Set([...recursos, 'manifest.json', 'sw.js', 'sobre.html'])) {
         assert.equal((await fetch(new URL(recurso, base))).status, 200, recurso);

@@ -1141,7 +1141,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v60'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v61'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1313,14 +1313,19 @@ async function validarPontosAutomaticos() {
  const criar=()=>({children:[],eventos:{},dataset:{},value:'',hidden:false,textContent:'',append(...x){this.children.push(...x);},prepend(...x){this.children.unshift(...x);},replaceChildren(...x){this.children=x;},setAttribute(k,v){this[k]=v;},removeAttribute(k){delete this[k];},addEventListener(k,f){this.eventos[k]=f;},focus(){},scrollIntoView(){},select(){},click(){this.eventos.click?.();},set innerHTML(v){throw Error('HTML externo não permitido');}});
  const els=new Map(),el=id=>{if(!els.has(id))els.set(id,criar());return els.get(id);};
  const chips=Object.keys(api.categoriasOSM).map(c=>{const e=criar();e.dataset.categoriaOsm=c;return e;});const eventos={};let localizacoes=0,consultas=0;
- const ambiente={fetch:async()=>({ok:true,json:async()=>[fixo]}),sessionStorage:storage,localStorage:{setItem(){throw Error('Não pode alterar Meus lugares');}},navigator:{onLine:false,geolocation:{getCurrentPosition(ok,erro){localizacoes++;erro();}}},addEventListener:(k,f)=>eventos[k]=f};
- let receberUI;
- const ui=iniciarPontosOSM({getElementById:el,createElement:criar,querySelectorAll:()=>chips,addEventListener:(k,f)=>eventos[k]=f},ambiente,{...api,criarClienteOSM:()=>({consultar:async()=>{consultas++;return ps;}}),criarBuscaOSM:({receber})=>{receberUI=receber;return {cancelar(){},agendar(){}}}});
- await avancar(0);await avancar(0);chips[3].click();assert.equal(consultas,0);assert.equal(el('osm-lista').children.length,1);assert.match(el('osm-status').textContent,/offline/);assert.equal(localizacoes,0);
+ const ambiente={...relogio,fetch:async()=>({ok:true,json:async()=>[fixo]}),sessionStorage:storage,localStorage:{setItem(){throw Error('Não pode alterar Meus lugares');}},navigator:{onLine:false,geolocation:{getCurrentPosition(ok,erro){localizacoes++;erro();}}},addEventListener:(k,f)=>eventos[k]=f,
+  L:{layerGroup:()=>({addTo(){return this;},clearLayers(){}}),divIcon:()=>({}),marker:()=>({addTo(){return this;},on(){},getElement:()=>({isConnected:false})})}};
+ const ui=iniciarPontosOSM({getElementById:el,createElement:criar,querySelectorAll:()=>chips,addEventListener:(k,f)=>eventos[k]=f},ambiente,{...api,criarClienteOSM:()=>({consultar:async()=>{consultas++;return ps;}})});
+ await ui.pronto;
+ ui.conectar({on(){},getZoom:()=>15,getBounds:()=>({getSouth:()=>-23.56,getWest:()=>-46.65,getNorth:()=>-23.55,getEast:()=>-46.64})});
+ await avancar(0);await avancar(0);chips[3].click();assert.equal(consultas,0);assert.equal(el('osm-lista').children.length,1);assert.match(el('osm-status').textContent,/Mostrando pontos salvos/);assert.equal(localizacoes,0);
  el('osm-perto').click();assert.equal(localizacoes,1);assert.equal(el('osm-perto').disabled,false);
  const texto=JSON.stringify(el('osm-lista').children);assert.match(texto,/Verificado pelo Ecoa/);assert.match(texto,/Verificado em 01\/01\/2026/);
- ambiente.navigator.onLine=true;receberUI(ps);assert.equal(el('osm-lista').children.length,2);assert.ok(JSON.stringify(el('osm-lista').children).includes('<img src=x onerror=alert(1)>'));
- ambiente.navigator.onLine=false;eventos.offline();assert.equal(el('osm-lista').children.length,2);
+ ambiente.navigator.onLine=true;
+ ui.atualizar({forcar:true});
+ await avancar(600);assert.equal(consultas,1);assert.ok(el('osm-lista').children.length>=2);assert.ok(JSON.stringify(el('osm-lista').children).includes('<img src=x onerror=alert(1)>'));
+ const comRede=el('osm-lista').children.length;
+ ambiente.navigator.onLine=false;eventos.offline();assert.equal(el('osm-lista').children.length,comRede);assert.match(el('osm-status').textContent,/Mostrando pontos salvos/);
 
   // Clique no pin abre um unico cartao; descricao externa entra como texto, nunca como HTML.
   const nosCartao=new Map();
@@ -1329,29 +1334,31 @@ async function validarPontosAutomaticos() {
    setAttribute(k,v){this[k]=v;},removeAttribute(k){delete this[k];},addEventListener(k,f){this.eventos[k]=f;},focus(){this.focado=true;},
    click(){this.eventos.click?.();},set innerHTML(v){throw Error('HTML externo nao permitido');}});
   const elCartao=id=>{if(!nosCartao.has(id))nosCartao.set(id,criarCartao('div'));return nosCartao.get(id);};
+  const chipsCartao=['','horta'].map(c=>{const e=criarCartao('button');e.dataset.categoriaOsm=c;return e;});
   const eventosCartao={};let clicarMarcador,focoMarcador=false;
   const elementoMarcador={isConnected:true,focus(){focoMarcador=true;}};
   const marcador={on(nome,fn){if(nome==='click')clicarMarcador=fn;return this;},addTo(){return this;},getElement:()=>elementoMarcador};
   const camadaFake={addTo(){return this;},clearLayers(){}};
   const mapaCartao={getBounds:()=>({getSouth:()=>-24.02,getWest:()=>-48.36,getNorth:()=>-24,getEast:()=>-48.34}),
    getZoom:()=>15,on(){},setView(){return this;},getCenter:()=>({lat:-24.01,lng:-48.35})};
-  let receberCartao;
+  const pontoCartao={id:'osm-carregado',nome:'Horta',categoria:'horta',descricao:'<img src=x onerror=alert(1)>',
+   latitude:-24.01,longitude:-48.35,origem:'osm'};
   let salvouPonto=null,navegouPlano=null;
   const ambienteCartao={fetch:async()=>({ok:true,json:async()=>({versao:1,categorias:{}})}),
-   sessionStorage:storage,localStorage:{setItem(){throw Error('Nao pode alterar Meus lugares');}},navigator:{onLine:false},
+   sessionStorage:storage,localStorage:{setItem(){throw Error('Nao pode alterar Meus lugares');}},navigator:{onLine:true},
+   setTimeout:fn=>{fn();return 1;},clearTimeout(){},
    addEventListener(){},L:{layerGroup:()=>camadaFake,divIcon:()=>({}),marker:()=>marcador},
    EcoaAcoesPontos:require('./public/acoes-pontos'),
    EcoaPlanoPontos:{contemAcaoPlano:()=>false,salvarAcaoDoPonto:(acao,ponto)=>{salvouPonto={titulo:acao.titulo,id:ponto.id};return {salva:true};}},
     EcoaRouter:{navegar:destino=>{navegouPlano=destino;}}};
-  const docCartao={getElementById:elCartao,createElement:criarCartao,querySelectorAll:()=>[],activeElement:null,
+  const docCartao={getElementById:elCartao,createElement:criarCartao,querySelectorAll:()=>chipsCartao,activeElement:null,
    addEventListener:(k,f)=>{eventosCartao[k]=f;}};
   const uiCartao=iniciarPontosOSM(docCartao,ambienteCartao,{...api,
-   criarClienteOSM:()=>({consultar:async()=>[],consultarComLimite:async()=>({pontos:[],limiteAtingido:false}),cidades:async()=>[]}),
-   criarBuscaOSM:({receber})=>{receberCartao=receber;return {cancelar(){},agendar(){}};}});
-  await uiCartao.pronto;uiCartao.conectar(mapaCartao);
-  const pontoCartao={id:'osm-carregado',nome:'Horta',categoria:'horta',descricao:'<img src=x onerror=alert(1)>',
-   latitude:-24.01,longitude:-48.35,origem:'osm'};
-  receberCartao([pontoCartao]);assert.equal(typeof clicarMarcador,'function');
+   criarClienteOSM:()=>({consultar:async()=>[pontoCartao],consultarComLimite:async()=>({pontos:[],limiteAtingido:false}),cidades:async()=>[]})});
+  eventosCartao['ecoa-rota']({detail:{tela:'na-cidade'}});
+  await uiCartao.pronto;chipsCartao[1].click();uiCartao.conectar(mapaCartao);
+  await new Promise(r=>setTimeout(r,0));
+  assert.equal(typeof clicarMarcador,'function');
   clicarMarcador();
   const conteudo=elCartao('ponto-cartao-conteudo');
   const temImg=nos=>nos.some(n=>n.tagName==='img'||temImg(n.children||[]));
@@ -1492,8 +1499,8 @@ async function validarCorrecoesFase2(){
  const el=id=>{if(!elementos.has(id))elementos.set(id,criar());return elementos.get(id);};
  const chips=['','reciclagem','agua'].map(c=>{const e=criar();e.dataset.categoriaOsm=c;e['aria-pressed']=c===''?'true':'false';return e;});
  const api=require('./public/pontos-osm');
- const env={EcoaMapaInicial:cfg,fetch:async()=>({ok:true,json:async()=>[]}),navigator:{onLine:true},addEventListener(){},L:{layerGroup:()=>({addTo(){return this;},clearLayers(){}})}};
- const ui=require('./public/pontos-osm-ui').iniciarPontosOSM({getElementById:el,createElement:criar,querySelectorAll:()=>chips,addEventListener(k,f){eventos[k]=f;}},env,{...api,criarClienteOSM:()=>({consultar(){}}),criarBuscaOSM:()=>({cancelar(){},agendar(...args){chamadas.push(args);}})});
+ const env={fetch:async()=>({ok:true,json:async()=>[]}),navigator:{onLine:true},addEventListener(){},setTimeout:fn=>{fn();return 1;},clearTimeout(){},L:{layerGroup:()=>({addTo(){return this;},clearLayers(){}})}};
+ const ui=require('./public/pontos-osm-ui').iniciarPontosOSM({getElementById:el,createElement:criar,querySelectorAll:()=>chips,addEventListener(k,f){eventos[k]=f;}},env,{...api,criarClienteOSM:()=>({consultar(...args){chamadas.push(args);return [];}})});
  assert.equal(chips[0]['aria-pressed'],'true');assert.equal(chips[1]['aria-pressed'],'false');assert.equal(chamadas.length,0);
  await ui.pronto;eventos['ecoa-rota']({detail:{tela:'na-cidade'}});
  ui.conectar({on(){},getZoom:()=>14,getBounds:()=>({getSouth:()=>-24.02,getWest:()=>-48.36,getNorth:()=>-24,getEast:()=>-48.34})});
@@ -1664,11 +1671,12 @@ async function validarIntegracaoBancoMapa(){
   },async cidades(){return cidadesBanco;}};
  const chips=['','agua','reciclagem'].map(c=>{const e=criar();e.dataset.categoriaOsm=c;return e;});
  let callbacks={};
- const env={EcoaMapaInicial:{},EcoaConfig:{},EcoaCompartilhados:{...sup,criarClientePontosCompartilhados:()=>clienteFake},
+ const env={EcoaMapaInicial:{},EcoaConfig:{},EcoaCompartilhados:{...sup,criarClientePontosCompartilhados:()=>clienteFake},setTimeout:fn=>{fn();return 1;},clearTimeout(){},
   EcoaBuscaCidade:{conectar:cb=>{callbacks=cb;}},fetch:async()=>({ok:true,json:async()=>[]}),navigator:{onLine:true},addEventListener(){},
   L:{layerGroup:()=>({addTo(){return this;},clearLayers(){}}),divIcon:()=>({}),marker:()=>({addTo(){return this;},on(){},getElement:()=>({isConnected:false})})}};
  const doc={getElementById:el,createElement:criar,querySelectorAll:()=>chips,addEventListener:(k,f)=>eventos[k]=f};
- const ui=require('./public/pontos-osm-ui').iniciarPontosOSM(doc,env,{...osm,criarBuscaOSM:()=>({cancelar(){},agendar(){}}),validarBaseOSM:()=>[],validarFixosOSM:()=>[]});
+ const ui=require('./public/pontos-osm-ui').iniciarPontosOSM(doc,env,{...osm,
+  criarClienteOSM:()=>({consultar:async()=>[]}),validarBaseOSM:()=>[],validarFixosOSM:()=>[]});
  const esperar=()=>new Promise(r=>setTimeout(r,650));
  chips[1].click();await ui.pronto;ui.conectar(mapa);await esperar();
  assert.equal(queries.length,1);assert.equal(el('osm-lista').children.length,1);
@@ -1679,31 +1687,33 @@ async function validarIntegracaoBancoMapa(){
   el('ponto-cartao-fechar').eventos.click();assert.equal(el('ponto-cartao').hidden,true);
 
  // Atualizar a mesma área não apaga os pontos enquanto a resposta vem.
- pendente={};ui.atualizar();assert.equal(el('osm-lista').children.length,1);await esperar();
+ pendente={};ui.atualizar({forcar:true});assert.equal(el('osm-lista').children.length,1);await esperar();
  assert.equal(queries.length,2);pendente.resolve({pontos:[pontoEm(bboxA,'db-2','Ponto 2')],limiteAtingido:false});pendente=null;
- await new Promise(r=>setTimeout(r,0));assert.equal(el('osm-lista').children.length,2);
- assert.match(JSON.stringify(el('osm-lista').children),/Ponto 1/);
+ await new Promise(r=>setTimeout(r,0));
+ assert.equal(el('osm-lista').children.length,1);
  assert.match(JSON.stringify(el('osm-lista').children),/Ponto 2/);
- // Arrastar consulta a nova área visível e acrescenta pontos sem remover os anteriores.
- bboxAtual=bboxB.slice();handlers.moveend();assert.equal(el('osm-lista').children.length,2);await esperar();
+ assert.doesNotMatch(JSON.stringify(el('osm-lista').children),/Ponto 1/);
+ // Arrastar troca o escopo para a nova área visível; a área anterior não fica como filtro oculto.
+ bboxAtual=bboxB.slice();handlers.moveend();assert.equal(el('osm-lista').children.length,0);await esperar();
  assert.equal(queries.length,3);assert.deepEqual(queries[2].bbox,bboxB);
- assert.equal(el('osm-lista').children.length,3);
- const textoAposArraste=JSON.stringify(el('osm-lista').children);
- assert.match(textoAposArraste,/Ponto 1/);assert.match(textoAposArraste,/Ponto 2/);assert.match(textoAposArraste,/Ponto 3/);
- // Um clique simples no mapa também não remove nada.
- handlers.moveend();await esperar();assert.equal(el('osm-lista').children.length,4);
+ assert.equal(el('osm-lista').children.length,1);
+ assert.match(JSON.stringify(el('osm-lista').children),/Ponto 3/);
+ // Um moveend sem mudança de área apenas revalida a consulta atual, sem limpar os pontos.
+ handlers.moveend();await esperar();assert.equal(queries.length,3);
+ ui.atualizar({forcar:true});await esperar();assert.equal(el('osm-lista').children.length,1);
  assert.match(JSON.stringify(el('osm-lista').children),/Ponto 4/);
  // Falha de rede não apaga os pontos disponíveis da região atual.
- falhar=true;ui.atualizar();await esperar();assert.equal(el('osm-lista').children.length,4);
+ const qAntesFalha=queries.length;
+ falhar=true;ui.atualizar({forcar:true});await esperar();assert.equal(el('osm-lista').children.length,1);
  assert.match(el('osm-status').textContent,/Mostrando pontos salvos/);
  falhar=false;
- // Resposta vazia válida também não apaga: os pontos já carregados ficam ancorados.
- vazio=true;handlers.moveend();await esperar();assert.equal(el('osm-lista').children.length,4);
- assert.doesNotMatch(el('osm-status').textContent,/Ainda não temos pontos cadastrados/);
- falhar=true;ui.atualizar();await esperar();assert.equal(el('osm-lista').children.length,4);
- assert.match(el('osm-banco-status').textContent,/pontos salvos/);assert.equal(el('osm-tentar').hidden,false);
- falhar=false;vazio=false;handlers.moveend();await esperar();assert.equal(el('osm-lista').children.length,5);
- // Trocar cidade consulta por cidade/UF e centraliza o mapa; navegar preserva a cidade e os pontos.
+ // Resposta vazia válida atualiza somente a fonte/consulta correspondente.
+ vazio=true;ui.atualizar({forcar:true});await esperar();assert.equal(el('osm-lista').children.length,0);
+ assert.match(el('osm-status').textContent,/Nenhum local encontrado com estes filtros/);
+ falhar=true;ui.atualizar({forcar:true});await esperar();assert.equal(el('osm-lista').children.length,0);
+ assert.match(el('osm-banco-status').textContent,/Não conseguimos atualizar agora/);assert.equal(el('osm-tentar').hidden,false);
+ falhar=false;vazio=false;ui.atualizar({forcar:true});await esperar();assert.equal(el('osm-lista').children.length,1);
+ // Trocar cidade consulta por cidade/UF e preserva a categoria escolhida.
  const qAntes=queries.length;
   callbacks.aoEndereco({nome:'Itapetininga',cidade:'Itapetininga',uf:'SP',latitude:-23.49,longitude:-48.01});
   assert.match(el('osm-filtro-ajuda').textContent,/Itapetininga\/SP/);
@@ -1711,11 +1721,10 @@ async function validarIntegracaoBancoMapa(){
   assert.equal(queries.at(-1).cidade,'Itapetininga');assert.equal(queries.at(-1).uf,'SP');
   assert.equal(queries.at(-1).categoria,'agua');assert.equal(queries.at(-1).bbox,undefined);
   assert.match(JSON.stringify(el('osm-lista').children),/em Itapetininga/);
+  // Arrastar após escolher cidade troca o escopo para a área visível.
   bboxAtual=bboxA.slice();handlers.moveend();
-  assert.match(el('osm-filtro-ajuda').textContent,/Itapetininga\/SP/);
-  assert.match(JSON.stringify(el('osm-lista').children),/em Itapetininga/);
-  await esperar();assert.equal(queries.at(-1).cidade,'Itapetininga');assert.equal(queries.at(-1).bbox,undefined);
-  assert.match(JSON.stringify(el('osm-lista').children),/em Itapetininga/);
+  assert.doesNotMatch(el('osm-filtro-ajuda').textContent,/Itapetininga\/SP/);
+  await esperar();assert.equal(queries.at(-1).cidade,undefined);assert.deepEqual(queries.at(-1).bbox,bboxA);
  // A RPC acrescenta cidades com cadastros aprovados; sem coordenadas, aoCidade não move o mapa.
   assert.deepEqual(await callbacks.buscarCidades('itap'),cidadesBanco.filter(c=>/itap/i.test(c.cidade)));
   const centroAntes=bboxAtual.slice();
@@ -1744,7 +1753,7 @@ async function validarIntegracaoBancoMapa(){
  eventos['ecoa-rota']({detail:{tela:'inicio'}});
  const html=fs.readFileSync('public/index.html','utf8');
  assert.doesNotMatch(html,/id="osm-cidade"|id="osm-nome"/);
- console.log('OK Integração banco/mapa: área visível, cidade por nome/UF e pela RPC, categoria preservada, arraste sem filtro oculto, vazio válido, falha sem apagar marcadores, resposta tardia e ponto em foco');
+ console.log('OK Integração banco/mapa: área visível, cidade por nome/UF e pela RPC, categoria preservada, arraste troca escopo sem filtro oculto, vazio válido, falha sem apagar marcadores, resposta tardia e ponto em foco');
 }
 validarIntegracaoBancoMapa().catch(e=>{console.error(e);process.exitCode=1;});
 
@@ -1769,134 +1778,81 @@ async function validarCadastroFase2(){
   const s={getItem:()=>null,setItem(){}};await assert.rejects(c.criarEnviosPontos(config,{storage:s,fetcher:async()=>({ok:false,status,json:async()=>({code:codigo,message:'<script>não mostrar</script>'})})}).cadastrar(dados),regex);
  }
  await assert.rejects(c.criarEnviosPontos(config,{storage:{getItem:()=>null,setItem(){}},fetcher:async()=>{throw TypeError('network');}}).cadastrar(dados),/conexão/);
- const html=fs.readFileSync('public/index.html','utf8');assert.match(html,/Cadastre apenas locais públicos\. Não informe endereço de casa nem dados pessoais\./);assert.match(html,/id="cadastro-localPublico"[^>]*required/);assert.match(html,/id="cadastro-endereco"[^>]*data-autocomplete-endereco/);
+ const html=fs.readFileSync('public/index.html','utf8');
+ for(const trecho of ['id="cadastro-abrir"','id="cadastro-painel"','cadastro-pontos-ui.js','Marcar um ponto','Enviar ponto','Confirmei a posição deste local'])
+  assert.doesNotMatch(html,new RegExp(trecho.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+ assert.match(html,/id="denuncia-dialogo"/);
+ assert.match(fs.readFileSync('public/pontos-osm-ui.js','utf8'),/Denunciar este ponto/);
+ assert.equal(typeof cli.cadastrar,'function');assert.equal(typeof cli.denunciar,'function');
  const sql=fs.readFileSync('supabase/testar-rls.sql','utf8');assert.match(sql,/set local role anon/);assert.match(sql,/rollback;/);assert.match(sql,/visitante criou aprovado/);assert.match(sql,/UPDATE não foi negado/);assert.match(sql,/DELETE não foi negado/);
- console.log('OK Cadastro fase 2: pendente forçado, validação, privacidade, honeypot, quota/data, armazenamento preservado, duplicados 100m, denúncia, erros rede/RLS/tabela e SQL de prova');
+ console.log('OK Contrato de envios: cadastro permanece no cliente/API (sem UI pública), pendente forçado, validação, honeypot, quota/data, armazenamento preservado, duplicados 100m, denúncia, erros rede/RLS/tabela e SQL de prova');
 }
 validarCadastroFase2().catch(e=>{console.error(e);process.exitCode=1;});
 
-async function validarInterfaceCadastroFase2(){
- const api=require('./public/cadastro-pontos'),osm=require('./public/pontos-osm'),comp=require('./public/pontos-compartilhados');
- const els=new Map();const el=id=>{if(!els.has(id))els.set(id,{value:'',checked:false,hidden:false,disabled:false,open:false,eventos:{},addEventListener(k,f){this.eventos[k]=f;},setAttribute(){},focus(){},scrollIntoView(){},reset(){},showModal(){this.open=true;},close(){this.open=false;},set innerHTML(v){throw Error('XSS');}});return els.get(id);};
- let posts=0,liberar,duplicate=false;const store=new Map(),eventos={};
- const env={EcoaConfig:{SUPABASE_URL:'https://teste.supabase.co',SUPABASE_ANON_KEY:'sb_publishable_teste'},EcoaCompartilhados:comp,EcoaPontosOSM:osm,ecoaPontosMapa:{todos:()=>[]},navigator:{onLine:true},localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)},setTimeout,clearTimeout,Enderecos:{consultarCep:async()=>null,localizarCadastro:async()=>null},fetch:async(u,o)=>{
-  if(o.method==='POST'){posts++;await new Promise(r=>liberar=r);return {ok:true};}
-  return {ok:true,json:async()=>duplicate?[{id:'ec0a0000-0000-4000-8000-000000000002',nome:'Praça Pública',categoria:'agua',lat:-24.01,lng:-48.35,status:'aprovado',verificado:false}]:[]};
- }};
- const ui=require('./public/cadastro-pontos-ui').iniciarCadastroPontos({getElementById:el,addEventListener:(k,f)=>eventos[k]=f},env,api);
- const valores={nome:'Praça Pública',cidade:'Capão Bonito',uf:'SP',categoria:'agua',endereco:'Rua Pública, 10',descricao:'Bebedouro',lat:'-24.01',lng:'-48.35'};
- for(const [k,v] of Object.entries(valores))el('cadastro-'+k).value=v;el('cadastro-localPublico').checked=true;el('cadastro-posicao-confirmada').checked=true;
- el('cadastro-abrir').eventos.click();assert.equal(el('cadastro-painel').hidden,false);
- const submit=()=>{el('cadastro-posicao-confirmada').checked=true;return el('cadastro-form').eventos.submit({preventDefault(){}});};
- duplicate=true;await submit();assert.equal(posts,0);assert.equal(el('cadastro-duplicado').hidden,false);assert.match(el('cadastro-duplicado-texto').textContent,/100 m/);
- el('cadastro-confirmar-duplicado').checked=true;const pending=submit();await new Promise(r=>setTimeout(r,0));await submit();assert.equal(posts,1);liberar();await pending;assert.match(el('cadastro-status').textContent,/Recebemos!/);assert.equal(el('cadastro-campos').disabled,false);
- env.navigator.onLine=false;await submit();assert.match(el('cadastro-status').textContent,/offline/);assert.equal(posts,1);
- ui.denunciar({bancoId:'ec0a0000-0000-4000-8000-000000000002',nome:'<img onerror=x>'});assert.equal(el('denuncia-local').textContent,'<img onerror=x>');assert.equal(el('denuncia-dialogo').open,true);
- el('denuncia-motivo').value='nao_existe';await el('denuncia-form').eventos.submit({preventDefault(){}});assert.match(el('denuncia-status').textContent,/offline/);assert.equal(posts,1);
- el('cadastro-endereco').eventos['endereco-selecionado']({detail:{cidade:'Itapeva',uf:'SP',bairro:'Centro',latitude:-23.98,longitude:-48.87}});assert.equal(el('cadastro-cidade').value,'Itapeva');assert.equal(el('cadastro-lat').value,'-23.980000');
- eventos['ecoa-rota']();assert.equal(el('denuncia-dialogo').open,false);
- console.log('OK Interface cadastro: endereço reutilizado, duplicado exige confirmação, bloqueio de duplo envio, mensagem offline, denúncia e texto seguro');
+async function validarInterfaceDenuncia(){
+ const fs=require('node:fs');
+ const html=fs.readFileSync('public/index.html','utf8'),fonte=fs.readFileSync('public/pontos-osm-ui.js','utf8');
+ assert.match(html,/id="denuncia-dialogo"/);
+ assert.match(html,/id="denuncia-motivo"/);
+ assert.match(html,/id="denuncia-form"/);
+ assert.match(fonte,/Denunciar este ponto/);
+ assert.match(fonte,/function denunciarPonto\(/);
+ for(const trecho of ['id="cadastro-abrir"','id="cadastro-painel"','cadastro-pontos-ui.js','Marcar um ponto','Enviar ponto','Confirmei a posição deste local'])
+  assert.doesNotMatch(html,new RegExp(trecho.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+ console.log('OK Interface pública: cadastro removido, denúncia preservada e texto seguro');
 }
-validarInterfaceCadastroFase2().catch(e=>{console.error(e);process.exitCode=1;});
+validarInterfaceDenuncia().catch(e=>{console.error(e);process.exitCode=1;});
 
-async function validarCadastroPosicao(){
-  const api=require('./public/cadastro-pontos'),osm=require('./public/pontos-osm'),comp=require('./public/pontos-compartilhados');
-  const els=new Map();const el=id=>{if(!els.has(id))els.set(id,{value:'',checked:false,hidden:false,disabled:false,eventos:{},dataset:{},addEventListener(k,f){this.eventos[k]=f;},setAttribute(){},focus(){},scrollIntoView(){},reset(){},showModal(){},close(){},set innerHTML(v){throw Error('XSS');}});return els.get(id);};
-  let agora=0,idTimer=0,posts=0;const timers=new Map(),cepChamadas=[],geoChamadas=[],pendentes=[];
-  const relogio={setTimeout(fn,ms){timers.set(++idTimer,{fn,quando:agora+ms});return idTimer;},clearTimeout(i){timers.delete(i);}};
-  const tick=async ms=>{agora+=ms;for(const [i,t]of [...timers])if(t.quando<=agora){timers.delete(i);t.fn();}for(let j=0;j<10;j++)await Promise.resolve();};
-  let geoResposta={latitude:-24,longitude:-48};
-  const env={EcoaConfig:{SUPABASE_URL:'https://teste.supabase.co',SUPABASE_ANON_KEY:'sb_publishable_teste'},EcoaCompartilhados:comp,EcoaPontosOSM:osm,ecoaPontosMapa:{todos:()=>[]},
-    navigator:{onLine:true},localStorage:{getItem:()=>null,setItem(){}},...relogio,
-    Enderecos:{
-      consultarCep:async texto=>{
-        cepChamadas.push(texto);
-        if(texto==='99999999')return null;
-        if(texto==='11111111')throw Object.assign(Error('offline'),{codigoCep:'indisponivel'});
-        if(texto==='33333333')throw Object.assign(Error('json'),{codigoCep:'invalido'});
-        if(texto==='44444444')throw new TypeError('network');
-        if(texto==='22222222')return new Promise(resolve=>pendentes.push(resolve));
-        return {cep:'18300-000',endereco:'Rua A',bairro:'Centro',cidade:'Capão Bonito',uf:'SP'};
-      },
-      localizarCadastro:async dados=>{geoChamadas.push(dados);return geoResposta;},
-      reverter:async()=>({endereco:'Rua Revertida',bairro:'Centro',cidade:'Capão Bonito',uf:'SP'})
-    },
-    fetch:async(u,o)=>{
-      if(o?.method==='POST'){posts++;return {ok:true};}
-      return {ok:true,json:async()=>[]};
-    }};
-  require('./public/cadastro-pontos-ui').iniciarCadastroPontos({getElementById:el,addEventListener(){}},env,api);
-  const digitar=(campo,valor)=>{el(campo).value=valor;el(campo).eventos.input({target:el(campo)});};
-  const status=()=>el('cadastro-status').textContent,cepStatus=()=>el('cadastro-cep-status').textContent;
-  const confirmada=()=>el('cadastro-posicao-confirmada').checked;
-
-  digitar('cadastro-cep','18300');assert.match(cepStatus(),/incompleto/);
-  digitar('cadastro-cep','18300000A');await tick(400);assert.match(cepStatus(),/inválido/);assert.equal(cepChamadas.length,0);
-  digitar('cadastro-cep','18300-000');await tick(350);
-  assert.deepEqual(cepChamadas,['18300-000']);assert.equal(el('cadastro-endereco').value,'Rua A');
-  assert.equal(el('cadastro-cidade').value,'Capão Bonito');assert.equal(el('cadastro-uf').value,'SP');assert.equal(confirmada(),false);
-  digitar('cadastro-endereco','Rua Manual');assert.equal(el('cadastro-endereco').dataset.autoEndereco,undefined);
-  digitar('cadastro-cep','18300001');await tick(350);assert.equal(el('cadastro-endereco').value,'Rua Manual');
-  digitar('cadastro-cep','22222222');await tick(350);assert.equal(pendentes.length,1);
-  el('cadastro-cep-buscar').eventos.click();await tick(0);assert.equal(pendentes.length,1);
-  digitar('cadastro-cep','18300002');await tick(350);pendentes[0]({cep:'99999-999',endereco:'Rua Antiga',cidade:'Capão Bonito',uf:'SP'});
-  await tick(0);assert.equal(el('cadastro-cep').value,'18300-000');assert.notEqual(el('cadastro-cep').value,'99999-999');
-  digitar('cadastro-cep','99999999');await tick(350);assert.match(cepStatus(),/inexistente/);
-  digitar('cadastro-cep','11111111');await tick(350);assert.match(cepStatus(),/indisponível/);
-  digitar('cadastro-cep','33333333');await tick(350);assert.match(cepStatus(),/inválida/);
-  digitar('cadastro-cep','44444444');await tick(350);assert.match(cepStatus(),/indisponível/);
-
-  el('cadastro-cep').value='';el('cadastro-cep').eventos.input({target:el('cadastro-cep')});
-  digitar('cadastro-endereco','Rua A');digitar('cadastro-numero','10');
-  await tick(600);
-  assert.equal(geoChamadas.at(-1).numero,'10');assert.equal(geoChamadas.at(-1).cidade,'Capão Bonito');
-  assert.equal(el('cadastro-lat').value,'-24.000000');assert.equal(el('cadastro-lng').value,'-48.000000');
-  assert.equal(confirmada(),false);assert.equal(status(),'Confira a posição do local no mapa.');
-  assert.equal(el('cadastro-posicao-ajuda').textContent,'Confira a posição do local no mapa.');
-
-  // Editar o CEP não pode guardar coordenadas antigas com a confirmação marcada.
-  el('cadastro-posicao-confirmada').checked=true;
-  digitar('cadastro-cep','18300-999');
-  assert.equal(el('cadastro-lat').value,'');assert.equal(el('cadastro-lng').value,'');assert.equal(confirmada(),false);
-  el('cadastro-cep').value='';el('cadastro-cep').eventos.input({target:el('cadastro-cep')});
-  digitar('cadastro-endereco','Rua A');digitar('cadastro-numero','10');await tick(600);
-  assert.equal(el('cadastro-lat').value,'-24.000000');assert.equal(confirmada(),false);
-
-  el('cadastro-nome').value='Praça Pública';el('cadastro-categoria').value='agua';el('cadastro-descricao').value='Bebedouro público';
-  el('cadastro-localPublico').checked=true;
-  const submit=()=>el('cadastro-form').eventos.submit({preventDefault(){}});
-  await submit();assert.equal(posts,0);assert.match(status(),/Confirme a posição/);
-  el('cadastro-posicao-confirmada').checked=true;await submit();assert.equal(posts,1);assert.match(status(),/Recebemos!/);
-
-  geoResposta=null;digitar('cadastro-endereco','Rua Nova');await tick(600);
-  assert.equal(el('cadastro-lat').value,'');assert.equal(el('cadastro-lng').value,'');
-  assert.equal(confirmada(),false);assert.equal(status(),'Não encontramos a posição exata. Marque o local no mapa.');
-  geoResposta={latitude:0,longitude:0};el('cadastro-sem-numero').checked=true;el('cadastro-sem-numero').eventos.change({target:el('cadastro-sem-numero')});
-  await tick(600);assert.equal(el('cadastro-numero').disabled,true);assert.equal(geoChamadas.at(-1).numero,'');
-  assert.equal(el('cadastro-lat').value,'0.000000');assert.match(htmlCadastro(),/Confirmei a posição deste local\./);
-  el('cadastro-endereco').value='';el('cadastro-lat').value='-24.5';el('cadastro-lng').value='-48.5';
-  el('cadastro-lat').eventos.change({target:el('cadastro-lat')});await tick(0);
-  assert.equal(el('cadastro-lat').value,'-24.500000');assert.equal(el('cadastro-endereco').value,'Rua Revertida');
-  console.log('OK Cadastro com CEP: debounce hifenizado/sem hífen, estados de erro, ordem, edição manual, geocódigo com número, divergência, zero, limpeza e confirmação obrigatória');
+async function validarBuscaEnderecoConsulta(){
+ const fs=require('node:fs');
+ const busca=require('./public/cidade-busca');
+ const relogio={setTimeout,clearTimeout};
+ const servico=busca.criarServicoBuscaCidade({
+  buscarPontos:async termo=>termo==='ponto'?[{id:'p1',nome:'Ponto da busca',categoria:'reciclagem',cidade:'Capão Bonito',UF:'SP'}]:[],
+  buscarCidades:async termo=>termo==='ita'?[{cidade:'Itapetininga',uf:'SP'},{cidade:'Itapeva',uf:'SP'},{cidade:'Inválida',uf:'X'}]:[],
+  provedorEnderecos:async termo=>termo==='18300000'?[{nome:'Rua A',cidade:'Capão Bonito',uf:'SP',latitude:-24.01,longitude:-48.35,cep:'18300-000'}]:termo==='falha'?Promise.reject(Error('rede')):[],
+  criarServico:(p)=>async(termo,opcoes)=>p(termo,opcoes),
+  relogio
+ });
+ const Pontos=await servico.buscar('ponto');
+ assert.equal(Pontos[0].tipo,'ponto');assert.equal(Pontos[0].ponto.nome,'Ponto da busca');
+ const cidades=await servico.buscar('ita');
+ assert.deepEqual(cidades.map(c=>c.nome),['Itapetininga','Itapeva']);
+ assert.ok(cidades.every(c=>c.origemCidade===true&&c.endereco));
+ const endereco=await servico.buscar('18300000');
+ assert.equal(endereco[0].tipo,'endereco');assert.equal(endereco[0].endereco.cep,'18300-000');
+ assert.equal(Number.isFinite(endereco[0].endereco.latitude),true);
+ assert.deepEqual(await servico.buscar('falha'),[]);
+ assert.deepEqual(await servico.buscar('ab'),[]);
+ const estados=[];
+ const controle=busca.criarControleBuscaCidade({buscar:async()=>[{tipo:'endereco',nome:'Capão Bonito',endereco:{cidade:'Capão Bonito',uf:'SP',origemCidade:true}}],atualizar:(e,i)=>estados.push([e,i.length]),relogio});
+ controle.cancelar();await controle.executar('capão bonito');assert.equal(estados.at(-1)[0],'pronto');
+ const html=fs.readFileSync('public/index.html','utf8');
+ assert.match(html,/placeholder="Busque uma cidade, endereço, CEP ou local"/);
+ assert.match(html,/Encontre lugares para reciclar, doar e cuidar do seu bairro\./);
+ assert.doesNotMatch(html,/Marcar um ponto|Enviar ponto|Confirmei a posição deste local/);
+ console.log('OK Busca por cidade/endereço/CEP preservada como consulta, sem cadastro público');
 }
 function htmlCadastro(){return require('node:fs').readFileSync('public/index.html','utf8');}
-validarCadastroPosicao().catch(e=>{console.error(e);process.exitCode=1;});
+validarBuscaEnderecoConsulta().catch(e=>{console.error(e);process.exitCode=1;});
 
 async function validarTelaNaCidade(){
  const fs=require('node:fs');
  const html=fs.readFileSync('public/index.html','utf8'),css=fs.readFileSync('public/pontos-osm.css','utf8');
  for(const trecho of ['<h1 class="tela-titulo" id="tela-na-cidade-titulo" tabindex="-1">Na cidade</h1>',
-  'Encontre onde reciclar, doar e cuidar do seu bairro.',
-  'Conhece um lugar útil? Marque no mapa para ajudar outras pessoas a fazer a diferença.',
-  'placeholder="Busque um lugar, endereço, CEP ou cidade"','>Marcar um ponto</button>','<summary>Filtros</summary>',
-  '<summary>Ver lista</summary>','<summary>Mais informações (opcional)</summary>','<summary>Ajustar coordenadas</summary>',
-  'Ainda não temos pontos cadastrados nesta região.',
-  'Cadastre apenas locais públicos. Não informe endereço de casa nem dados pessoais.',
-  'Este é um local público','>Enviar ponto</button>',
-  'O que dá para fazer aqui?','pontos-cache.js','cidade-busca.js','categorias-pontos.js']){
-  assert.ok(fs.readFileSync('public/cadastro-pontos-ui.js','utf8').includes('Recebemos! Seu ponto aparecerá depois da aprovação.'));
+  'Encontre lugares para reciclar, doar e cuidar do seu bairro.',
+  'placeholder="Busque uma cidade, endereço, CEP ou local"',
+  '<summary>Ver lista</summary>','id="osm-filtro-ajuda"','id="osm-status"',
+  'id="osm-vazio-texto"','Nenhum local encontrado com estes filtros.',
+  'id="osm-vazio-atualizar"','id="osm-vazio-limpar"','id="osm-vazio-cidade"','id="osm-vazio-ampliar"',
+  'id="denuncia-dialogo"','pontos-cache.js','cidade-busca.js','categorias-pontos.js']){
   assert.ok(html.includes(trecho),trecho);
  }
+ for(const proibido of ['Marcar um ponto','Enviar ponto','Confirmei a posição deste local','Conhece um lugar útil?','Ainda não temos pontos cadastrados','cadastro-pontos-ui.js','id="cadastro-abrir"','id="cadastro-painel"'])
+  assert.doesNotMatch(html,new RegExp(proibido.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')),proibido);
+ const uiFonte=fs.readFileSync('public/pontos-osm-ui.js','utf8');
+ for(const texto of ['Buscando locais nesta região…','Mostrando pontos salvos','Não conseguimos atualizar agora.','Nenhum local encontrado com estes filtros.'])
+  assert.ok(uiFonte.includes(texto),texto);
  assert.equal((html.match(/id="ponto-cartao-titulo"/g)||[]).length,1);
  assert.match(fs.readFileSync('public/cidade-publica.js','utf8'),/cidade-busca-selecionada/);
  assert.match(fs.readFileSync('public/cadastro-pontos-ui.js','utf8'),/cidade-busca-selecionada/);
@@ -2028,7 +1984,7 @@ async function validarTelaNaCidade(){
  const opcoes=listaBusca.querySelectorAll('[role="option"]');
  opcoes.find(x=>x.dataset.tipoBusca==='endereco').click();
  assert.equal(pontoCriado,0);assert.equal(aoEndereco,0);
- assert.match(areaBusca.children.at(-1).textContent,/Nenhum ponto foi criado/);
+ assert.match(areaBusca.children.at(-1).textContent,/sem posição confirmada no mapa/);
  inputBusca.value='Itapeva';await uiBusca.buscar(inputBusca.value);
  const lista2=inputBusca.parentNode.children.find(x=>x.id==='cidade-sugestoes');
  const opcaoCidade=lista2.querySelectorAll('[role="option"]').find(x=>x.dataset.tipoBusca==='endereco');
@@ -2078,11 +2034,9 @@ async function validarTelaNaCidade(){
  const htmlFiltro=html.match(/<div class="osm-chips"[\s\S]*?<\/div>/)[0];
  assert.doesNotMatch(htmlFiltro,/data-categoria-osm="(?:verde|outros|todos)"/);
  assert.ok(htmlFiltro.includes('data-categoria-osm="horta"'));assert.ok(htmlFiltro.includes('data-categoria-osm="outro"'));
- for(const valor of cats.CATEGORIAS_PONTOS.map(c=>c.valor))assert.ok(html.includes('<option value="'+valor+'">'));
+ for(const valor of cats.CATEGORIAS_PONTOS.map(c=>c.valor))assert.ok(htmlFiltro.includes('data-categoria-osm="'+valor+'"'));
  assert.doesNotMatch(html,/<option value="(?:todos|verde|outros)"/);
- assert.ok(html.includes('placeholder="Ex.: recebe papel'));
- assert.ok(html.includes('Não é enviado automaticamente e não cria um ponto.'));
- assert.doesNotMatch(html,/id="cadastro-descricao"[^>]*>Ex\.:/);
+ assert.doesNotMatch(html,/placeholder="Ex\.: recebe papel|Não é enviado automaticamente e não cria um ponto|id="cadastro-descricao"/);
  const uiPontosFonte=fs.readFileSync('public/pontos-osm-ui.js','utf8');
  assert.doesNotMatch(uiPontosFonte,/Sugerir correção|Sugerir ao Ecoa|osm-sug/);
  assert.match(uiPontosFonte,/Denunciar este ponto/);
@@ -2144,32 +2098,36 @@ async function validarBasesRegionais(){
  const els=new Map(),el=id=>{if(!els.has(id))els.set(id,criar());return els.get(id);};
  const chips=['','reciclagem','horta'].map(c=>{const e=criar();e.dataset.categoriaOsm=c;return e;});
  const doc={getElementById:el,createElement:criar,querySelectorAll:()=>chips,addEventListener(){}};
- const handlers={};let cancelacoes=0;
+ const handlers={};
  const mapa={on(n,f){handlers[n]=f;return this;},getZoom:()=>13,fitBounds(){return this;},
   getBounds:()=>({getSouth:()=>-24.02,getWest:()=>-48.36,getNorth:()=>-24,getEast:()=>-48.34}),
   getCenter:()=>({lat:-24.01,lng:-48.35}),setView(){return this;}};
  let callbacks={};
- const env={EcoaMapaInicial:{},EcoaConfig:{},EcoaBasesRegiao:bases,
+ const env={EcoaMapaInicial:{},EcoaConfig:{},EcoaBasesRegiao:bases,sessionStorage:storage,
   EcoaBuscaCidade:{conectar:cb=>{callbacks=cb;}},
   fetch:fetcher,navigator:{onLine:false},addEventListener(){},
   L:{layerGroup:()=>({addTo(){return this;},clearLayers(){}}),divIcon:()=>({}),
     latLngBounds:coords=>({pad(){return this;}}),marker:()=>({addTo(){return this;},on(){},getElement:()=>({isConnected:false})})}};
- const ui=require('./public/pontos-osm-ui').iniciarPontosOSM(doc,env,{...osm,criarBuscaOSM:()=>({cancelar(){cancelacoes++;},agendar(){}}),validarBaseOSM:()=>[],validarFixosOSM:()=>[]});
- await ui.pronto;ui.conectar(mapa);
+ const ui=require('./public/pontos-osm-ui').iniciarPontosOSM(doc,env,{...osm,validarBaseOSM:()=>[],validarFixosOSM:()=>[]});
+ await ui.pronto;ui.conectar(mapa);chips[1].click();
  const esperar=()=>new Promise(r=>setTimeout(r,80));
  callbacks.aoCidade({cidade:'Itapetininga',uf:'SP'});await esperar();
- const cancelacoesAntes=cancelacoes;handlers.moveend();
- assert.ok(cancelacoes>cancelacoesAntes,'moveend após enquadrar deve atualizar');
+ const cidadeAntes=ui.estado().regiao.chave;handlers.moveend();
+ assert.equal(ui.estado().regiao.chave,cidadeAntes,'moveend sem mudar área mantém a cidade');
  const texto=()=>JSON.stringify(el('osm-lista').children);
  assert.match(texto(),/COOPERITA/);assert.doesNotMatch(texto(),/Parque das Águas/);
  assert.match(el('osm-filtro-ajuda').textContent,/Base importada: 6 registros/);
- assert.match(el('osm-status').textContent,/6 pontos encontrados/);
+ assert.match(el('osm-status').textContent,/Mostrando pontos salvos|6 pontos encontrados/);
  callbacks.aoCidade({cidade:'Capão Bonito',uf:'SP'});await esperar();
- assert.match(texto(),/Parque das Águas/);assert.doesNotMatch(texto(),/COOPERITA/);
+ // Trocar de cidade preserva a categoria: reciclagem continua ativa.
+ assert.match(texto(),/Centro de reciclagem/);assert.doesNotMatch(texto(),/COOPERITA/);
  assert.match(el('osm-filtro-ajuda').textContent,/cidade e arredores/);
+ chips[0].click();await esperar();
+ assert.match(texto(),/Parque das Águas/);
+ const todos=el('osm-lista').children.length;
  chips[1].click();await esperar();
  const sobraram=el('osm-lista').children;
- assert.ok(sobraram.length>0&&sobraram.length<69);
+ assert.ok(sobraram.length>0&&sobraram.length<todos);
  assert.ok(sobraram.every(p=>p.children[0]?.textContent==='Reciclagem'));
  chips[0].click();await esperar();
  callbacks.aoCidade({cidade:'Buri',uf:'SP'});await esperar();
@@ -2178,7 +2136,7 @@ async function validarBasesRegionais(){
  callbacks.aoCidade({cidade:'Presidente Prudente',uf:'SP'});await esperar();
  assert.equal(el('osm-lista').children.length,0);
  assert.match(el('osm-filtro-ajuda').textContent,/Ainda não há base importada/);
- assert.match(el('osm-status').textContent,/Ainda não temos pontos cadastrados/);
+ assert.match(el('osm-status').textContent,/Nenhum local encontrado com estes filtros/);
  callbacks.aoCidade({cidade:'Capão Bonito',uf:'SP'});await esperar();
  assert.match(texto(),/Parque das Águas/);
  handlers.moveend();await esperar();
@@ -2217,7 +2175,7 @@ function validarAcoesNosPontos(){
  const sw=fs.readFileSync('public/sw.js','utf8');
  assert.ok(html.includes('acoes-pontos.js'));
  assert.match(sw,/acoes-pontos\.js/);
- assert.match(sw,/prefixo \+ 'v60'/);
+ assert.match(sw,/prefixo \+ 'v61'/);
  console.log('OK Ações por ponto: regras por categoria, ODS existentes, passos curtos e texto educativo');
 }
 validarAcoesNosPontos();

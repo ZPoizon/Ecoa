@@ -59,8 +59,13 @@ test('cartões de ponto preservam descrição e origem com uma ação por finali
   const rotulos = rotulosDasAcoes(acoes);
 
   assert.equal(acoes.className, 'buttons ponto-botoes');
+  assert.equal(item.children.filter(filho => filho.className === 'buttons ponto-botoes').length, 1);
+  assert.equal(item.children[0].textContent, 'Reciclagem');
   assert.match(item.textContent, /Recebe plástico e papel em horário comercial\./);
-  assert.match(item.textContent, /Fonte: curadoria do Ecoa/);
+  assert.match(item.textContent, /O que dá para fazer aqui\?/);
+  assert.match(item.textContent, /Ação sugerida pelo Ecoa/);
+  assert.match(item.textContent, /Antes de ir:/);
+  assert.match(item.textContent, /Fonte: curadoria do Ecoa · Verificado pelo Ecoa/);
   assert.equal(rotulos.filter(rotulo => rotulo === 'Como chegar').length, 1);
   assert.equal(rotulos.filter(rotulo => rotulo === 'Consultar fonte').length, 1);
   assert.equal(rotulos.filter(rotulo => rotulo === 'Site do local').length, 1);
