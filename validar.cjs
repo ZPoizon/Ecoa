@@ -444,7 +444,29 @@ function validarCartaoPonto() {
   assert.equal(textos.filter(texto=>texto.includes('Fonte: OpenStreetMap')).length,1);
   assert.equal(textos.filter(texto=>texto.includes('Origem:')).length,0);
   assert.ok(textos.includes('Confirme as informações antes de ir.'));
-  console.log('OK Cartão do mapa: uma ação “Como chegar”, fontes consolidadas e ações agrupadas');
+  assert.equal(rotulos.filter(texto=>texto==='Como chegar').length,1);
+  const chegar=acoes.children.find(filho=>filho.textContent==='Como chegar');
+  assert.match(chegar.href,/^https:\/\/www\.google\.com\/maps\/dir\/\?api=1&destination=/);
+  assert.equal(chegar.target,'_blank');assert.equal(chegar.rel,'noopener noreferrer');
+  const rota=osm.montarLinkRotaOSM({latitude:-24.0798253,longitude:-48.3835514});
+  const url=new URL(rota);
+  assert.equal(url.origin,'https://www.google.com');
+  assert.equal(url.pathname,'/maps/dir/');
+  assert.equal(url.searchParams.get('api'),'1');
+  assert.equal(url.searchParams.get('destination'),'-24.0798253,-48.3835514');
+  assert.equal(url.searchParams.has('origin'),false);
+  assert.equal(url.searchParams.has('travelmode'),false);
+  assert.equal(osm.montarLinkRotaOSM({latitude:0,longitude:0}),'https://www.google.com/maps/dir/?api=1&destination=0%2C0');
+  assert.equal(osm.montarLinkRotaOSM({latitude:'0',longitude:'0'}),'https://www.google.com/maps/dir/?api=1&destination=0%2C0');
+  for(const invalido of [{},{latitude:undefined,longitude:1},{latitude:null,longitude:1},{latitude:NaN,longitude:1},
+    {latitude:'undefined',longitude:'1'},{latitude:'abc',longitude:'1'},{latitude:91,longitude:1},{latitude:1,longitude:181}]){
+    assert.equal(osm.montarLinkRotaOSM(invalido),null);
+  }
+  assert.match(osm.montarLinkRotaOSM({endereco:'Rua das Flores',cidade:'Sorocaba',UF:'SP'}),/destination=Rua\+das\+Flores/);
+  assert.equal(osm.montarLinkRotaOSM({endereco:'Praça'}),null);
+  assert.equal(osm.montarLinkRotaOSM({cidade:'Sorocaba',UF:'SP'}),null);
+  assert.doesNotMatch(require('node:fs').readFileSync('public/pontos-osm.js','utf8'),/geolocation/);
+  console.log('OK Cartão do mapa: uma ação “Como chegar”, rota Google Maps validada e fontes consolidadas');
 }
 validarCartaoPonto();
 
@@ -1099,7 +1121,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v56'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v57'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -2087,7 +2109,7 @@ function validarAcoesNosPontos(){
  const sw=fs.readFileSync('public/sw.js','utf8');
  assert.ok(html.includes('acoes-pontos.js'));
  assert.match(sw,/acoes-pontos\.js/);
- assert.match(sw,/prefixo \+ 'v56'/);
+ assert.match(sw,/prefixo \+ 'v57'/);
  console.log('OK Ações por ponto: regras por categoria, ODS existentes, passos curtos e texto educativo');
 }
 validarAcoesNosPontos();

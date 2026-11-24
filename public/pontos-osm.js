@@ -124,6 +124,38 @@ function pontosDisponiveisOSM(fixos,salvos,vivos,categoria,bbox){
  // Curadoria tem prioridade; dados ao vivo atualizam a cópia pelo mesmo ID.
  return mesclarPontosOSM(filtrar(fixos),[...filtrar(vivos),...filtrar(salvos)]);
 }
+// Rota externa: Google Maps recebe só o destino. Origens e meio de transporte
+// ficam com o aplicativo do Maps, que decide com base na permissão disponível.
+function coordenadasRotaOSM(latitude,longitude){
+ const numero=valor=>typeof valor==='string'&&valor.trim()!==''?Number(valor.replace(',','.')):valor;
+ const lat=numero(latitude),lng=numero(longitude);
+ if(typeof lat!=='number'||typeof lng!=='number'||!Number.isFinite(lat)||!Number.isFinite(lng))return null;
+ if(Math.abs(lat)>90||Math.abs(lng)>180)return null;
+ // Zero é coordenada válida; não pode ser tratado como ausência.
+ return {latitude:lat,longitude:lng};
+}
+function destinoRotaOSM(ponto){
+ const coord=coordenadasRotaOSM(ponto?.latitude,ponto?.longitude);
+ if(coord)return `${coord.latitude},${coord.longitude}`;
+ const texto=valor=>typeof valor==='string'?valor.trim():'';
+ const rua=texto(ponto?.endereco),cidade=texto(ponto?.cidade),uf=texto(ponto?.UF);
+ if(rua.length<3||cidade.length<2||!/^[A-Za-z]{2}$/.test(uf))return null;
+ return [rua,texto(ponto?.numero),texto(ponto?.bairro),cidade,uf,'Brasil'].filter(Boolean).join(', ');
+}
+function montarLinkRotaOSM(ponto){
+ const destino=destinoRotaOSM(ponto);if(!destino)return null;
+ const url=new URL('https://www.google.com/maps/dir/');
+ url.searchParams.set('api','1');url.searchParams.set('destination',destino);
+ return url.href;
+}
+function criarLinkRotaOSM(doc,ponto){
+ const href=montarLinkRotaOSM(ponto);if(!href)return null;
+ const a=doc.createElement('a');a.textContent='Como chegar';a.href=href;
+ a.target='_blank';a.rel='noopener noreferrer';a.className='ecoa-button secondary';
+ const nome=typeof ponto?.nome==='string'?ponto.nome.trim():'';
+ a.setAttribute?.('aria-label',`Como chegar até ${nome||'este local'} no Google Maps (abre em nova aba)`);
+ return a;
+}
 function preencherCartaoPonto(doc,item,p,opcoes={}){
  const texto=(tag,t,classe)=>{const el=doc.createElement(tag);el.textContent=String(t);if(classe)el.className=classe;item.append(el);return el;};
  texto('p',(categoriasOSM[categoriaMapaOSM(p.categoria)]||{nome:'Outro'}).nome,'ponto-categoria');
@@ -177,12 +209,12 @@ function preencherCartaoPonto(doc,item,p,opcoes={}){
    acoes.append(salvar);
   }
  }
- const rota=`https://www.openstreetmap.org/directions?to=${encodeURIComponent(p.latitude+','+p.longitude)}`;
- for(const [rotulo,valor] of [['Como chegar',rota],['Site do local',p.site],['Consultar fonte',p.fonte]]){
+ const rota=criarLinkRotaOSM(doc,p);if(rota)acoes.append(rota);
+ for(const [rotulo,valor] of [['Site do local',p.site],['Consultar fonte',p.fonte]]){
   try{const u=new URL(valor);if(u.protocol!=='https:'||u.username||u.password)continue;const a=doc.createElement('a');a.textContent=rotulo;a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';a.className='ecoa-button secondary';acoes.append(a);}catch{}
  }
  item.append(acoes);
  return acoes;
 }
-const apiPontosOSM={validarBaseOSM,pontosDisponiveisOSM,categoriaMapaOSM,preencherCartaoPonto,categoriasOSM,servidoresOSM,areaOSM,montarConsultaOSM,converterPontosOSM,validarFixosOSM,distanciaOSM,nomesParecidosOSM,mesclarPontosOSM,dentroAreaOSM,criarClienteOSM,criarBuscaOSM};
+const apiPontosOSM={validarBaseOSM,pontosDisponiveisOSM,categoriaMapaOSM,preencherCartaoPonto,coordenadasRotaOSM,destinoRotaOSM,montarLinkRotaOSM,criarLinkRotaOSM,categoriasOSM,servidoresOSM,areaOSM,montarConsultaOSM,converterPontosOSM,validarFixosOSM,distanciaOSM,nomesParecidosOSM,mesclarPontosOSM,dentroAreaOSM,criarClienteOSM,criarBuscaOSM};
 if(typeof module!=='undefined')module.exports=apiPontosOSM;else window.EcoaPontosOSM=apiPontosOSM;
