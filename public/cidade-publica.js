@@ -47,7 +47,6 @@ function iniciarMapaPublico(doc, ambiente) {
       };
       mapa.on('moveend', vies); vies();
       ambiente.ecoaPontosMapa?.conectar(mapa);
-      ambiente.ecoaCadastro?.conectar(mapa);
       $('cidade-mapa-abertura').hidden = true;
       aviso('Mapa aberto. Os mesmos locais estão na lista “Ver lista”.');
     } catch {

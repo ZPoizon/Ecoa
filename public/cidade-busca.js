@@ -175,8 +175,8 @@ function iniciarBuscaCidade(doc, ambiente, api = {}) {
     lista.hidden = estado !== 'pronto';
     input.setAttribute('aria-expanded', String(!lista.hidden));
     status.textContent = ({
-      carregando: 'Buscando…', vazio: 'Nenhum resultado. Você pode marcar um ponto.',
-      erro: 'Busca indisponível. Você ainda pode marcar um ponto.',
+      carregando: 'Buscando…', vazio: 'Nenhum resultado. Tente outro termo.',
+      erro: 'Busca indisponível. Tente novamente.',
       fechado: '', pronto: `${itens.length} resultados. Use as setas para escolher.`
     })[estado];
     if (lista.hidden) return;
@@ -222,17 +222,16 @@ function iniciarBuscaCidade(doc, ambiente, api = {}) {
           callbacks.aoCidade?.({ cidade: p.cidade, uf: p.uf });
         }
       } else {
-        status.textContent = 'Endereço encontrado, mas sem posição confirmada. Nenhum ponto foi criado.';
+        status.textContent = 'Endereço encontrado, mas sem posição confirmada no mapa.';
       }
     }
-    // Quando o mapa já recebeu a seleção pelos callbacks, o evento serve apenas
-    // para preencher o cadastro (se estiver aberto), sem centralizar o mapa de novo.
+    // O evento também avisa quem ouviu a seleção, sem centralizar o mapa duas vezes.
     const jaTratado = typeof callbacks.aoPonto === 'function' || typeof callbacks.aoEndereco === 'function' || typeof callbacks.aoCidade === 'function';
     input.dispatchEvent(new ambiente.CustomEvent('cidade-busca-selecionada', { bubbles: true, detail: { ...item, jaTratado } }));
   }
   async function confirmar() {
     const resultados = await controle.executar(input.value);
-    if (!resultados.length) { status.textContent = 'Nenhum resultado. Você pode marcar um ponto.'; return []; }
+    if (!resultados.length) { status.textContent = 'Nenhum resultado. Tente outro termo.'; return []; }
     selecionar(resultados[0]);
     return resultados;
   }
