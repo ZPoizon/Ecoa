@@ -1,6 +1,6 @@
 // Incremente a versão ao atualizar arquivos armazenados para uso offline.
 const prefixo = 'oqdpf:' + self.registration.scope + ':';
-const versao = prefixo + 'v61';
+const versao = prefixo + 'v62';
 const cacheBases = prefixo + 'bases-v1';
 const LIMITE_BASES = 6;
 const arquivos = [
