@@ -426,6 +426,28 @@ function validarFocoProgramatico() {
 }
 validarFocoProgramatico();
 
+function validarCartaoPonto() {
+  const osm=require('./public/pontos-osm');
+  const criar=tag=>({tag,children:[],textContent:'',className:'',
+    append(...filhos){this.children.push(...filhos);},
+    prepend(filho){this.children.unshift(filho);},
+    querySelector(seletor){const classe=seletor.replace('.','');return this.children.find(filho=>String(filho.className).split(' ').includes(classe))||null;}});
+  const ponto={id:'teste',nome:'Local de teste',categoria:'agua',origem:'osm',latitude:-24,longitude:-48,
+    endereco:'Rua de teste',cidade:'Capão Bonito',UF:'SP',fonte:'https://example.org/fonte'};
+  const cartao=criar('li');osm.preencherCartaoPonto({createElement:criar},cartao,ponto);
+  const acoes=cartao.querySelector('.ponto-botoes');
+  assert.ok(acoes,'cartão deve ter uma única barra de ações');
+  const rotulos=acoes.children.map(filho=>filho.textContent);
+  assert.equal(rotulos.filter(texto=>texto==='Como chegar').length,1);
+  assert.equal(cartao.children.filter(filho=>filho.textContent==='Como chegar').length,0);
+  const textos=cartao.children.map(filho=>filho.textContent);
+  assert.equal(textos.filter(texto=>texto.includes('Fonte: OpenStreetMap')).length,1);
+  assert.equal(textos.filter(texto=>texto.includes('Origem:')).length,0);
+  assert.ok(textos.includes('Confirme as informações antes de ir.'));
+  console.log('OK Cartão do mapa: uma ação “Como chegar”, fontes consolidadas e ações agrupadas');
+}
+validarCartaoPonto();
+
 function validarCartoesGuias() {
   const {runInNewContext} = require('node:vm');
   const {readFileSync} = require('node:fs');
@@ -1077,7 +1099,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v55'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v56'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1557,9 +1579,9 @@ async function validarSupabaseFase1(){
  const ponto={id:'a',nome:'<img src=x onerror=alert(1)>',cidade:'Capão Bonito',uf:'SP',categoria:'agua',lat:-24.01,lng:-48.35,status:'aprovado',verificado:true};
  const ps=api.converterPontosCompartilhados([ponto,{...ponto,id:'b',status:'pendente'},{...ponto,id:'c',lat:Infinity},{...ponto,id:'d',lat:'-24'},{...ponto,id:'e',nome:'EXEMPLO FICTÍCIO'}]);assert.equal(ps.length,1);
  assert.equal(api.filtrarPontosCompartilhados(ps,{cidade:'capao bonito',uf:'SP'}).length,1);assert.equal(api.filtrarPontosCompartilhados(ps,{cidade:'Outra'}).length,0);
- const cards=[];const doc={createElement:()=>({set textContent(v){cards.push(v);},set innerHTML(v){throw Error('XSS');}})},item={append(){}};
- osm.preencherCartaoPonto(doc,item,ps[0]);assert.ok(cards.includes(ponto.nome));assert.ok(cards.includes('Verificado'));
- osm.preencherCartaoPonto(doc,item,{...ps[0],verificado:false});assert.ok(cards.includes('Aprovado pela comunidade'));
+ const cards=[];const doc={createElement:()=>({children:[],append(){},set textContent(v){cards.push(v);},set innerHTML(v){throw Error('XSS');}})},item={append(){}};
+ osm.preencherCartaoPonto(doc,item,ps[0]);assert.ok(cards.includes(ponto.nome));assert.ok(cards.some(t=>t.includes('Verificado')));
+ osm.preencherCartaoPonto(doc,item,{...ps[0],verificado:false});assert.ok(cards.some(t=>t.includes('Aprovado pela comunidade')));
  assert.equal(osm.pontosDisponiveisOSM(ps,[{...ps[0],id:'osm-1',origem:'osm'}],[],'agua',null).length,1);
  const requests=[];
  const client=api.criarClientePontosCompartilhados(config,{fetcher:async(u,o)=>{requests.push([u,o]);return {ok:true,json:async()=>String(u).includes('rpc/')?[{cidade:'Capão Bonito',uf:'SP'}]:[ponto]};}});
@@ -2065,7 +2087,7 @@ function validarAcoesNosPontos(){
  const sw=fs.readFileSync('public/sw.js','utf8');
  assert.ok(html.includes('acoes-pontos.js'));
  assert.match(sw,/acoes-pontos\.js/);
- assert.match(sw,/prefixo \+ 'v55'/);
+ assert.match(sw,/prefixo \+ 'v56'/);
  console.log('OK Ações por ponto: regras por categoria, ODS existentes, passos curtos e texto educativo');
 }
 validarAcoesNosPontos();

@@ -126,14 +126,20 @@ function pontosDisponiveisOSM(fixos,salvos,vivos,categoria,bbox){
 }
 function preencherCartaoPonto(doc,item,p,opcoes={}){
  const texto=(tag,t,classe)=>{const el=doc.createElement(tag);el.textContent=String(t);if(classe)el.className=classe;item.append(el);return el;};
- texto('p',(categoriasOSM[categoriaMapaOSM(p.categoria)]||{nome:'Outro'}).nome);
+ texto('p',(categoriasOSM[categoriaMapaOSM(p.categoria)]||{nome:'Outro'}).nome,'ponto-categoria');
  const titulo=doc.createElement('h3');titulo.textContent=String(p.nome);if(opcoes.idTitulo)titulo.id=opcoes.idTitulo;item.append(titulo);
+ // Uma única barra de ações para lista e detalhes, com o mesmo espaçamento.
+ const acoes=doc.createElement('div');acoes.className='buttons ponto-botoes';
  if(p.origem==='fixo')texto('p','Verificado em '+p.dataVerificacao.split('-').reverse().join('/'));
  if(p.descricao&&!opcoes.detalhado)texto('p','O que dá para fazer aqui? '+p.descricao);
  for(const t of [[p.endereco,p.bairro,p.cidade,p.UF].filter(Boolean).join(' · '),p.horario&&'Horário: '+p.horario,p.aceita&&'O que aceita / informações: '+p.aceita,p.telefone&&'Telefone: '+p.telefone])if(t)texto('p',t);
- texto('p',p.origem==='supabase'?'Origem: cadastro da comunidade':p.origem==='fixo'?'Origem: curadoria do Ecoa':'Origem: OpenStreetMap');
- texto('p',p.origem==='supabase'?(p.verificado?'Verificado':'Aprovado pela comunidade'):p.origem==='fixo'?'Verificado pelo Ecoa':'Fonte: OpenStreetMap — não verificado presencialmente');
- texto('p','Dados da comunidade. Confirme antes de ir');
+ // Uma única linha de procedência: origem e verificação são a mesma informação.
+ const procedencia=p.origem==='supabase'
+  ? 'Fonte: cadastro da comunidade · '+(p.verificado?'Verificado':'Aprovado pela comunidade')
+  : p.origem==='fixo' ? 'Fonte: curadoria do Ecoa · Verificado pelo Ecoa'
+  : 'Fonte: OpenStreetMap · Não verificado pelo Ecoa';
+ texto('p',procedencia,'ponto-procedencia');
+ texto('p','Confirme as informações antes de ir.','ponto-confirmacao');
  if(opcoes.detalhado){
   const secao=titulo=>texto('h4',titulo,'ponto-secao-titulo');
   secao('O que é este lugar');
@@ -168,13 +174,15 @@ function preencherCartaoPonto(doc,item,p,opcoes={}){
     const resultado=opcoes.aoSalvarAcao(sugestao,p);
     if(resultado!==false){opcoes.acaoSalva=true;salvar.textContent='Ver no meu plano';}
    });
-   item.append(salvar);
+   acoes.append(salvar);
   }
  }
  const rota=`https://www.openstreetmap.org/directions?to=${encodeURIComponent(p.latitude+','+p.longitude)}`;
  for(const [rotulo,valor] of [['Como chegar',rota],['Site do local',p.site],['Consultar fonte',p.fonte]]){
-  try{const u=new URL(valor);if(u.protocol!=='https:'||u.username||u.password)continue;const a=doc.createElement('a');a.textContent=rotulo;a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';a.className='ecoa-button secondary';item.append(a);}catch{}
+  try{const u=new URL(valor);if(u.protocol!=='https:'||u.username||u.password)continue;const a=doc.createElement('a');a.textContent=rotulo;a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';a.className='ecoa-button secondary';acoes.append(a);}catch{}
  }
+ item.append(acoes);
+ return acoes;
 }
 const apiPontosOSM={validarBaseOSM,pontosDisponiveisOSM,categoriaMapaOSM,preencherCartaoPonto,categoriasOSM,servidoresOSM,areaOSM,montarConsultaOSM,converterPontosOSM,validarFixosOSM,distanciaOSM,nomesParecidosOSM,mesclarPontosOSM,dentroAreaOSM,criarClienteOSM,criarBuscaOSM};
 if(typeof module!=='undefined')module.exports=apiPontosOSM;else window.EcoaPontosOSM=apiPontosOSM;

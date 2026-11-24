@@ -3,8 +3,11 @@
 .osm-chips button[aria-pressed=true]{background:var(--color-primary);color:var(--color-on-primary);box-shadow:inset 0 0 0 2px var(--color-primary)}
 .osm-card{min-width:0;overflow-wrap:anywhere}
 .osm-card[data-selecionado]{outline:3px solid var(--color-focus);outline-offset:3px}
-.osm-card .buttons{display:flex;flex-wrap:wrap;gap:.6rem}
-.osm-card a,.osm-card button{min-height:44px;white-space:normal}
+.osm-card .buttons,#ponto-cartao-conteudo .ponto-botoes{display:flex;flex-wrap:wrap;align-items:stretch;gap:var(--space-3)}
+.osm-card a,.osm-card button,#ponto-cartao-conteudo .ponto-botoes>*{min-height:44px;white-space:normal;overflow-wrap:anywhere}
+.ponto-categoria{font-size:.875rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--color-text-muted)}
+.ponto-procedencia,.ponto-confirmacao{font-size:.875rem;color:var(--color-text-muted)}
+#ponto-cartao-conteudo .ponto-botoes{margin-top:var(--space-4)}
 
 /* Pins vermelhos em todas as origens: ponto visual de 16 px e área de toque de 44 px. */
 .osm-marker{display:grid;place-items:center;background:transparent;border:0;box-shadow:none}
@@ -28,10 +31,9 @@
 
 #osm-lista[aria-busy=true]{opacity:.7}
 #osm-status{min-height:1.5em}
-#cidade-mapa{height:clamp(360px,55vh,640px)}
 #na-minha-cidade [hidden]{display:none!important}
 
-.cidade-busca{position:relative;display:flex;flex-wrap:wrap;align-items:flex-start;gap:.75rem;margin-block:var(--space-5)}
+.cidade-busca{position:relative;display:flex;flex-wrap:wrap;align-items:flex-start;gap:var(--space-3);margin-block:var(--space-6)}
 .cidade-busca>input[type=search],.cidade-busca>.busca-unica{flex:1 1 20rem;min-width:0}
 .busca-unica{position:relative;flex:1 1 20rem;min-width:0}
 .busca-unica>input[type=search]{width:100%;min-width:0}

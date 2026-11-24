@@ -26,7 +26,6 @@ function iniciarPontosOSM(doc,ambiente,api) {
   const cliente=api.criarClienteOSM({fetcher:ambiente.fetch.bind(ambiente),storage});
   const bbox=()=>{if(!mapa)return null;const b=mapa.getBounds();return [b.getSouth(),b.getWest(),b.getNorth(),b.getEast()];};
   const online=()=>ambiente.navigator.onLine!==false;
-  const link=(texto,url)=>{const a=criar('a',texto);a.className='ecoa-button secondary';a.href=url;a.target='_blank';a.rel='noopener noreferrer';return a;};
   const vazioTexto='Ainda não temos pontos cadastrados nesta região.';
   const rotuloCidade=()=>cidadeFiltro?[cidadeFiltro.nome,cidadeFiltro.uf].filter(Boolean).join('/'):'';
   const rotuloAbrangencia=()=>coberturaCidade?.entrada?.abrangencia==='cidade e arredores'
@@ -111,12 +110,10 @@ function iniciarPontosOSM(doc,ambiente,api) {
         };
       }
     }
-    api.preencherCartaoPonto(doc,conteudo,p,opcoesCartao);
+    const acoes=api.preencherCartaoPonto(doc,conteudo,p,opcoesCartao);
     if(p.origem==='supabase'&&p.bancoId){
-      const acoes=criar('div');acoes.className='buttons';
       const denunciar=criar('button','Denunciar este ponto');denunciar.type='button';denunciar.className='secondary';
       denunciar.addEventListener('click',()=>ambiente.ecoaCadastro?.denunciar(p));acoes.append(denunciar);
-      conteudo.append(acoes);
     }
     destacar(marker);
     $('ponto-cartao').hidden=false;
@@ -144,23 +141,20 @@ function iniciarPontosOSM(doc,ambiente,api) {
     for(const p of visiveis){
       if(!preservados.some(x=>x.id===p.id))preservados.push(p);
       const item=criar('li');item.tabIndex=-1;item.className='osm-card';itensLista.set(item,p);
-      api.preencherCartaoPonto(doc,item,p);
-      const botoes=criar('div');botoes.className='buttons';
-      const coord=`${p.latitude},${p.longitude}`;
-      botoes.append(link('Como chegar',`https://www.openstreetmap.org/directions?to=${encodeURIComponent(coord)}`));
+      const botoes=api.preencherCartaoPonto(doc,item,p);
       if(camada){
         const icon=ambiente.L.divIcon({className:'osm-marker',html:'<span aria-hidden="true">●</span>',iconSize:[44,44],iconAnchor:[22,22]});
         const marker=ambiente.L.marker([p.latitude,p.longitude],{icon,title:p.nome,alt:p.nome,keyboard:true}).addTo(camada);
         marcadores.set(p.id,marker);
         marker.on('click',()=>abrirCartao(p,marker));
-        const ver=criar('button','Ver detalhes');ver.type='button';ver.className='secondary';
-        ver.addEventListener('click',()=>selecionar(item,marker));botoes.prepend(ver);
+        const ver=criar('button','Ver detalhes');ver.type='button';
+        ver.addEventListener('click',()=>selecionar(item,marker));botoes?.prepend(ver);
       }
       if(p.origem==='supabase'&&p.bancoId){
         const denunciar=criar('button','Denunciar ponto');denunciar.type='button';denunciar.className='secondary';
-        denunciar.addEventListener('click',()=>ambiente.ecoaCadastro?.denunciar(p));botoes.append(denunciar);
+        denunciar.addEventListener('click',()=>ambiente.ecoaCadastro?.denunciar(p));botoes?.append(denunciar);
       }
-      item.append(botoes);$('osm-lista').append(item);
+      $('osm-lista').append(item);
     }
     if(cartaoPonto&&!visiveis.some(x=>x.id===cartaoPonto.id))fecharCartao();
     else if(cartaoPonto)destacar(marcadores.get(cartaoPonto.id));

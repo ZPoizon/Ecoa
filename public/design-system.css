@@ -169,7 +169,7 @@ dialog::backdrop { background: var(--color-overlay); }
   .ecoa-nav a:hover { color: var(--green); background: var(--soft); }
 }
 @media (max-width: 64rem) {
-  body:has(.ecoa-nav) { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom,0px)); }
+  body:has(.ecoa-nav) { padding-bottom: calc(var(--ecoa-nav-altura, 5.5rem) + env(safe-area-inset-bottom,0px)); }
   .nav { grid-template-columns: minmax(0,1fr) auto; }
   .nav .tema-toggle { grid-column: 2; grid-row: 1; }
   .nav .ecoa-nav { position: fixed; z-index: 100; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 0; background: var(--surface); border-top: 1px solid var(--line); padding: var(--space-2) max(var(--space-1),env(safe-area-inset-right)) calc(var(--space-2) + env(safe-area-inset-bottom,0px)) max(var(--space-1),env(safe-area-inset-left)); }
