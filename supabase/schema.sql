@@ -55,7 +55,8 @@ alter table public.denuncias enable row level security;
 revoke all on public.pontos, public.denuncias from public, anon, authenticated;
 grant usage on schema public, extensions to anon;
 grant select on public.pontos to anon;
-grant insert(nome,categoria,cidade,uf,bairro,endereco,descricao,horario,aceita,telefone,site,lat,lng,status,verificado) on public.pontos to anon;
+-- Cadastro público removido: anon não tem INSERT em public.pontos.
+-- A policy de insert abaixo permanece apenas para não alterar RLS; sem grant não autoriza escrita.
 grant insert(ponto_id,motivo) on public.denuncias to anon;
 create policy "Visitante le apenas aprovados" on public.pontos for select to anon using(status='aprovado');
 create policy "Visitante envia apenas pendentes" on public.pontos for insert to anon

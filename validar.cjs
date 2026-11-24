@@ -1641,7 +1641,11 @@ async function validarSupabaseFase1(){
  const sql=fs.readFileSync('supabase/schema.sql','utf8');
  for(const t of ['pontos','denuncias'])assert.ok(sql.includes('alter table public.'+t+' enable row level security'));
  assert.match(sql,/with check\(status='pendente' and verificado=false and denuncias=0\)/);assert.match(sql,/for select to anon using\(status='aprovado'\)/);
- assert.doesNotMatch(sql,/grant\s+(?:all|update|delete)\s+on\s+public\.(?:pontos|denuncias)\s+to\s+anon/i);assert.match(sql,/security invoker/);assert.match(sql,/gin_trgm_ops/);
+ assert.doesNotMatch(sql,/grant\s+(?:all|update|delete)\s+on\s+public\.(?:pontos|denuncias)\s+to\s+anon/i);
+ assert.doesNotMatch(sql,/grant\s+insert\s*\([^)]*\)\s+on\s+public\.pontos\s+to\s+anon/i,'anon não pode inserir pontos');
+ assert.match(sql,/grant\s+select\s+on\s+public\.pontos\s+to\s+anon/i);
+ assert.match(sql,/grant\s+insert\s*\(ponto_id,motivo\)\s+on\s+public\.denuncias\s+to\s+anon/i);
+ assert.match(sql,/security invoker/);assert.match(sql,/gin_trgm_ops/);
  const sw=fs.readFileSync('public/sw.js','utf8');assert.match(sw,/'pontos-compartilhados.js'/);assert.match(sw,/pathname.startsWith\('\/rest\/v1\/'\)/);
  console.log('OK Supabase fase 1: consultas, filtros, coordenadas, aprovados, XSS, mesclagem, cancelamento, contrato RLS e API fora do cache SW');
 }
