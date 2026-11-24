@@ -95,7 +95,7 @@ function iniciarPontosOSM(doc,ambiente,api) {
     cartaoPonto=p;ultimoMarcador=marker||null;
     const conteudo=$('ponto-cartao-conteudo');conteudo.replaceChildren();
     $('ponto-cartao-titulo').textContent=String(p.nome);
-    api.preencherCartaoPonto(doc,conteudo,p,{idTitulo:'ponto-cartao-titulo'});
+    api.preencherCartaoPonto(doc,conteudo,p,{idTitulo:'ponto-cartao-titulo',detalhado:true});
     if(p.origem==='supabase'&&p.bancoId){
       const acoes=criar('div');acoes.className='buttons';
       const denunciar=criar('button','Denunciar este ponto');denunciar.type='button';denunciar.className='secondary';

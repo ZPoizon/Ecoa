@@ -2,6 +2,7 @@
    uma categoria por vez; respeitar Retry-After e aguardar ao menos 30 s após 429.
    O navegador controla User-Agent; o comentário da consulta identifica o projeto. */
 const categoriasPontosComunsOSM = typeof module!=='undefined'?require('./categorias-pontos'):window.EcoaCategoriasPontos;
+const acoesPontosComunsOSM = typeof module!=='undefined'?require('./acoes-pontos'):window.EcoaAcoesPontos;
 // Os mesmos valores do filtro e do cadastro alimentam as consultas e os cartões.
 const categoriasOSM = Object.fromEntries(categoriasPontosComunsOSM.CATEGORIAS_PONTOS.map(c=>[c.valor,{nome:c.nome,tags:c.tagsOSM}]));
 function categoriaMapaOSM(c){return categoriasPontosComunsOSM.categoriaPontosCanonica(c);}
@@ -124,15 +125,51 @@ function pontosDisponiveisOSM(fixos,salvos,vivos,categoria,bbox){
  return mesclarPontosOSM(filtrar(fixos),[...filtrar(vivos),...filtrar(salvos)]);
 }
 function preencherCartaoPonto(doc,item,p,opcoes={}){
- const texto=(tag,t)=>{const el=doc.createElement(tag);el.textContent=String(t);item.append(el);};
+ const texto=(tag,t,classe)=>{const el=doc.createElement(tag);el.textContent=String(t);if(classe)el.className=classe;item.append(el);return el;};
  texto('p',(categoriasOSM[categoriaMapaOSM(p.categoria)]||{nome:'Outro'}).nome);
  const titulo=doc.createElement('h3');titulo.textContent=String(p.nome);if(opcoes.idTitulo)titulo.id=opcoes.idTitulo;item.append(titulo);
  if(p.origem==='fixo')texto('p','Verificado em '+p.dataVerificacao.split('-').reverse().join('/'));
- if(p.descricao)texto('p','O que dá para fazer aqui? '+p.descricao);
+ if(p.descricao&&!opcoes.detalhado)texto('p','O que dá para fazer aqui? '+p.descricao);
  for(const t of [[p.endereco,p.bairro,p.cidade,p.UF].filter(Boolean).join(' · '),p.horario&&'Horário: '+p.horario,p.aceita&&'O que aceita / informações: '+p.aceita,p.telefone&&'Telefone: '+p.telefone])if(t)texto('p',t);
  texto('p',p.origem==='supabase'?'Origem: cadastro da comunidade':p.origem==='fixo'?'Origem: curadoria do Ecoa':'Origem: OpenStreetMap');
  texto('p',p.origem==='supabase'?(p.verificado?'Verificado':'Aprovado pela comunidade'):p.origem==='fixo'?'Verificado pelo Ecoa':'Fonte: OpenStreetMap — não verificado presencialmente');
  texto('p','Dados da comunidade. Confirme antes de ir');
+ if(opcoes.detalhado){
+  const secao=titulo=>texto('h4',titulo,'ponto-secao-titulo');
+  secao('O que é este lugar');
+  const nomeCategoria=(categoriasOSM[categoriaMapaOSM(p.categoria)]||{nome:'Local útil'}).nome;
+  const descricao=p.descricao?String(p.descricao)
+    :`${nomeCategoria}. ${categoriasPontosComunsOSM.orientacaoCategoriaPontos(p.categoria)} Confirme a finalidade do local na fonte indicada.`;
+  texto('p',descricao);
+  const sugestao=acoesPontosComunsOSM?.sugestaoAcaoPonto?.(p);
+  if(sugestao){
+   secao('O que fazer aqui?');
+   texto('p','Ação sugerida pelo Ecoa','sugestao-rotulo');
+   texto('p',sugestao.oQueFazer);
+   secao('Como fazer');
+   const passos=doc.createElement('ol');passos.className='ponto-etapas';
+   for(const passo of sugestao.passos){const li=doc.createElement('li');li.textContent=String(passo);passos.append(li);}item.append(passos);
+   secao('ODS relacionados');
+   const ods=doc.createElement('p');ods.className='ponto-ods';
+   sugestao.ods.forEach((numero,indice)=>{
+    if(indice&&doc.createTextNode)ods.append(doc.createTextNode(' · '));
+    const a=doc.createElement('a');a.href='#/aprender/ods-'+numero;a.textContent=acoesPontosComunsOSM.nomeOdsAcaoPonto(sugestao,numero);ods.append(a);
+   });
+   item.append(ods);
+   texto('p',`${sugestao.relacao} Esses ODS são uma relação educativa feita pelo Ecoa, não certificação da ONU nem avaliação do local.`,'ponto-ods-aviso');
+   secao('Antes de ir');
+   const antes=doc.createElement('ul');antes.className='ponto-preparo';
+   for(const aviso of sugestao.antesDeIr){const li=doc.createElement('li');li.textContent=String(aviso);antes.append(li);}item.append(antes);
+   const salvar=doc.createElement('button');salvar.type='button';salvar.className='secondary';
+   salvar.textContent=opcoes.acaoSalva?'Ver no meu plano':'Salvar ação no meu plano';
+   salvar.addEventListener('click',()=>{
+    if(!opcoes.aoSalvarAcao)return;
+    const resultado=opcoes.aoSalvarAcao(sugestao,p);
+    if(resultado!==false)salvar.textContent='Ver no meu plano';
+   });
+   item.append(salvar);
+  }
+ }
  const rota=`https://www.openstreetmap.org/directions?to=${encodeURIComponent(p.latitude+','+p.longitude)}`;
  for(const [rotulo,valor] of [['Como chegar',rota],['Site do local',p.site],['Consultar fonte',p.fonte]]){
   try{const u=new URL(valor);if(u.protocol!=='https:'||u.username||u.password)continue;const a=doc.createElement('a');a.textContent=rotulo;a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';a.className='ecoa-button secondary';item.append(a);}catch{}

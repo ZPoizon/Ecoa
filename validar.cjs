@@ -130,7 +130,7 @@ async function validarPwa() {
     eventos[nome]({ ...extras, waitUntil: resolve });
   });
   await rodar('install');
-  for (const arquivo of ['estrutura.js','estrutura.css','pontos-osm.js', 'pontos-osm-ui.js', 'pontos-osm.css', 'pontos-fixos.json', 'cidade-layout.css', 'aprender.js', 'aprender.css', 'agir.js', 'agir.css', 'inicio.js', 'inicio.css', 'rotas.js', 'design-system.css', 'index.html', 'sobre.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
+  for (const arquivo of ['estrutura.js','estrutura.css','acoes-pontos.js','pontos-osm.js', 'pontos-osm-ui.js', 'pontos-osm.css', 'pontos-fixos.json', 'cidade-layout.css', 'aprender.js', 'aprender.css', 'agir.js', 'agir.css', 'inicio.js', 'inicio.css', 'rotas.js', 'design-system.css', 'index.html', 'sobre.html', 'vendor/pdf-lib.min.js', 'guias.js', 'plano-json.js', 'lembretes.js', 'lembretes-ui.js', 'enderecos.js', 'cidade.js', 'cidade-ui.js', 'pontos-modelo.json', 'estimativa.js', 'estimativa-ui.js', 'progresso.js', 'desafio.js', 'desafio-ui.js', 'quiz.js', 'quiz-ui.js', 'acessibilidade.js', 'acessibilidade.css', 'compartilhar.js', 'compartilhar-ui.js', 'ods/17.webp']) {
     assert.ok(armazenados.has(origem + arquivo));
   }
   console.log('OK Instalação inclui arquivos necessários para guias e PDF offline');
@@ -1050,7 +1050,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v48'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v49'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1262,6 +1262,14 @@ async function validarPontosAutomaticos() {
   const temImg=nos=>nos.some(n=>n.tagName==='img'||temImg(n.children||[]));
   assert.equal(elCartao('ponto-cartao').hidden,false);assert.equal(elCartao('ponto-cartao-titulo').textContent,'Horta');
   assert.equal(temImg(conteudo.children),false);assert.ok(JSON.stringify(conteudo.children).includes('<img src=x onerror=alert(1)>'));
+  const textoCartao=JSON.stringify(conteudo.children);
+  for(const trecho of ['O que é este lugar','O que fazer aqui?','Ação sugerida pelo Ecoa','Como fazer','ODS relacionados','Antes de ir','Salvar ação no meu plano','Como chegar','não certificação da ONU']){
+   assert.ok(textoCartao.includes(trecho),trecho);
+  }
+  const nosCartaoPlano=(nos)=>nos.flatMap(n=>[n,...nosCartaoPlano(n.children||[])]);
+  assert.ok(nosCartaoPlano(conteudo.children).some(n=>n.tagName==='a'&&n.href==='#/aprender/ods-15'));
+  const etapas=nosCartaoPlano(conteudo.children).find(n=>n.className==='ponto-etapas');
+  assert.ok(etapas&&etapas.children.length>0&&etapas.children.length<=3);
   assert.equal(elCartao('ponto-cartao').children.length,0,'cartao e um unico painel de conteudo');
   eventosCartao.keydown({key:'Escape',preventDefault(){}});
   assert.equal(elCartao('ponto-cartao').hidden,true);assert.equal(focoMarcador,true);
@@ -1979,3 +1987,32 @@ async function validarBasesRegionais(){
  console.log('OK Bases regionais: índice, seis cidades, carregamento sob demanda, cache válido, falha preservada e cartões no mapa');
 }
 validarBasesRegionais().catch(e=>{console.error(e);process.exitCode=1;});
+
+function validarAcoesNosPontos(){
+ const fs=require('node:fs');
+ const cats=require('./public/categorias-pontos');
+ const regras=require('./public/acoes-pontos');
+ const catalogo={acoes,objetivos};
+ for(const categoria of cats.CATEGORIAS_PONTOS){
+  const sugestao=regras.sugestaoAcaoPonto({categoria:categoria.valor,nome:'Local de teste'},catalogo);
+  assert.ok(sugestao,categoria.valor);
+  assert.ok(sugestao.ods.length>=1&&sugestao.ods.length<=2,categoria.valor);
+  assert.ok(sugestao.ods.every(numero=>Number.isInteger(numero)&&numero>=1&&numero<=17),categoria.valor);
+  assert.ok(acoes.some(acao=>acao.ods+':'+acao.titulo===sugestao.chave),categoria.valor);
+  assert.ok(sugestao.passos.length>=1&&sugestao.passos.length<=3,categoria.valor);
+  assert.ok(sugestao.antesDeIr.length>=1&&sugestao.antesDeIr.length<=3,categoria.valor);
+  assert.ok(sugestao.oQueFazer&&sugestao.relacao,categoria.valor);
+  assert.doesNotMatch(sugestao.relacao+' '+sugestao.antesDeIr.join(' '),/certificad[oa] pela ONU/i,categoria.valor);
+ }
+ const horta=regras.sugestaoAcaoPonto({categoria:'horta'},catalogo);
+ assert.deepEqual(horta.ods,[15,11]);
+ assert.equal(horta.chave,'15:Observe a vegetação do seu bairro');
+ assert.match(regras.nomeOdsAcaoPonto(horta,15),/^ODS 15 — /);
+ const html=fs.readFileSync('public/index.html','utf8');
+ const sw=fs.readFileSync('public/sw.js','utf8');
+ assert.ok(html.includes('acoes-pontos.js'));
+ assert.match(sw,/acoes-pontos\.js/);
+ assert.match(sw,/prefixo \+ 'v49'/);
+ console.log('OK Ações por ponto: regras por categoria, ODS existentes, passos curtos e texto educativo');
+}
+validarAcoesNosPontos();

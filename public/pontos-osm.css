@@ -18,6 +18,13 @@
 .ponto-cartao-cabecalho h3{margin:0;min-width:0;overflow-wrap:anywhere}
 .ponto-cartao-cabecalho button{flex:none;min-height:44px}
 #ponto-cartao-conteudo p{margin-block:.5rem}
+.ponto-secao-titulo{margin:1.1rem 0 .35rem;font-size:1rem;line-height:1.3}
+.sugestao-rotulo{margin:.35rem 0!important;font-size:.8125rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--color-text-muted)}
+.ponto-etapas,.ponto-preparo{margin:.4rem 0 .6rem;padding-inline-start:1.35rem}
+.ponto-etapas li,.ponto-preparo li{margin-block:.3rem;overflow-wrap:anywhere}
+.ponto-ods{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}
+.ponto-ods a{color:var(--color-primary);text-decoration:underline;text-underline-offset:.15em}
+.ponto-ods-aviso{font-size:.875rem;color:var(--color-text-muted)}
 
 #osm-lista[aria-busy=true]{opacity:.7}
 #osm-status{min-height:1.5em}
