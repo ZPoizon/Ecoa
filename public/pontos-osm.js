@@ -60,10 +60,10 @@ function esperarOSM(ms,signal) {
 function criarClienteOSM({fetcher=fetch,storage,agora=Date.now,esperar=esperarOSM,servidores=servidoresOSM}={}) {
   const chave='ecoa-osm-cache-v1',ttl=900000,cache=new Map();let liberar=0,falhas=0,inicio=0;
   try{for(const [k,v] of JSON.parse(storage?.getItem(chave)||'[]').slice(-20))if(typeof k==='string'&&v&&Number.isFinite(v.em)&&v.em<=agora()&&agora()-v.em<ttl&&Array.isArray(v.pontos)&&v.pontos.length<=200&&v.pontos.every(p=>pontoValidoOSM(p)&&p.origem==='osm'))cache.set(k,v);}catch{}
-  async function consultar(categoria,bbox,{signal,ocupado=()=>{}}={}) {
+  async function consultar(categoria,bbox,{signal,ocupado=()=>{},forcar=false}={}) {
     const query=montarConsultaOSM(categoria,bbox),key=categoriaMapaOSM(categoria)+':'+areaOSM(bbox).join(',');
     if(signal?.aborted)throw abortadoOSM();
-    const c=cache.get(key);if(c&&agora()-c.em<ttl)return c.pontos;
+    const c=cache.get(key);if(!forcar&&c&&agora()-c.em<ttl)return c.pontos;
     for(let tentativa=0;tentativa<servidores.length;tentativa++) {
       if(liberar>agora()){ocupado(Math.ceil((liberar-agora())/1000));await esperar(liberar-agora(),signal);}
       if(signal?.aborted)throw abortadoOSM();
@@ -158,28 +158,32 @@ function criarLinkRotaOSM(doc,ponto){
 }
 function preencherCartaoPonto(doc,item,p,opcoes={}){
  const texto=(tag,t,classe)=>{const el=doc.createElement(tag);el.textContent=String(t);if(classe)el.className=classe;item.append(el);return el;};
- texto('p',(categoriasOSM[categoriaMapaOSM(p.categoria)]||{nome:'Outro'}).nome,'ponto-categoria');
+ const secao=titulo=>texto('h4',titulo,'ponto-secao-titulo');
+ const categoria=categoriaMapaOSM(p.categoria);
+ const nomeCategoria=(categoriasOSM[categoria]||{nome:'Local útil'}).nome;
+ texto('p',nomeCategoria,'ponto-categoria');
  const titulo=doc.createElement('h3');titulo.textContent=String(p.nome);if(opcoes.idTitulo)titulo.id=opcoes.idTitulo;item.append(titulo);
  // Uma única barra de ações para lista e detalhes, com o mesmo espaçamento.
  const acoes=doc.createElement('div');acoes.className='buttons ponto-botoes';
  if(p.origem==='fixo')texto('p','Verificado em '+p.dataVerificacao.split('-').reverse().join('/'));
- if(p.descricao&&!opcoes.detalhado)texto('p','O que dá para fazer aqui? '+p.descricao);
  for(const t of [[p.endereco,p.bairro,p.cidade,p.UF].filter(Boolean).join(' · '),p.horario&&'Horário: '+p.horario,p.aceita&&'O que aceita / informações: '+p.aceita,p.telefone&&'Telefone: '+p.telefone])if(t)texto('p',t);
- // Uma única linha de procedência: origem e verificação são a mesma informação.
- const procedencia=p.origem==='supabase'
-  ? 'Fonte: cadastro da comunidade · '+(p.verificado?'Verificado':'Aprovado pela comunidade')
-  : p.origem==='fixo' ? 'Fonte: curadoria do Ecoa · Verificado pelo Ecoa'
-  : 'Fonte: OpenStreetMap · Não verificado pelo Ecoa';
- texto('p',procedencia,'ponto-procedencia');
- texto('p','Confirme as informações antes de ir.','ponto-confirmacao');
+ const sugestao=acoesPontosComunsOSM?.sugestaoAcaoPonto?.(p)||null;
+ const linhaOds=classe=>{
+  if(!sugestao)return;
+  const linha=doc.createElement('p');linha.className=classe;
+  sugestao.ods.forEach((numero,indice)=>{
+   if(indice&&doc.createTextNode)linha.append(doc.createTextNode(' · '));
+   const a=doc.createElement('a');a.href='#/aprender/ods-'+numero;a.textContent=acoesPontosComunsOSM.nomeOdsAcaoPonto(sugestao,numero);linha.append(a);
+  });
+  item.append(linha);
+ };
  if(opcoes.detalhado){
-  const secao=titulo=>texto('h4',titulo,'ponto-secao-titulo');
   secao('O que é este lugar');
-  const nomeCategoria=(categoriasOSM[categoriaMapaOSM(p.categoria)]||{nome:'Local útil'}).nome;
-  const descricao=p.descricao?String(p.descricao)
-    :`${nomeCategoria}. ${categoriasPontosComunsOSM.orientacaoCategoriaPontos(p.categoria)} Confirme a finalidade do local na fonte indicada.`;
-  texto('p',descricao);
-  const sugestao=acoesPontosComunsOSM?.sugestaoAcaoPonto?.(p);
+  texto('p',p.descricao?String(p.descricao)
+   :`${nomeCategoria}. ${categoriasPontosComunsOSM.orientacaoCategoriaPontos(p.categoria)} Confirme a finalidade do local na fonte indicada.`);
+  secao('O que dá para fazer aqui?');
+  texto('p',p.descricao?`Informação da fonte: ${p.descricao}`
+   :'A fonte consultada não informa serviços confirmados neste local.','ponto-descricao');
   if(sugestao){
    secao('O que fazer aqui?');
    texto('p','Ação sugerida pelo Ecoa','sugestao-rotulo');
@@ -187,13 +191,7 @@ function preencherCartaoPonto(doc,item,p,opcoes={}){
    secao('Como fazer');
    const passos=doc.createElement('ol');passos.className='ponto-etapas';
    for(const passo of sugestao.passos){const li=doc.createElement('li');li.textContent=String(passo);passos.append(li);}item.append(passos);
-   secao('ODS relacionados');
-   const ods=doc.createElement('p');ods.className='ponto-ods';
-   sugestao.ods.forEach((numero,indice)=>{
-    if(indice&&doc.createTextNode)ods.append(doc.createTextNode(' · '));
-    const a=doc.createElement('a');a.href='#/aprender/ods-'+numero;a.textContent=acoesPontosComunsOSM.nomeOdsAcaoPonto(sugestao,numero);ods.append(a);
-   });
-   item.append(ods);
+   secao('ODS relacionados');linhaOds('ponto-ods');
    texto('p',`${sugestao.relacao} Esses ODS são uma relação educativa feita pelo Ecoa, não certificação da ONU nem avaliação do local.`,'ponto-ods-aviso');
    secao('Antes de ir');
    const antes=doc.createElement('ul');antes.className='ponto-preparo';
@@ -208,7 +206,28 @@ function preencherCartaoPonto(doc,item,p,opcoes={}){
    });
    acoes.append(salvar);
   }
+ }else{
+  secao('O que dá para fazer aqui?');
+  texto('p',p.descricao?String(p.descricao):'A fonte não informa detalhes do serviço neste local.','ponto-descricao');
+  if(sugestao){
+   texto('p','Ação sugerida pelo Ecoa','sugestao-rotulo');
+   texto('p',sugestao.oQueFazer);
+   linhaOds('ponto-ods ponto-ods-compacto');
+   if(sugestao.antesDeIr[0])texto('p','Antes de ir: '+sugestao.antesDeIr[0],'ponto-preparo-resumo');
+  }
  }
+ if(['reciclagem','doacao','oleo-de-cozinha','pilhas-eletronicos'].includes(categoria)&&!p.aceita){
+  texto('p','Confirme quais materiais este local recebe antes de sair.','ponto-confirmacao');
+ }
+ if(categoria==='agua')texto('p','A categoria “Água potável” vem da fonte; confirme a potabilidade no local.','ponto-confirmacao');
+ // Uma única linha de procedência: origem e verificação são a mesma informação.
+ const procedencia=p.origem==='supabase'
+  ? 'Fonte: cadastro da comunidade · '+(p.verificado?'Verificado':'Aprovado pela comunidade')
+  : p.origem==='fixo' ? 'Fonte: curadoria do Ecoa · Verificado pelo Ecoa'
+  : p.origem==='base' ? 'Fonte: base importada · Não verificado pelo Ecoa'
+  : 'Fonte: OpenStreetMap · Não verificado pelo Ecoa';
+ texto('p',procedencia,'ponto-procedencia');
+ texto('p','Confirme as informações antes de ir.','ponto-confirmacao');
  const rota=criarLinkRotaOSM(doc,p);if(rota)acoes.append(rota);
  for(const [rotulo,valor] of [['Site do local',p.site],['Consultar fonte',p.fonte]]){
   try{const u=new URL(valor);if(u.protocol!=='https:'||u.username||u.password)continue;const a=doc.createElement('a');a.textContent=rotulo;a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';a.className='ecoa-button secondary';acoes.append(a);}catch{}

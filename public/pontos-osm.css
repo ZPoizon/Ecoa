@@ -28,6 +28,10 @@
 .ponto-ods{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}
 .ponto-ods a{color:var(--color-primary);text-decoration:underline;text-underline-offset:.15em}
 .ponto-ods-aviso{font-size:.875rem;color:var(--color-text-muted)}
+.osm-card .ponto-secao-titulo{margin:.6rem 0 .2rem;font-size:.9375rem}
+.osm-card .ponto-descricao{margin-block:.35rem}
+.osm-card .ponto-ods-compacto{font-size:.8125rem}
+.osm-card .ponto-preparo-resumo{font-size:.875rem;color:var(--color-text-muted);margin-block:.35rem}
 
 #osm-lista[aria-busy=true]{opacity:.7}
 #osm-status{min-height:1.5em}
