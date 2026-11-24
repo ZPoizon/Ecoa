@@ -1141,7 +1141,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v62'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v63'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1874,6 +1874,7 @@ async function validarTelaNaCidade(){
   const esperado='sha256-'+crypto.createHash('sha256').update(conteudo).digest('base64');
   assert.equal(esperado,'sha256-'+hash);
   assert.ok(uiMapa.includes(esperado),'SRI de '+arquivo);
+  assert.ok(uiMapa.includes('if(sri)tentar(null)'),'retry sem SRI em cache misturado');
  }
 
  // Cache isolado por projeto, validado, limitado e com resposta vazia válida.
@@ -2182,7 +2183,7 @@ function validarAcoesNosPontos(){
  const sw=fs.readFileSync('public/sw.js','utf8');
  assert.ok(html.includes('acoes-pontos.js'));
  assert.match(sw,/acoes-pontos\.js/);
- assert.match(sw,/prefixo \+ 'v62'/);
+ assert.match(sw,/prefixo \+ 'v63'/);
  console.log('OK Ações por ponto: regras por categoria, ODS existentes, passos curtos e texto educativo');
 }
 validarAcoesNosPontos();
