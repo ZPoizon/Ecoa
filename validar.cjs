@@ -1141,7 +1141,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v58'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v59'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1642,7 +1642,7 @@ validarSupabaseFase1().catch(e=>{console.error(e);process.exitCode=1;});
 
 async function validarIntegracaoBancoMapa(){
  const fs=require('node:fs'),osm=require('./public/pontos-osm'),sup=require('./public/pontos-compartilhados');
- const criar=()=>({children:[],eventos:{},dataset:{},value:'',hidden:false,textContent:'',append(...x){this.children.push(...x);},prepend(...x){this.children.unshift(...x);},replaceChildren(...x){this.children=x;},setAttribute(k,v){this[k]=v;},removeAttribute(k){delete this[k];},addEventListener(k,f){this.eventos[k]=f;},focus(){},scrollIntoView(){},click(){this.eventos.click?.();},set innerHTML(v){throw Error('XSS');}});
+ const criar=()=>({children:[],eventos:{},dataset:{},value:'',hidden:false,textContent:'',append(...x){this.children.push(...x);},prepend(...x){this.children.unshift(...x);},replaceChildren(...x){this.children=x;},setAttribute(k,v){this[k]=v;},removeAttribute(k){delete this[k];},addEventListener(k,f){this.eventos[k]=f;},focus(){},scrollIntoView(){(this.scrolls=(this.scrolls||0)+1);},click(){this.eventos.click?.();},set innerHTML(v){throw Error('XSS');}});
  const els=new Map(),el=id=>{if(!els.has(id))els.set(id,criar());return els.get(id);},eventos={};
  const bboxA=[-24.02,-48.36,-24,-48.34],bboxB=[-23.99,-48.87,-23.97,-48.85];
  let bboxAtual=bboxA.slice(),falhar=false,vazio=false,pendente=null;
@@ -1673,6 +1673,11 @@ async function validarIntegracaoBancoMapa(){
  chips[1].click();await ui.pronto;ui.conectar(mapa);await esperar();
  assert.equal(queries.length,1);assert.equal(el('osm-lista').children.length,1);
  assert.match(JSON.stringify(el('osm-lista').children),/Ponto 1/);
+  const acoesCartao=el('osm-lista').children[0].children.find(x=>x.className==='buttons ponto-botoes');
+  acoesCartao.children.find(b=>b.textContent==='Ver detalhes').click();
+  assert.equal(el('ponto-cartao').hidden,false);assert.ok(el('ponto-cartao').scrolls>0);
+  el('ponto-cartao-fechar').eventos.click();assert.equal(el('ponto-cartao').hidden,true);
+
  // Atualizar a mesma área não apaga os pontos enquanto a resposta vem.
  pendente={};ui.atualizar();assert.equal(el('osm-lista').children.length,1);await esperar();
  assert.equal(queries.length,2);pendente.resolve({pontos:[pontoEm(bboxA,'db-2','Ponto 2')],limiteAtingido:false});pendente=null;
@@ -2135,7 +2140,7 @@ async function validarBasesRegionais(){
 
  // Fluxo completo no mapa: a base local aparece mesmo com Supabase/Overpass falhando.
  const osm=require('./public/pontos-osm'),sup=require('./public/pontos-compartilhados');
- const criar=()=>({children:[],eventos:{},dataset:{},value:'',hidden:false,textContent:'',append(...x){this.children.push(...x);},prepend(...x){this.children.unshift(...x);},replaceChildren(...x){this.children=x;},setAttribute(k,v){this[k]=v;},removeAttribute(k){delete this[k];},addEventListener(k,f){this.eventos[k]=f;},focus(){},scrollIntoView(){},click(){this.eventos.click?.();},set innerHTML(v){throw Error('XSS');}});
+ const criar=()=>({children:[],eventos:{},dataset:{},value:'',hidden:false,textContent:'',append(...x){this.children.push(...x);},prepend(...x){this.children.unshift(...x);},replaceChildren(...x){this.children=x;},setAttribute(k,v){this[k]=v;},removeAttribute(k){delete this[k];},addEventListener(k,f){this.eventos[k]=f;},focus(){},scrollIntoView(){(this.scrolls=(this.scrolls||0)+1);},click(){this.eventos.click?.();},set innerHTML(v){throw Error('XSS');}});
  const els=new Map(),el=id=>{if(!els.has(id))els.set(id,criar());return els.get(id);};
  const chips=['','reciclagem','horta'].map(c=>{const e=criar();e.dataset.categoriaOsm=c;return e;});
  const doc={getElementById:el,createElement:criar,querySelectorAll:()=>chips,addEventListener(){}};
@@ -2212,7 +2217,7 @@ function validarAcoesNosPontos(){
  const sw=fs.readFileSync('public/sw.js','utf8');
  assert.ok(html.includes('acoes-pontos.js'));
  assert.match(sw,/acoes-pontos\.js/);
- assert.match(sw,/prefixo \+ 'v58'/);
+ assert.match(sw,/prefixo \+ 'v59'/);
  console.log('OK Ações por ponto: regras por categoria, ODS existentes, passos curtos e texto educativo');
 }
 validarAcoesNosPontos();

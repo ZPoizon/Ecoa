@@ -116,12 +116,18 @@ function iniciarPontosOSM(doc,ambiente,api) {
       denunciar.addEventListener('click',()=>ambiente.ecoaCadastro?.denunciar(p));acoes.append(denunciar);
     }
     destacar(marker);
-    $('ponto-cartao').hidden=false;
+    const cartao=$('ponto-cartao');cartao.hidden=false;
     $('ponto-cartao-titulo').focus?.({preventScroll:true});
+    // O painel fica sobre o mapa; ao abrir pela lista ele pode estar fora da viewport.
+    const altura=ambiente.innerHeight||globalThis.innerHeight||0;
+    if(typeof cartao.getBoundingClientRect==='function'&&altura){
+      const r=cartao.getBoundingClientRect();
+      if(r.top<0||r.bottom>altura)cartao.scrollIntoView?.({block:'center'});
+    }else cartao.scrollIntoView?.({block:'center'});
   }
   function selecionar(item,marker) {
     for(const el of $('osm-lista').children)el.removeAttribute?.('data-selecionado');
-    item.dataset.selecionado='true';item.focus({preventScroll:true});item.scrollIntoView({block:'nearest',behavior:'instant'});
+    item.dataset.selecionado='true';item.focus({preventScroll:true});
     abrirCartao(itensLista.get(item),marker);
   }
   const itensLista=new WeakMap();
