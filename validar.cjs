@@ -400,6 +400,32 @@ function validarAcessibilidade() {
 }
 validarAcessibilidade();
 
+function validarFocoProgramatico() {
+  const a=require('./public/acessibilidade'),fs=require('node:fs'),eventos={};
+  const sensor=a.iniciarSensorFoco({},{addEventListener(nome,fn){eventos[nome]=fn;}});
+  const criar=(interativo,tabindex)=>({
+    attrs:tabindex===undefined?{}:{tabindex},
+    matches(seletor){return interativo && String(seletor).includes('button');},
+    getAttribute(nome){return nome in this.attrs?this.attrs[nome]:null;},
+    setAttribute(nome,valor){this.attrs[nome]=String(valor);},
+    removeAttribute(nome){delete this.attrs[nome];}
+  });
+  const titulo=criar(false,'-1'),botao=criar(true),janela={};
+  assert.equal(sensor.modo,'inicial');assert.equal(sensor.semTeclado(),true);
+  assert.equal(a.iniciarSensorFoco(janela,{addEventListener(){}}),janela.EcoaFoco);
+  eventos.focusin({target:titulo});assert.equal(titulo.attrs['data-foco-programatico'],'true');
+  eventos.focusin({target:botao});assert.equal(botao.attrs['data-foco-programatico'],undefined);
+  eventos.pointerdown();assert.equal(sensor.semTeclado(),true);
+  eventos.focusin({target:titulo});assert.equal(titulo.attrs['data-foco-programatico'],'true');
+  eventos.keydown();assert.equal(sensor.semTeclado(),false);
+  eventos.focusin({target:titulo});assert.equal(titulo.attrs['data-foco-programatico'],undefined);
+  eventos.focusin({target:botao});assert.equal(botao.attrs['data-foco-programatico'],undefined);
+  assert.match(fs.readFileSync('public/limpeza.css','utf8'),/\[data-foco-programatico="true"\]:focus\{outline:none!important\}/);
+  assert.match(fs.readFileSync('public/rotas.js','utf8'),/semTeclado\?\.\(\) \?\? true/);
+  console.log('OK Foco: primeiro carregamento e ponteiro sem moldura em alvos programáticos; teclado e controles preservados');
+}
+validarFocoProgramatico();
+
 function validarCartoesGuias() {
   const {runInNewContext} = require('node:vm');
   const {readFileSync} = require('node:fs');
@@ -1006,6 +1032,7 @@ function validarRotasFase1() {
   Object.defineProperty(janela,'localStorage',{get(){throw Error('Roteador não deve acessar dados salvos');}});
   const router=iniciarRotasEcoa(doc,janela,{abrirGuia(n){guia=n;},abrirAcao(chave){acao=chave;}});
   assert.equal(janela.location.hash,'#/agir');assert.equal(doc.title,'Agir | Ecoa');assert.equal(foco,'tela-agir-titulo');assert.equal(rolagens,1);
+  assert.equal(el('tela-agir-titulo').attrs['data-foco-toque'],'true');
   docEventos.pointerdown();router.navegar('#/inicio');assert.equal(el('tela-inicio-titulo').attrs['data-foco-toque'],'true');
   docEventos.keydown();router.navegar('#/agir');assert.equal(el('tela-agir-titulo').attrs['data-foco-toque'],'false');
   const estado=()=>{assert.equal(telas.filter(t=>!t.hidden).length,1);assert.equal(nav.filter(n=>n.attrs['aria-current']==='page').length,1);};estado();
@@ -1044,13 +1071,13 @@ function validarRotasFase1() {
   assert.equal(el('campo-existente'),original);assert.equal(original.value,'valor não salvo');
   const link=el('link');link.attrs.href='#/aprender';let impediu=false;
   docEventos.click({target:{closest:()=>link},button:0,preventDefault(){impediu=true;}});assert.ok(impediu);assert.equal(janela.location.hash,'#/aprender');
-  link.attrs.href='#conteudo';docEventos.click({target:{closest:()=>link},button:0,preventDefault(){}});assert.equal(foco,'tela-aprender-titulo');
+  link.attrs.href='#conteudo';docEventos.click({target:{closest:()=>link},button:0,preventDefault(){}});assert.equal(foco,'tela-aprender-titulo');assert.equal(el('tela-aprender-titulo').attrs['data-foco-toque'],'false');
   let curadorDestino;janela.location.replace=url=>{curadorDestino=url;};router.navegar('#/curador');assert.equal(curadorDestino,'curador.html#/curador');
   const html=fs.readFileSync('public/index.html','utf8');
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v54'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v55'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -2038,7 +2065,7 @@ function validarAcoesNosPontos(){
  const sw=fs.readFileSync('public/sw.js','utf8');
  assert.ok(html.includes('acoes-pontos.js'));
  assert.match(sw,/acoes-pontos\.js/);
- assert.match(sw,/prefixo \+ 'v54'/);
+ assert.match(sw,/prefixo \+ 'v55'/);
  console.log('OK Ações por ponto: regras por categoria, ODS existentes, passos curtos e texto educativo');
 }
 validarAcoesNosPontos();

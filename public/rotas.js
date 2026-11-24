@@ -34,7 +34,8 @@ function atualizarAbasEspaco(doc,sub){
 }
 function iniciarRotasEcoa(doc,janela,adaptadores={}) {
   const $=id=>doc.getElementById(id);
-  let ultima=null,usandoPonteiro=false;
+  let ultima=null,usandoPonteiro=janela.EcoaFoco?.semTeclado?.() ?? true;
+  // Primeiro carregamento também é "sem teclado": o foco inicial é programático.
   doc.addEventListener('pointerdown',()=>{usandoPonteiro=true;},true);
   doc.addEventListener('keydown',()=>{usandoPonteiro=false;doc.activeElement?.removeAttribute('data-foco-toque');},true);
   function aplicar(hash,forcar=false) {
@@ -96,7 +97,9 @@ function iniciarRotasEcoa(doc,janela,adaptadores={}) {
     const el=evento.target.closest('a[href],button[data-rota]');if(!el||el.target==='_blank'||el.hasAttribute('download'))return;
     const hash=el.dataset.rota||el.getAttribute('href');
     if(hash==='#conteudo'){
-      evento.preventDefault();const rota=resolverRotaEcoa(janela.location.hash);$('tela-'+rota.tela+'-titulo').focus();return;
+      evento.preventDefault();const rota=resolverRotaEcoa(janela.location.hash),destino=$('tela-'+rota.tela+'-titulo');
+      if(destino){destino.setAttribute('data-foco-toque',String(usandoPonteiro));destino.tabIndex=-1;destino.focus({preventScroll:true});}
+      return;
     }
     if(!hash?.startsWith('#'))return;
     // Também suporta âncoras legadas internas não cadastradas explicitamente.

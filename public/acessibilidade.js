@@ -1,4 +1,36 @@
 const chaveAcessibilidade = 'oqdpf-acessibilidade-v1';
+// Alvos que devem manter :focus-visible mesmo quando o foco chega por clique.
+// Qualquer outro elemento com tabindex="-1" é alvo programático (título, status, região).
+const seletorControleFoco = 'a[href], area[href], button, input, select, textarea, summary, iframe, [contenteditable], [tabindex]:not([tabindex="-1"])';
+function iniciarSensorFoco(janela, documento) {
+  let modo = 'inicial'; // 'inicial' e 'ponteiro' não são navegação por teclado.
+  function marcar(alvo) {
+    if (!alvo || typeof alvo !== 'object') return;
+    const removable = typeof alvo.removeAttribute === 'function';
+    if (typeof alvo.matches === 'function' && alvo.matches(seletorControleFoco)) {
+      if (removable) alvo.removeAttribute('data-foco-programatico');
+      return;
+    }
+    const tabindex = typeof alvo.getAttribute === 'function' ? alvo.getAttribute('tabindex')
+      : alvo.tabIndex === -1 ? '-1' : null;
+    if (tabindex !== '-1' || typeof alvo.setAttribute !== 'function') return;
+    if (modo === 'teclado') {
+      if (removable) alvo.removeAttribute('data-foco-programatico');
+    } else {
+      alvo.setAttribute('data-foco-programatico', 'true');
+    }
+  }
+  documento.addEventListener('pointerdown', () => { modo = 'ponteiro'; }, true);
+  documento.addEventListener('keydown', () => { modo = 'teclado'; }, true);
+  documento.addEventListener('focusin', evento => marcar(evento.target), true);
+  const api = {
+    get modo() { return modo; },
+    semTeclado() { return modo !== 'teclado'; },
+    marcar
+  };
+  if (janela && typeof janela === 'object' && !janela.EcoaFoco) janela.EcoaFoco = api;
+  return api;
+}
 function normalizarPreferencias(dados) {
   return {
     tema: ['sistema', 'claro', 'escuro'].includes(dados?.tema) ? dados.tema : 'sistema',
@@ -30,6 +62,7 @@ function aplicarPreferencias(raiz, preferencias, sistemaEscuro) {
   raiz.style.fontSize = dados.fonte + '%';
 }
 function iniciarAcessibilidade(janela, documento) {
+  iniciarSensorFoco(janela, documento);
   let armazenamento;
   try { armazenamento = janela.localStorage; } catch { /* Preferências disponíveis na sessão. */ }
   let preferencias = lerPreferencias(armazenamento);
@@ -72,5 +105,6 @@ function iniciarAcessibilidade(janela, documento) {
   });
 }
 if (typeof module !== 'undefined') module.exports = { normalizarPreferencias, lerPreferencias,
-  salvarPreferencias, temaEfetivo, proximoTema, alterarFonte, aplicarPreferencias, iniciarAcessibilidade };
+  salvarPreferencias, temaEfetivo, proximoTema, alterarFonte, aplicarPreferencias,
+  iniciarSensorFoco, iniciarAcessibilidade };
 else iniciarAcessibilidade(window, document);
