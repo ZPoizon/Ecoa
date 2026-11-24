@@ -1,7 +1,11 @@
 #cadastro-abrir { margin-block:1rem; }
 #cadastro-painel { padding:var(--space-4);margin-block:var(--space-4);background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md); }
 #cadastro-painel fieldset { border:0;padding:0;min-width:0; }
-.cadastro-grade { display:grid;grid-template-columns:1fr 1fr;gap:1rem; }
+.cadastro-grade { display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4); }
+.cadastro-cep { display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-2);align-items:end;margin-block:var(--space-3); }
+.cadastro-cep>label { margin:0; }
+.cadastro-cep #cadastro-cep-status { grid-column:1/-1;margin:0; }
+.cadastro-posicao-confirmacao { min-height:48px;padding:var(--space-2) var(--space-3);border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface-soft); }
 #cadastro-painel label,#denuncia-dialogo label { display:grid;gap:.4rem;margin-block:.75rem;min-width:0; }
 #cadastro-painel input:not([type=checkbox]),#cadastro-painel select,#cadastro-painel textarea,#denuncia-dialogo select { width:100%;min-width:0;font:inherit;box-sizing:border-box; }
 #cadastro-painel .cadastro-check { display:flex;align-items:center;gap:.75rem;min-height:44px; }
@@ -14,4 +18,4 @@
 #cadastro-painel .cadastro-detalhes{margin-block:1rem;border-block:1px solid var(--color-border);padding-block:.5rem}
 #cadastro-painel .cadastro-detalhes>summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700;color:var(--color-primary)}
 #cadastro-painel .cadastro-detalhes[open]>summary{margin-bottom:.75rem}
-@media(max-width:40rem){.cadastro-grade{grid-template-columns:1fr;}#cadastro-abrir,#cadastro-enviar,#cadastro-marcar,#cadastro-centro{width:100%;}}
+@media(max-width:40rem){.cadastro-grade,.cadastro-cep{grid-template-columns:1fr;}#cadastro-abrir,#cadastro-enviar,#cadastro-marcar,#cadastro-centro,#cadastro-cep-buscar{width:100%;}}

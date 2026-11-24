@@ -11,23 +11,43 @@ function identificarCepEndereco(texto) {
   return /^\d{5}-?\d{3}$/.test(limpo)?limpo.replace('-',''):null;
 }
 let idiomaPhotonEndereco='pt';
+// Única consulta ao ViaCEP, compartilhada pela busca e pelo cadastro.
+// Erros têm código próprio para a interface distinguir "não existe" de falha de rede.
+async function consultarViaCep(cep,{signal,fetcher=globalThis.fetch}={}) {
+  const codigo=identificarCepEndereco(cep);if(!codigo)return null;
+  const resposta=await fetcher(`https://viacep.com.br/ws/${codigo}/json/`,{signal,cache:'no-store',credentials:'omit'});
+  if(!resposta.ok)throw Object.assign(Error('Consulta de CEP indisponível'),{codigoCep:'indisponivel'});
+  const p=await resposta.json();if(p.erro)return null;
+  const texto=x=>typeof x==='string'?x.slice(0,300):'';
+  const cidade=texto(p.localidade),uf=texto(p.uf),bairro=texto(p.bairro),rua=texto(p.logradouro);
+  if(!cidade||!uf)throw Object.assign(Error('Resposta de CEP inválida'),{codigoCep:'invalido'});
+  return {cep:codigo.slice(0,5)+'-'+codigo.slice(5),endereco:rua,bairro,cidade,uf};
+}
+// Geocodifica o endereço completo do cadastro no provedor já usado pela busca.
+// Só aceita resultado brasileiro da mesma cidade/UF; número entra na consulta.
+async function localizarEnderecoCadastro(dados,{signal,fetcher=globalThis.fetch}={}) {
+  const partes=[dados?.endereco,dados?.numero,dados?.bairro,dados?.cidade,dados?.uf,'Brasil'].filter(v=>typeof v==='string'&&v.trim()).map(v=>v.trim());
+  const cidade=String(dados?.cidade||''),uf=String(dados?.uf||'').toUpperCase();
+  if(partes.length<3||cidade.trim().length<2||uf.length!==2)return null;
+  const itens=await consultarProvedorEndereco(partes.join(', '),{signal,fetcher});
+  const encontrado=itens.find(item=>item.brasil!==false&&item.uf?.toUpperCase()===uf&&
+    normalizarBuscaEndereco(item.cidade||'')===normalizarBuscaEndereco(cidade));
+  if(!encontrado||!Number.isFinite(encontrado.latitude)||!Number.isFinite(encontrado.longitude))return null;
+  return {latitude:encontrado.latitude,longitude:encontrado.longitude,aproximado:true};
+}
 // Único adaptador do provedor: retorna o formato interno, independente do Photon.
 async function consultarProvedorEndereco(consulta,{signal,vies,fetcher=globalThis.fetch}={}) {
   const cep=identificarCepEndereco(consulta);
   if(cep) {
-    // ViaCEP público: sem validação em massa; apenas consultas interativas com cache.
-    const resposta=await fetcher(`https://viacep.com.br/ws/${cep}/json/`,{signal,cache:'no-store',credentials:'omit'});
-    if(!resposta.ok)throw Error('Consulta de CEP indisponível');
-    const p=await resposta.json();if(p.erro)return [];
-    const texto=x=>typeof x==='string'?x.slice(0,300):'';
-    const cidade=texto(p.localidade),uf=texto(p.uf),bairro=texto(p.bairro),rua=texto(p.logradouro);
-    if(!cidade||!uf)throw Error('Resposta de CEP inválida');
+    const dados=await consultarViaCep(cep,{signal,fetcher});
+    if(!dados)return [];
+    const {bairro,cidade,uf}=dados,rua=dados.endereco;
     let coordenadas=null;
     try {
       const locais=await consultarProvedorEndereco([rua,cidade,uf,'Brasil'].filter(Boolean).join(' '),{signal,vies,fetcher});
       coordenadas=locais.find(l=>l.brasil&&normalizarBuscaEndereco(l.cidade)===normalizarBuscaEndereco(cidade)&&l.uf===uf);
     }catch(e){if(signal?.aborted)throw e;}
-    const nome=rua||cidade,cidadeUF=cidade+'/'+uf,formatado=cep.slice(0,5)+'-'+cep.slice(5);
+    const nome=rua||cidade,cidadeUF=cidade+'/'+uf,formatado=dados.cep;
     const subtitulo=[bairro,cidadeUF,'CEP '+formatado,coordenadas?'Posição aproximada — confira no mapa':'Sem coordenadas — preencha manualmente'].filter(Boolean).join(' · ');
     return [{nome,bairro,cidade,uf,cidadeUF,cep:formatado,rotulo:[nome,bairro,cidadeUF,'CEP '+formatado].filter(Boolean).join(' — '),subtitulo,latitude:coordenadas?.latitude??null,longitude:coordenadas?.longitude??null,brasil:true}];
   }
@@ -145,7 +165,7 @@ function iniciarEnderecos(doc,ambiente,provedor=consultarProvedorEndereco) {
   function atualizar(){doc.querySelectorAll('input[data-autocomplete-endereco]').forEach(conectar);}
   atualizar();
   if(ambiente.MutationObserver)new ambiente.MutationObserver(atualizar).observe(doc.body,{childList:true,subtree:true});
-  return {buscar:input=>campos.get(input)?.buscar()};
+  return {buscar:input=>campos.get(input)?.buscar(),consultarCep:consultarViaCep,localizarCadastro:localizarEnderecoCadastro,reverter:reverterEndereco};
 }
-if(typeof module!=='undefined')module.exports={normalizarBuscaEndereco,identificarCepEndereco,consultarProvedorEndereco,formatarEnderecosPhoton,reverterEndereco,criarServicoEnderecos,criarControleEndereco,iniciarEnderecos};
+if(typeof module!=='undefined')module.exports={normalizarBuscaEndereco,identificarCepEndereco,consultarViaCep,localizarEnderecoCadastro,consultarProvedorEndereco,formatarEnderecosPhoton,reverterEndereco,criarServicoEnderecos,criarControleEndereco,iniciarEnderecos};
 else window.Enderecos=iniciarEnderecos(document,window);

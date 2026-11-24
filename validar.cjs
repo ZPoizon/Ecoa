@@ -958,7 +958,27 @@ async function validarCep() {
   assert.deepEqual(await a.consultarProvedorEndereco('99999999',{fetcher:async()=>({ok:true,json:async()=>({erro:true})})}),[]);
   assert.deepEqual(await a.consultarProvedorEndereco('18300',{fetcher:async()=>{throw Error('Não deveria consultar');}}),[]);
   await assert.rejects(()=>a.consultarProvedorEndereco('18300000',{fetcher:async()=>{throw Error('offline');}}));
-  console.log('OK CEP: com/sem hífen, cache sem acentos/caixa, fallback de idioma, CEP inexistente/incompleto, falha de rede e endereço sem coordenadas');
+  let urlCep;
+  const dadosCep=await a.consultarViaCep('18300-000',{fetcher:async u=>{urlCep=new URL(u);return {ok:true,json:async()=>({logradouro:'Rua A',bairro:'Centro',localidade:'Capão Bonito',uf:'SP'})};}});
+  assert.equal(urlCep.origin,'https://viacep.com.br');assert.equal(urlCep.pathname,'/ws/18300000/json/');
+  assert.deepEqual(dadosCep,{cep:'18300-000',endereco:'Rua A',bairro:'Centro',cidade:'Capão Bonito',uf:'SP'});
+  assert.equal(await a.consultarViaCep('18300',{fetcher:async()=>{throw Error('não deve consultar');}}),null);
+  assert.equal(await a.consultarViaCep('99999999',{fetcher:async()=>({ok:true,json:async()=>({erro:true})})}),null);
+  await assert.rejects(()=>a.consultarViaCep('18300000',{fetcher:async()=>({ok:false,status:503})}),e=>e.codigoCep==='indisponivel');
+  const geoUrls=[];
+  const respostaPhoton=()=>({ok:true,json:async()=>({features:[{
+    geometry:{coordinates:[-48,-23]},properties:{name:'Rua A',street:'Rua A',district:'Centro',city:'Capão Bonito',state:'São Paulo',countrycode:'BR'}
+  }]})});
+  const localizado=await a.localizarEnderecoCadastro({endereco:'Rua A',numero:'10',bairro:'Centro',cidade:'Capão Bonito',uf:'SP'},
+    {fetcher:async u=>{geoUrls.push(new URL(u));return respostaPhoton();}});
+  assert.equal(geoUrls[0].pathname,'/api/');
+  assert.match(geoUrls[0].searchParams.get('q'),/rua a, 10, centro/);
+  assert.equal(localizado.latitude,-23);assert.equal(localizado.aproximado,true);
+  assert.equal(await a.localizarEnderecoCadastro({endereco:'Rua A',numero:'10',cidade:'Sorocaba',uf:'SP'},{fetcher:async()=>respostaPhoton()}),null);
+  const semNumero=await a.localizarEnderecoCadastro({endereco:'Rua A',cidade:'Capão Bonito',uf:'SP'},
+    {fetcher:async u=>{geoUrls.push(new URL(u));return respostaPhoton();}});
+  assert.ok(semNumero);assert.doesNotMatch(geoUrls.at(-1).searchParams.get('q'),/rua a, 10/);
+  console.log('OK CEP: com/sem hífen, cache, fallback, inexistente/incompleto/falha, ViaCEP dedicado, geocódigo com número e divergência cidade/UF');
 }
 // Executado após a suíte existente para manter isolado o teste do idioma inicial.
 setTimeout(()=>validarCep().catch(e=>{console.error(e);process.exitCode=1;}),0);
@@ -1121,7 +1141,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v57'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v58'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1754,15 +1774,15 @@ async function validarInterfaceCadastroFase2(){
  const api=require('./public/cadastro-pontos'),osm=require('./public/pontos-osm'),comp=require('./public/pontos-compartilhados');
  const els=new Map();const el=id=>{if(!els.has(id))els.set(id,{value:'',checked:false,hidden:false,disabled:false,open:false,eventos:{},addEventListener(k,f){this.eventos[k]=f;},setAttribute(){},focus(){},scrollIntoView(){},reset(){},showModal(){this.open=true;},close(){this.open=false;},set innerHTML(v){throw Error('XSS');}});return els.get(id);};
  let posts=0,liberar,duplicate=false;const store=new Map(),eventos={};
- const env={EcoaConfig:{SUPABASE_URL:'https://teste.supabase.co',SUPABASE_ANON_KEY:'sb_publishable_teste'},EcoaCompartilhados:comp,EcoaPontosOSM:osm,ecoaPontosMapa:{todos:()=>[]},navigator:{onLine:true},localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)},fetch:async(u,o)=>{
+ const env={EcoaConfig:{SUPABASE_URL:'https://teste.supabase.co',SUPABASE_ANON_KEY:'sb_publishable_teste'},EcoaCompartilhados:comp,EcoaPontosOSM:osm,ecoaPontosMapa:{todos:()=>[]},navigator:{onLine:true},localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)},setTimeout,clearTimeout,Enderecos:{consultarCep:async()=>null,localizarCadastro:async()=>null},fetch:async(u,o)=>{
   if(o.method==='POST'){posts++;await new Promise(r=>liberar=r);return {ok:true};}
   return {ok:true,json:async()=>duplicate?[{id:'ec0a0000-0000-4000-8000-000000000002',nome:'Praça Pública',categoria:'agua',lat:-24.01,lng:-48.35,status:'aprovado',verificado:false}]:[]};
  }};
  const ui=require('./public/cadastro-pontos-ui').iniciarCadastroPontos({getElementById:el,addEventListener:(k,f)=>eventos[k]=f},env,api);
  const valores={nome:'Praça Pública',cidade:'Capão Bonito',uf:'SP',categoria:'agua',endereco:'Rua Pública, 10',descricao:'Bebedouro',lat:'-24.01',lng:'-48.35'};
- for(const [k,v] of Object.entries(valores))el('cadastro-'+k).value=v;el('cadastro-localPublico').checked=true;
+ for(const [k,v] of Object.entries(valores))el('cadastro-'+k).value=v;el('cadastro-localPublico').checked=true;el('cadastro-posicao-confirmada').checked=true;
  el('cadastro-abrir').eventos.click();assert.equal(el('cadastro-painel').hidden,false);
- const submit=()=>el('cadastro-form').eventos.submit({preventDefault(){}});
+ const submit=()=>{el('cadastro-posicao-confirmada').checked=true;return el('cadastro-form').eventos.submit({preventDefault(){}});};
  duplicate=true;await submit();assert.equal(posts,0);assert.equal(el('cadastro-duplicado').hidden,false);assert.match(el('cadastro-duplicado-texto').textContent,/100 m/);
  el('cadastro-confirmar-duplicado').checked=true;const pending=submit();await new Promise(r=>setTimeout(r,0));await submit();assert.equal(posts,1);liberar();await pending;assert.match(el('cadastro-status').textContent,/Recebemos!/);assert.equal(el('cadastro-campos').disabled,false);
  env.navigator.onLine=false;await submit();assert.match(el('cadastro-status').textContent,/offline/);assert.equal(posts,1);
@@ -1773,6 +1793,89 @@ async function validarInterfaceCadastroFase2(){
  console.log('OK Interface cadastro: endereço reutilizado, duplicado exige confirmação, bloqueio de duplo envio, mensagem offline, denúncia e texto seguro');
 }
 validarInterfaceCadastroFase2().catch(e=>{console.error(e);process.exitCode=1;});
+
+async function validarCadastroPosicao(){
+  const api=require('./public/cadastro-pontos'),osm=require('./public/pontos-osm'),comp=require('./public/pontos-compartilhados');
+  const els=new Map();const el=id=>{if(!els.has(id))els.set(id,{value:'',checked:false,hidden:false,disabled:false,eventos:{},dataset:{},addEventListener(k,f){this.eventos[k]=f;},setAttribute(){},focus(){},scrollIntoView(){},reset(){},showModal(){},close(){},set innerHTML(v){throw Error('XSS');}});return els.get(id);};
+  let agora=0,idTimer=0,posts=0;const timers=new Map(),cepChamadas=[],geoChamadas=[],pendentes=[];
+  const relogio={setTimeout(fn,ms){timers.set(++idTimer,{fn,quando:agora+ms});return idTimer;},clearTimeout(i){timers.delete(i);}};
+  const tick=async ms=>{agora+=ms;for(const [i,t]of [...timers])if(t.quando<=agora){timers.delete(i);t.fn();}for(let j=0;j<10;j++)await Promise.resolve();};
+  let geoResposta={latitude:-24,longitude:-48};
+  const env={EcoaConfig:{SUPABASE_URL:'https://teste.supabase.co',SUPABASE_ANON_KEY:'sb_publishable_teste'},EcoaCompartilhados:comp,EcoaPontosOSM:osm,ecoaPontosMapa:{todos:()=>[]},
+    navigator:{onLine:true},localStorage:{getItem:()=>null,setItem(){}},...relogio,
+    Enderecos:{
+      consultarCep:async texto=>{
+        cepChamadas.push(texto);
+        if(texto==='99999999')return null;
+        if(texto==='11111111')throw Object.assign(Error('offline'),{codigoCep:'indisponivel'});
+        if(texto==='33333333')throw Object.assign(Error('json'),{codigoCep:'invalido'});
+        if(texto==='44444444')throw new TypeError('network');
+        if(texto==='22222222')return new Promise(resolve=>pendentes.push(resolve));
+        return {cep:'18300-000',endereco:'Rua A',bairro:'Centro',cidade:'Capão Bonito',uf:'SP'};
+      },
+      localizarCadastro:async dados=>{geoChamadas.push(dados);return geoResposta;},
+      reverter:async()=>({endereco:'Rua Revertida',bairro:'Centro',cidade:'Capão Bonito',uf:'SP'})
+    },
+    fetch:async(u,o)=>{
+      if(o?.method==='POST'){posts++;return {ok:true};}
+      return {ok:true,json:async()=>[]};
+    }};
+  require('./public/cadastro-pontos-ui').iniciarCadastroPontos({getElementById:el,addEventListener(){}},env,api);
+  const digitar=(campo,valor)=>{el(campo).value=valor;el(campo).eventos.input({target:el(campo)});};
+  const status=()=>el('cadastro-status').textContent,cepStatus=()=>el('cadastro-cep-status').textContent;
+  const confirmada=()=>el('cadastro-posicao-confirmada').checked;
+
+  digitar('cadastro-cep','18300');assert.match(cepStatus(),/incompleto/);
+  digitar('cadastro-cep','18300000A');await tick(400);assert.match(cepStatus(),/inválido/);assert.equal(cepChamadas.length,0);
+  digitar('cadastro-cep','18300-000');await tick(350);
+  assert.deepEqual(cepChamadas,['18300-000']);assert.equal(el('cadastro-endereco').value,'Rua A');
+  assert.equal(el('cadastro-cidade').value,'Capão Bonito');assert.equal(el('cadastro-uf').value,'SP');assert.equal(confirmada(),false);
+  digitar('cadastro-endereco','Rua Manual');assert.equal(el('cadastro-endereco').dataset.autoEndereco,undefined);
+  digitar('cadastro-cep','18300001');await tick(350);assert.equal(el('cadastro-endereco').value,'Rua Manual');
+  digitar('cadastro-cep','22222222');await tick(350);assert.equal(pendentes.length,1);
+  el('cadastro-cep-buscar').eventos.click();await tick(0);assert.equal(pendentes.length,1);
+  digitar('cadastro-cep','18300002');await tick(350);pendentes[0]({cep:'99999-999',endereco:'Rua Antiga',cidade:'Capão Bonito',uf:'SP'});
+  await tick(0);assert.equal(el('cadastro-cep').value,'18300-000');assert.notEqual(el('cadastro-cep').value,'99999-999');
+  digitar('cadastro-cep','99999999');await tick(350);assert.match(cepStatus(),/inexistente/);
+  digitar('cadastro-cep','11111111');await tick(350);assert.match(cepStatus(),/indisponível/);
+  digitar('cadastro-cep','33333333');await tick(350);assert.match(cepStatus(),/inválida/);
+  digitar('cadastro-cep','44444444');await tick(350);assert.match(cepStatus(),/indisponível/);
+
+  el('cadastro-cep').value='';el('cadastro-cep').eventos.input({target:el('cadastro-cep')});
+  digitar('cadastro-endereco','Rua A');digitar('cadastro-numero','10');
+  await tick(600);
+  assert.equal(geoChamadas.at(-1).numero,'10');assert.equal(geoChamadas.at(-1).cidade,'Capão Bonito');
+  assert.equal(el('cadastro-lat').value,'-24.000000');assert.equal(el('cadastro-lng').value,'-48.000000');
+  assert.equal(confirmada(),false);assert.equal(status(),'Confira a posição do local no mapa.');
+  assert.equal(el('cadastro-posicao-ajuda').textContent,'Confira a posição do local no mapa.');
+
+  // Editar o CEP não pode guardar coordenadas antigas com a confirmação marcada.
+  el('cadastro-posicao-confirmada').checked=true;
+  digitar('cadastro-cep','18300-999');
+  assert.equal(el('cadastro-lat').value,'');assert.equal(el('cadastro-lng').value,'');assert.equal(confirmada(),false);
+  el('cadastro-cep').value='';el('cadastro-cep').eventos.input({target:el('cadastro-cep')});
+  digitar('cadastro-endereco','Rua A');digitar('cadastro-numero','10');await tick(600);
+  assert.equal(el('cadastro-lat').value,'-24.000000');assert.equal(confirmada(),false);
+
+  el('cadastro-nome').value='Praça Pública';el('cadastro-categoria').value='agua';el('cadastro-descricao').value='Bebedouro público';
+  el('cadastro-localPublico').checked=true;
+  const submit=()=>el('cadastro-form').eventos.submit({preventDefault(){}});
+  await submit();assert.equal(posts,0);assert.match(status(),/Confirme a posição/);
+  el('cadastro-posicao-confirmada').checked=true;await submit();assert.equal(posts,1);assert.match(status(),/Recebemos!/);
+
+  geoResposta=null;digitar('cadastro-endereco','Rua Nova');await tick(600);
+  assert.equal(el('cadastro-lat').value,'');assert.equal(el('cadastro-lng').value,'');
+  assert.equal(confirmada(),false);assert.equal(status(),'Não encontramos a posição exata. Marque o local no mapa.');
+  geoResposta={latitude:0,longitude:0};el('cadastro-sem-numero').checked=true;el('cadastro-sem-numero').eventos.change({target:el('cadastro-sem-numero')});
+  await tick(600);assert.equal(el('cadastro-numero').disabled,true);assert.equal(geoChamadas.at(-1).numero,'');
+  assert.equal(el('cadastro-lat').value,'0.000000');assert.match(htmlCadastro(),/Confirmei a posição deste local\./);
+  el('cadastro-endereco').value='';el('cadastro-lat').value='-24.5';el('cadastro-lng').value='-48.5';
+  el('cadastro-lat').eventos.change({target:el('cadastro-lat')});await tick(0);
+  assert.equal(el('cadastro-lat').value,'-24.500000');assert.equal(el('cadastro-endereco').value,'Rua Revertida');
+  console.log('OK Cadastro com CEP: debounce hifenizado/sem hífen, estados de erro, ordem, edição manual, geocódigo com número, divergência, zero, limpeza e confirmação obrigatória');
+}
+function htmlCadastro(){return require('node:fs').readFileSync('public/index.html','utf8');}
+validarCadastroPosicao().catch(e=>{console.error(e);process.exitCode=1;});
 
 async function validarTelaNaCidade(){
  const fs=require('node:fs');
@@ -2109,7 +2212,7 @@ function validarAcoesNosPontos(){
  const sw=fs.readFileSync('public/sw.js','utf8');
  assert.ok(html.includes('acoes-pontos.js'));
  assert.match(sw,/acoes-pontos\.js/);
- assert.match(sw,/prefixo \+ 'v57'/);
+ assert.match(sw,/prefixo \+ 'v58'/);
  console.log('OK Ações por ponto: regras por categoria, ODS existentes, passos curtos e texto educativo');
 }
 validarAcoesNosPontos();
