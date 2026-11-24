@@ -1050,7 +1050,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v53'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v54'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1965,7 +1965,7 @@ async function validarBasesRegionais(){
  const els=new Map(),el=id=>{if(!els.has(id))els.set(id,criar());return els.get(id);};
  const chips=['','reciclagem','horta'].map(c=>{const e=criar();e.dataset.categoriaOsm=c;return e;});
  const doc={getElementById:el,createElement:criar,querySelectorAll:()=>chips,addEventListener(){}};
- const handlers={};
+ const handlers={};let cancelacoes=0;
  const mapa={on(n,f){handlers[n]=f;return this;},getZoom:()=>13,fitBounds(){return this;},
   getBounds:()=>({getSouth:()=>-24.02,getWest:()=>-48.36,getNorth:()=>-24,getEast:()=>-48.34}),
   getCenter:()=>({lat:-24.01,lng:-48.35}),setView(){return this;}};
@@ -1975,10 +1975,12 @@ async function validarBasesRegionais(){
   fetch:fetcher,navigator:{onLine:false},addEventListener(){},
   L:{layerGroup:()=>({addTo(){return this;},clearLayers(){}}),divIcon:()=>({}),
     latLngBounds:coords=>({pad(){return this;}}),marker:()=>({addTo(){return this;},on(){},getElement:()=>({isConnected:false})})}};
- const ui=require('./public/pontos-osm-ui').iniciarPontosOSM(doc,env,{...osm,criarBuscaOSM:()=>({cancelar(){},agendar(){}}),validarBaseOSM:()=>[],validarFixosOSM:()=>[]});
+ const ui=require('./public/pontos-osm-ui').iniciarPontosOSM(doc,env,{...osm,criarBuscaOSM:()=>({cancelar(){cancelacoes++;},agendar(){}}),validarBaseOSM:()=>[],validarFixosOSM:()=>[]});
  await ui.pronto;ui.conectar(mapa);
  const esperar=()=>new Promise(r=>setTimeout(r,80));
  callbacks.aoCidade({cidade:'Itapetininga',uf:'SP'});await esperar();
+ const cancelacoesAntes=cancelacoes;handlers.moveend();
+ assert.ok(cancelacoes>cancelacoesAntes,'moveend após enquadrar deve atualizar');
  const texto=()=>JSON.stringify(el('osm-lista').children);
  assert.match(texto(),/COOPERITA/);assert.doesNotMatch(texto(),/Parque das Águas/);
  assert.match(el('osm-filtro-ajuda').textContent,/Base importada: 6 registros/);
@@ -2036,7 +2038,7 @@ function validarAcoesNosPontos(){
  const sw=fs.readFileSync('public/sw.js','utf8');
  assert.ok(html.includes('acoes-pontos.js'));
  assert.match(sw,/acoes-pontos\.js/);
- assert.match(sw,/prefixo \+ 'v53'/);
+ assert.match(sw,/prefixo \+ 'v54'/);
  console.log('OK Ações por ponto: regras por categoria, ODS existentes, passos curtos e texto educativo');
 }
 validarAcoesNosPontos();

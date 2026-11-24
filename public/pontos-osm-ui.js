@@ -6,7 +6,7 @@ function iniciarPontosOSM(doc,ambiente,api) {
   const inicial=ambiente.EcoaMapaInicial||(typeof module!=='undefined'?require('./cidade-config'):ECOA_MAPA_INICIAL);
   const normalizar=texto=>String(texto||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().trim().replace(/\s+/g,' ');
   let mapa,camada,categoria='',fixos=[],salvos=[],pontos=[],visiveis=[],compartilhados=[],posicaoPendente,focoAnteriorCartao;
-  let pontoFocado=null,ativo=false,basePronta=false,cidadeFiltro=null,movimentoProgramado=false;
+  let pontoFocado=null,ativo=false,basePronta=false,cidadeFiltro=null;
   let consultaBanco=0,timerBanco,controleBanco,buscaConectada=false;
   let cartaoPonto=null,ultimoMarcador=null,limiteAtingido=false,areaAtual='';
   // Pontos já carregados ficam ancorados: navegar no mapa só acrescenta resultados.
@@ -223,13 +223,11 @@ function iniciarPontosOSM(doc,ambiente,api) {
     mapa.on('moveend',()=>{
       // Navegar no mapa só acrescenta resultados da nova área; nunca apaga os pontos
       // já carregados nem troca a cidade escolhida.
-      if(movimentoProgramado){movimentoProgramado=false;return;}
       atualizar();
     });
     if(posicaoPendente){
-      movimentoProgramado=true;
       mapa.setView(posicaoPendente.pos,posicaoPendente.zoom||15,{animate:false});
-      movimentoProgramado=false;posicaoPendente=null;
+      posicaoPendente=null;
     }
     conectarBusca();atualizar();
   }
@@ -253,7 +251,7 @@ function iniciarPontosOSM(doc,ambiente,api) {
     ambiente.navigator.geolocation.getCurrentPosition(p=>{
       $('osm-perto').disabled=false;const pos=[p.coords.latitude,p.coords.longitude];
       limparEscopoCidade();
-      if(mapa){movimentoProgramado=true;mapa.setView(pos,15,{animate:false});movimentoProgramado=false;}
+      if(mapa)mapa.setView(pos,15,{animate:false});
       else{posicaoPendente={pos,zoom:15};$('cidade-carregar').click();}
       estado('Área localizada. Buscando pontos…');atualizar();
     },()=>{$('osm-perto').disabled=false;estado('Não foi possível obter sua localização. Você pode digitar um lugar.','erro');},{enableHighAccuracy:false,maximumAge:0,timeout:10000});
@@ -263,7 +261,7 @@ function iniciarPontosOSM(doc,ambiente,api) {
     pontoFocado=p;
     compartilhados=[p,...compartilhados.filter(x=>x.id!==p.id)];
     const pos=[p.latitude,p.longitude];
-    if(mapa){movimentoProgramado=true;mapa.setView(pos,16,{animate:false});movimentoProgramado=false;}
+    if(mapa)mapa.setView(pos,16,{animate:false});
     else posicaoPendente={pos,zoom:16};
     renderizar();abrirCartao(p);estado('Ponto encontrado.','pronto');atualizar();
   }
@@ -272,9 +270,7 @@ function iniciarPontosOSM(doc,ambiente,api) {
     const coords=pontoLista.map(p=>[p.latitude,p.longitude]).filter(([a,b])=>Number.isFinite(a)&&Number.isFinite(b));
     if(!coords.length&&!Array.isArray(centro))return;
     const limites=coords.length?ambiente.L.latLngBounds(coords):ambiente.L.latLngBounds([centro,centro]);
-    movimentoProgramado=true;
     mapa.fitBounds(limites.pad(.18),{animate:false,maxZoom:14,padding:[24,24]});
-    movimentoProgramado=false;
   }
   async function carregarBaseCidade(nome,uf,geracao,pos,zoom){
     baseCidade=[];coberturaCidade=null;
@@ -316,7 +312,7 @@ function iniciarPontosOSM(doc,ambiente,api) {
     limiteAtingido=false;areaAtual='';
     fecharCartao();renderizar();atualizarIndicador();
     if(pos&&Number.isFinite(pos[0])&&Number.isFinite(pos[1])){
-      if(mapa){movimentoProgramado=true;mapa.setView(pos,zoom,{animate:false});movimentoProgramado=false;}
+      if(mapa)mapa.setView(pos,zoom,{animate:false});
       else posicaoPendente={pos,zoom};
     }
     atualizar();
@@ -329,7 +325,7 @@ function iniciarPontosOSM(doc,ambiente,api) {
     if(ehCidade){definirCidade({nome:p.cidade,uf:p.uf},[p.latitude,p.longitude],13);return;}
     limparEscopoCidade();pontoFocado=null;fecharCartao();
     const pos=[p.latitude,p.longitude];
-    if(mapa){movimentoProgramado=true;mapa.setView(pos,16,{animate:false});movimentoProgramado=false;}
+    if(mapa)mapa.setView(pos,16,{animate:false});
     else posicaoPendente={pos,zoom:16};
     atualizar();
   }
