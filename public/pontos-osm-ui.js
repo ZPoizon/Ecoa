@@ -9,7 +9,8 @@ function iniciarPontosOSM(doc,ambiente,api) {
   let pontoFocado=null,ativo=false,basePronta=false,cidadeFiltro=null,movimentoProgramado=false;
   let consultaBanco=0,timerBanco,controleBanco,buscaConectada=false;
   let cartaoPonto=null,ultimoMarcador=null,limiteAtingido=false,areaAtual='';
-  let arrastando=false,arrastou=false;
+  // Pontos já carregados ficam ancorados: navegar no mapa só acrescenta resultados.
+  let preservados=[];
   let promessaCidades=null,cidadesEm=0;
   let baseCidade=[],coberturaCidade=null,geracaoBase=0;
   const gerenteBases=ambiente.EcoaBasesRegiao?.criarGerenciadorBasesRegiao?.({
@@ -54,15 +55,15 @@ function iniciarPontosOSM(doc,ambiente,api) {
     if(ajuda)ajuda.textContent=cidadeFiltro
       ? `Consultando pontos aprovados em ${rotuloCidade()} e a base disponível. ${cobertura
           ? `Base importada: ${cobertura.quantidade} registros válidos em ${cobertura.abrangencia==='cidade e arredores'?'cidade e arredores':'município'}, gerada em ${cobertura.geradoEm||'data não informada'}${coberturaCidade.origemCache?' (cópia salva)':''}.`
-          : 'Ainda não há base importada para esta cidade; só aparecem pontos aprovados no Supabase e pontos OSM da área visível.'} A categoria escolhida continua ativa; arraste o mapa para consultar a área visível.`
-      : 'A busca acima escolhe o lugar. Aqui você escolhe só o tipo de ponto; a lista e o mapa mostram os mesmos lugares da área visível, até 200 resultados. Arrastar o mapa redefine a área consultada.';
+          : 'Ainda não há base importada para esta cidade; só aparecem pontos aprovados no Supabase e pontos OSM da área visível.'} A categoria escolhida continua ativa; navegar no mapa acrescenta pontos da área visível sem remover os já carregados.`
+      : 'A busca acima escolhe o lugar. Aqui você escolhe só o tipo de ponto; a lista e o mapa mostram os mesmos lugares da área visível, até 200 resultados. Navegar no mapa acrescenta pontos da nova área; os já carregados permanecem.';
     const paragrafo=doc.querySelector?.('#osm-vazio p');
     if(paragrafo)paragrafo.textContent=textoVazio();
   }
   atualizarIndicador();
   function limparEscopoCidade(){
     if(!cidadeFiltro&&!baseCidade.length&&!coberturaCidade)return;
-    geracaoBase++;cidadeFiltro=null;baseCidade=[];coberturaCidade=null;
+    geracaoBase++;cidadeFiltro=null;baseCidade=[];preservados=[];coberturaCidade=null;
     if($('osm-banco-status'))$('osm-banco-status').textContent='';
     atualizarIndicador();
   }
@@ -135,10 +136,13 @@ function iniciarPontosOSM(doc,ambiente,api) {
     const vivos=cidadeFiltro?pontos.filter(dentroEscopo):pontos;
     // Com cidade escolhida não há recorte pela bbox visível: a lista cobre o município.
     visiveis=api.pontosDisponiveisOSM([...fixos,...importados,...emEscopo],antigos,vivos,categoria,cidadeFiltro?null:bbox());
+    const ancorados=api.pontosDisponiveisOSM(preservados,[],[],categoria,null);
+    visiveis=api.mesclarPontosOSM(ancorados,visiveis);
     if(pontoFocado&&!visiveis.some(x=>x.id===pontoFocado.id))visiveis=[pontoFocado,...visiveis];
     $('osm-lista').replaceChildren();camada?.clearLayers();marcadores.clear();
     $('osm-vazio').hidden=visiveis.length>0;
     for(const p of visiveis){
+      if(!preservados.some(x=>x.id===p.id))preservados.push(p);
       const item=criar('li');item.tabIndex=-1;item.className='osm-card';itensLista.set(item,p);
       api.preencherCartaoPonto(doc,item,p);
       const botoes=criar('div');botoes.className='buttons';
@@ -161,7 +165,7 @@ function iniciarPontosOSM(doc,ambiente,api) {
     if(cartaoPonto&&!visiveis.some(x=>x.id===cartaoPonto.id))fecharCartao();
     else if(cartaoPonto)destacar(marcadores.get(cartaoPonto.id));
   }
-  const busca=api.criarBuscaOSM({consultar:cliente.consultar,receber:lista=>{pontos=lista;renderizar();},estado});
+  const busca=api.criarBuscaOSM({consultar:cliente.consultar,receber:lista=>{pontos=api.mesclarPontosOSM(pontos,lista);renderizar();},estado});
   function atualizar() {
     busca.cancelar();
     if(!ativo)return;
@@ -202,8 +206,8 @@ function iniciarPontosOSM(doc,ambiente,api) {
         if(clienteBanco.consultarComLimite){const resposta=await clienteBanco.consultarComLimite({...filtros,limite:200},{signal});lista=resposta.pontos;atingiu=resposta.limiteAtingido;}
         else lista=await clienteBanco.consultar(filtros,{signal});
         if(geracao!==consultaBanco)return;
-        // Resposta válida vazia substitui a anterior; falha nunca apaga o que já estava na área.
-        compartilhados=lista;limiteAtingido=atingiu;
+        // Resposta válida acrescenta resultados; falha nunca apaga o que já estava na área.
+        compartilhados=api.mesclarPontosOSM(compartilhados,lista);limiteAtingido=atingiu;
         cacheBanco?.gravar(filtros,lista);
         $('osm-banco-status').textContent='';
         renderizar();estado('Pontos atualizados.','pronto');
@@ -215,18 +219,12 @@ function iniciarPontosOSM(doc,ambiente,api) {
   }
   function conectar(m) {
     mapa=m;camada=ambiente.L.layerGroup().addTo(mapa);
-    mapa.on('dragstart',()=>{arrastando=true;});
-    mapa.on('dragend',()=>{arrastando=false;arrastou=true;});
     mapa.on('movestart',()=>{busca.cancelar();cancelarBanco();});
     mapa.on('moveend',()=>{
-      // O reposicionamento da busca já define o escopo. Um clique no marcador também
-      // gera moveend (o Leaflet recentra o mapa), mas não é arraste: só o arraste
-      // do usuário volta a consultar a área visível.
+      // Navegar no mapa só acrescenta resultados da nova área; nunca apaga os pontos
+      // já carregados nem troca a cidade escolhida.
       if(movimentoProgramado){movimentoProgramado=false;return;}
-      const usuario=arrastando||arrastou;
-      arrastou=false;
-      if(usuario&&(cidadeFiltro||baseCidade.length))limparEscopoCidade();
-      if(usuario||!cidadeFiltro)atualizar();
+      atualizar();
     });
     if(posicaoPendente){
       movimentoProgramado=true;
@@ -314,7 +312,7 @@ function iniciarPontosOSM(doc,ambiente,api) {
     // Nenhum filtro/cancelamento da cidade anterior pode chegar à nova consulta.
     busca.cancelar();cancelarBanco();
     const geracao=++geracaoBase;
-    pontos=[];compartilhados=[];baseCidade=[];coberturaCidade=null;pontoFocado=null;
+    pontos=[];compartilhados=[];baseCidade=[];preservados=[];coberturaCidade=null;pontoFocado=null;
     limiteAtingido=false;areaAtual='';
     fecharCartao();renderizar();atualizarIndicador();
     if(pos&&Number.isFinite(pos[0])&&Number.isFinite(pos[1])){

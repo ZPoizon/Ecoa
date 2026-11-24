@@ -1050,7 +1050,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v52'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v53'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1585,22 +1585,29 @@ async function validarIntegracaoBancoMapa(){
  // Atualizar a mesma área não apaga os pontos enquanto a resposta vem.
  pendente={};ui.atualizar();assert.equal(el('osm-lista').children.length,1);await esperar();
  assert.equal(queries.length,2);pendente.resolve({pontos:[pontoEm(bboxA,'db-2','Ponto 2')],limiteAtingido:false});pendente=null;
- await new Promise(r=>setTimeout(r,0));assert.equal(el('osm-lista').children.length,1);
- // Arrastar consulta a nova área visível e não mostra mais os pontos da anterior.
- bboxAtual=bboxB.slice();handlers.moveend();assert.equal(el('osm-lista').children.length,0);await esperar();
+ await new Promise(r=>setTimeout(r,0));assert.equal(el('osm-lista').children.length,2);
+ assert.match(JSON.stringify(el('osm-lista').children),/Ponto 1/);
+ assert.match(JSON.stringify(el('osm-lista').children),/Ponto 2/);
+ // Arrastar consulta a nova área visível e acrescenta pontos sem remover os anteriores.
+ bboxAtual=bboxB.slice();handlers.moveend();assert.equal(el('osm-lista').children.length,2);await esperar();
  assert.equal(queries.length,3);assert.deepEqual(queries[2].bbox,bboxB);
- assert.match(JSON.stringify(el('osm-lista').children),/Ponto 3/);
+ assert.equal(el('osm-lista').children.length,3);
+ const textoAposArraste=JSON.stringify(el('osm-lista').children);
+ assert.match(textoAposArraste,/Ponto 1/);assert.match(textoAposArraste,/Ponto 2/);assert.match(textoAposArraste,/Ponto 3/);
+ // Um clique simples no mapa também não remove nada.
+ handlers.moveend();await esperar();assert.equal(el('osm-lista').children.length,4);
+ assert.match(JSON.stringify(el('osm-lista').children),/Ponto 4/);
  // Falha de rede não apaga os pontos disponíveis da região atual.
-  falhar=true;ui.atualizar();await esperar();assert.equal(el('osm-lista').children.length,1);
-  assert.match(el('osm-status').textContent,/Mostrando pontos salvos/);
-  falhar=false;
-  // Resposta vazia válida limpa a área; falha posterior não ressuscita registros antigos.
- vazio=true;handlers.moveend();await esperar();assert.equal(el('osm-lista').children.length,0);
- assert.match(el('osm-status').textContent,/Ainda não temos pontos cadastrados nesta região\./);
- falhar=true;ui.atualizar();await esperar();assert.equal(el('osm-lista').children.length,0);
+ falhar=true;ui.atualizar();await esperar();assert.equal(el('osm-lista').children.length,4);
+ assert.match(el('osm-status').textContent,/Mostrando pontos salvos/);
+ falhar=false;
+ // Resposta vazia válida também não apaga: os pontos já carregados ficam ancorados.
+ vazio=true;handlers.moveend();await esperar();assert.equal(el('osm-lista').children.length,4);
+ assert.doesNotMatch(el('osm-status').textContent,/Ainda não temos pontos cadastrados/);
+ falhar=true;ui.atualizar();await esperar();assert.equal(el('osm-lista').children.length,4);
  assert.match(el('osm-banco-status').textContent,/pontos salvos/);assert.equal(el('osm-tentar').hidden,false);
- falhar=false;vazio=false;handlers.moveend();await esperar();assert.equal(el('osm-lista').children.length,1);
- // Trocar cidade consulta por cidade/UF e centraliza o mapa; o arraste depois usa a área visível.
+ falhar=false;vazio=false;handlers.moveend();await esperar();assert.equal(el('osm-lista').children.length,5);
+ // Trocar cidade consulta por cidade/UF e centraliza o mapa; navegar preserva a cidade e os pontos.
  const qAntes=queries.length;
   callbacks.aoEndereco({nome:'Itapetininga',cidade:'Itapetininga',uf:'SP',latitude:-23.49,longitude:-48.01});
   assert.match(el('osm-filtro-ajuda').textContent,/Itapetininga\/SP/);
@@ -1608,9 +1615,11 @@ async function validarIntegracaoBancoMapa(){
   assert.equal(queries.at(-1).cidade,'Itapetininga');assert.equal(queries.at(-1).uf,'SP');
   assert.equal(queries.at(-1).categoria,'agua');assert.equal(queries.at(-1).bbox,undefined);
   assert.match(JSON.stringify(el('osm-lista').children),/em Itapetininga/);
-  bboxAtual=bboxA.slice();handlers.dragstart();handlers.dragend();handlers.moveend();
-  assert.doesNotMatch(el('osm-filtro-ajuda').textContent,/Itapetininga/);
-  await esperar();assert.equal(queries.at(-1).cidade,undefined);assert.deepEqual(queries.at(-1).bbox,bboxA);
+  bboxAtual=bboxA.slice();handlers.moveend();
+  assert.match(el('osm-filtro-ajuda').textContent,/Itapetininga\/SP/);
+  assert.match(JSON.stringify(el('osm-lista').children),/em Itapetininga/);
+  await esperar();assert.equal(queries.at(-1).cidade,'Itapetininga');assert.equal(queries.at(-1).bbox,undefined);
+  assert.match(JSON.stringify(el('osm-lista').children),/em Itapetininga/);
  // A RPC acrescenta cidades com cadastros aprovados; sem coordenadas, aoCidade não move o mapa.
   assert.deepEqual(await callbacks.buscarCidades('itap'),cidadesBanco.filter(c=>/itap/i.test(c.cidade)));
   const centroAntes=bboxAtual.slice();
@@ -1993,8 +2002,10 @@ async function validarBasesRegionais(){
  assert.match(texto(),/Parque das Águas/);
  handlers.moveend();await esperar();
  assert.match(el('osm-filtro-ajuda').textContent,/Base importada/);
-  handlers.dragstart();handlers.dragend();handlers.moveend();await esperar();
-  assert.doesNotMatch(el('osm-filtro-ajuda').textContent,/Base importada/);
+ assert.match(texto(),/Parque das Águas/);
+ handlers.moveend();await esperar();
+ assert.match(el('osm-filtro-ajuda').textContent,/Base importada/);
+ assert.match(texto(),/Parque das Águas/);
  const build=fs.readFileSync('build.cjs','utf8');
  assert.doesNotMatch(build,/overpass|importar-osm/);
  console.log('OK Bases regionais: índice, seis cidades, carregamento sob demanda, cache válido, falha preservada e cartões no mapa');
@@ -2025,7 +2036,7 @@ function validarAcoesNosPontos(){
  const sw=fs.readFileSync('public/sw.js','utf8');
  assert.ok(html.includes('acoes-pontos.js'));
  assert.match(sw,/acoes-pontos\.js/);
- assert.match(sw,/prefixo \+ 'v52'/);
+ assert.match(sw,/prefixo \+ 'v53'/);
  console.log('OK Ações por ponto: regras por categoria, ODS existentes, passos curtos e texto educativo');
 }
 validarAcoesNosPontos();
