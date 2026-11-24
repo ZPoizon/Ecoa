@@ -9,6 +9,7 @@ function iniciarPontosOSM(doc,ambiente,api) {
   let pontoFocado=null,ativo=false,basePronta=false,cidadeFiltro=null,movimentoProgramado=false;
   let consultaBanco=0,timerBanco,controleBanco,buscaConectada=false;
   let cartaoPonto=null,ultimoMarcador=null,limiteAtingido=false,areaAtual='';
+  let arrastando=false,arrastou=false;
   let promessaCidades=null,cidadesEm=0;
   let baseCidade=[],coberturaCidade=null,geracaoBase=0;
   const gerenteBases=ambiente.EcoaBasesRegiao?.criarGerenciadorBasesRegiao?.({
@@ -95,7 +96,21 @@ function iniciarPontosOSM(doc,ambiente,api) {
     cartaoPonto=p;ultimoMarcador=marker||null;
     const conteudo=$('ponto-cartao-conteudo');conteudo.replaceChildren();
     $('ponto-cartao-titulo').textContent=String(p.nome);
-    api.preencherCartaoPonto(doc,conteudo,p,{idTitulo:'ponto-cartao-titulo',detalhado:true});
+    const planoPontos=ambiente.EcoaPlanoPontos||(typeof window!=='undefined'?window.EcoaPlanoPontos:null);
+    const acoesPontos=ambiente.EcoaAcoesPontos||(typeof window!=='undefined'?window.EcoaAcoesPontos:null);
+    const opcoesCartao={idTitulo:'ponto-cartao-titulo',detalhado:true};
+    if(planoPontos&&acoesPontos?.sugestaoAcaoPonto){
+      const sugestao=acoesPontos.sugestaoAcaoPonto(p);
+      if(sugestao?.acao){
+        opcoesCartao.acaoSalva=!!planoPontos.contemAcaoPlano?.(sugestao.acao);
+        opcoesCartao.aoSalvarAcao=(sugestaoAtual,ponto)=>planoPontos.salvarAcaoDoPonto(sugestaoAtual?.acao,ponto)?.salva===true;
+        opcoesCartao.aoVerPlano=()=>{
+          const roteador=ambiente.EcoaRouter||(typeof window!=='undefined'?window.EcoaRouter:null);
+          roteador?.navegar?.('#/meu-espaco');
+        };
+      }
+    }
+    api.preencherCartaoPonto(doc,conteudo,p,opcoesCartao);
     if(p.origem==='supabase'&&p.bancoId){
       const acoes=criar('div');acoes.className='buttons';
       const denunciar=criar('button','Denunciar este ponto');denunciar.type='button';denunciar.className='secondary';
@@ -200,13 +215,18 @@ function iniciarPontosOSM(doc,ambiente,api) {
   }
   function conectar(m) {
     mapa=m;camada=ambiente.L.layerGroup().addTo(mapa);
+    mapa.on('dragstart',()=>{arrastando=true;});
+    mapa.on('dragend',()=>{arrastando=false;arrastou=true;});
     mapa.on('movestart',()=>{busca.cancelar();cancelarBanco();});
     mapa.on('moveend',()=>{
-      // O reposicionamento feito pela busca já define o escopo; só o arraste do
-      // usuário volta a consultar a área visível.
+      // O reposicionamento da busca já define o escopo. Um clique no marcador também
+      // gera moveend (o Leaflet recentra o mapa), mas não é arraste: só o arraste
+      // do usuário volta a consultar a área visível.
       if(movimentoProgramado){movimentoProgramado=false;return;}
-      if(cidadeFiltro||baseCidade.length)limparEscopoCidade();
-      atualizar();
+      const usuario=arrastando||arrastou;
+      arrastou=false;
+      if(usuario&&(cidadeFiltro||baseCidade.length))limparEscopoCidade();
+      if(usuario||!cidadeFiltro)atualizar();
     });
     if(posicaoPendente){
       movimentoProgramado=true;

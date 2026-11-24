@@ -17,6 +17,8 @@ const arquivoPlano = document.querySelector('#arquivo-plano');
 const statusJson = document.querySelector('#plano-json-status');
 const salvarAcao = document.querySelector('#salvar-acao');
 const chaveAcao = acao => acao.ods + ':' + acao.titulo;
+// Vínculo separado: o plano e o backup continuam com o formato antigo, sem migração.
+const chaveVinculosPontos = 'ecoa:acoes-pontos-v1';
 let plano = new Map();
 
 try {
@@ -25,6 +27,86 @@ try {
     .map(chave => [chave, dados[chave]]));
 } catch {
   planoAviso.textContent = 'Não foi possível ler o plano salvo neste navegador.';
+}
+
+let vinculosPontos = new Map();
+const chaveVinculoPonto = (chave, idPonto) => chave + '|' + String(idPonto).slice(0, 100);
+function carregarVinculosPontos() {
+  const vinculos = new Map();
+  try {
+    const dados = JSON.parse(localStorage.getItem(chaveVinculosPontos) || '{}');
+    if (dados && typeof dados === 'object' && !Array.isArray(dados)) {
+      for (const [chave, item] of Object.entries(dados)) {
+        const chaveOriginal = String(chave).split('|')[0];
+        if (!item || typeof item !== 'object' || typeof item.id !== 'string' || typeof item.nome !== 'string' ||
+            !acoes.some(acao => chaveAcao(acao) === chaveOriginal)) continue;
+        vinculos.set(chave, {
+          chave: chaveOriginal,
+          id: item.id.slice(0, 100), nome: item.nome.slice(0, 100),
+          cidade: String(item.cidade || '').slice(0, 100),
+          uf: String(item.uf || '').toUpperCase().slice(0, 2),
+          salvoEm: String(item.salvoEm || '').slice(0, 10)
+        });
+      }
+    }
+  } catch {}
+  vinculosPontos = vinculos;
+}
+carregarVinculosPontos();
+function guardarVinculosPontos() {
+  try {
+    localStorage.setItem(chaveVinculosPontos, JSON.stringify(Object.fromEntries(vinculosPontos)));
+    return true;
+  } catch {
+    planoAviso.textContent = 'A ação foi salva, mas o vínculo com o ponto não pôde ser guardado neste navegador.';
+    return false;
+  }
+}
+function removerVinculosDaAcao(chave) {
+  let removeu = false;
+  for (const [atual, vinculo] of vinculosPontos) {
+    if (vinculo.chave === chave) { vinculosPontos.delete(atual); removeu = true; }
+  }
+  if (removeu) guardarVinculosPontos();
+}
+function dadosPontoSeguros(ponto) {
+  return {
+    id: String(ponto?.id || '').slice(0, 100),
+    nome: String(ponto?.nome || '').slice(0, 100),
+    cidade: String(ponto?.cidade || '').slice(0, 100),
+    uf: String(ponto?.UF || '').toUpperCase().slice(0, 2)
+  };
+}
+function contemAcaoPlano(acao) {
+  return !!acao && plano.has(chaveAcao(acao));
+}
+function salvarAcaoDoPonto(acao, ponto) {
+  if (!acao || !acoes.some(item => chaveAcao(item) === chaveAcao(acao))) {
+    return { salva: false, jaSalva: false, vinculada: false };
+  }
+  const chave = chaveAcao(acao);
+  const jaSalva = plano.has(chave);
+  if (!jaSalva) {
+    plano.set(chave, false);
+    guardarPlano();
+  }
+  let vinculada = false;
+  const dados = dadosPontoSeguros(ponto);
+  if (dados.id && dados.nome) {
+    const chaveVinculo = chaveVinculoPonto(chave, dados.id);
+    if (vinculosPontos.has(chaveVinculo)) vinculada = true;
+    else {
+      vinculosPontos.set(chaveVinculo, { chave, ...dados, salvoEm: new Date().toISOString().slice(0, 10) });
+      while (vinculosPontos.size > 200) vinculosPontos.delete(vinculosPontos.keys().next().value);
+      vinculada = guardarVinculosPontos();
+    }
+  }
+  atualizarPlano();
+  return { salva: true, jaSalva, vinculada };
+}
+function vinculoDoPonto(acao, ponto) {
+  const dados = dadosPontoSeguros(ponto);
+  return dados.id ? vinculosPontos.get(chaveVinculoPonto(chaveAcao(acao), dados.id)) || null : null;
 }
 
 function atualizarBotaoSalvar() {
@@ -73,6 +155,7 @@ function atualizarPlano() {
     remover.setAttribute('aria-label', 'Remover: ' + acao.titulo);
     remover.addEventListener('click', () => {
       plano.delete(chave);
+      removerVinculosDaAcao(chave);
       guardarPlano();
       atualizarPlano();
       document.querySelector('#plano-titulo').focus();
@@ -187,4 +270,10 @@ if(typeof window!=='undefined')window.addEventListener('storage',evento=>{
     plano=new Map(acoes.map(chaveAcao).filter(chave=>typeof dados?.[chave]==='boolean').map(chave=>[chave,dados[chave]]));
     atualizarPlano();
   }catch{planoAviso.textContent='Não foi possível atualizar o plano de outra aba.';}
+});
+
+// API usada pelo cartão do ponto: salva a ação do catálogo e guarda o vínculo
+// em chave separada, deixando o plano legado e o backup inalterados.
+if(typeof window!=='undefined')window.EcoaPlanoPontos=Object.freeze({
+  contemAcaoPlano, salvarAcaoDoPonto, vinculoDoPonto
 });

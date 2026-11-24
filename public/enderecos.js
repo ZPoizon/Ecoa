@@ -39,10 +39,11 @@ async function consultarProvedorEndereco(consulta,{signal,vies,fetcher=globalThi
   url.searchParams.set('lat',String(centro.latitude));url.searchParams.set('lon',String(centro.longitude));
   // Brasil primeiro, sem excluir endereços de outros países.
   let resposta=await fetcher(url.href,{signal,cache:'no-store',credentials:'omit'});
-  // A instância pública atualmente não suporta pt. Só repete em caso de rejeição explícita do idioma.
+  // A instância pública recusa pt com 400 (às vezes sem corpo). Repete sem o idioma
+  // e guarda a escolha para não repetir a falha nas próximas consultas.
   if(resposta.status===400&&idiomaPhotonEndereco==='pt') {
-    const erro=await resposta.json();
-    if(erro.lang){idiomaPhotonEndereco='default';url.searchParams.set('lang','default');resposta=await fetcher(url.href,{signal,cache:'no-store',credentials:'omit'});}
+    idiomaPhotonEndereco='default';url.searchParams.set('lang','default');
+    resposta=await fetcher(url.href,{signal,cache:'no-store',credentials:'omit'});
   }
   if(!resposta.ok)throw Error('Serviço de endereços indisponível');
   const dados=await resposta.json();if(!Array.isArray(dados.features))throw Error('Resposta inválida');
@@ -71,8 +72,8 @@ async function reverterEndereco(lat,lng,{signal,fetcher=globalThis.fetch}={}) {
   url.searchParams.set('lang',idiomaPhotonEndereco);url.searchParams.set('limit','1');
   let resposta=await fetcher(url.href,{signal,cache:'no-store',credentials:'omit'});
   if(resposta.status===400&&idiomaPhotonEndereco==='pt'){
-    const erro=await resposta.json();
-    if(erro.lang){idiomaPhotonEndereco='default';url.searchParams.set('lang','default');resposta=await fetcher(url.href,{signal,cache:'no-store',credentials:'omit'});}
+    idiomaPhotonEndereco='default';url.searchParams.set('lang','default');
+    resposta=await fetcher(url.href,{signal,cache:'no-store',credentials:'omit'});
   }
   if(!resposta.ok)throw Error('Serviço de endereços indisponível');
   const dados=await resposta.json();if(!Array.isArray(dados.features))throw Error('Resposta inválida');

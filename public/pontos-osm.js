@@ -163,9 +163,10 @@ function preencherCartaoPonto(doc,item,p,opcoes={}){
    const salvar=doc.createElement('button');salvar.type='button';salvar.className='secondary';
    salvar.textContent=opcoes.acaoSalva?'Ver no meu plano':'Salvar ação no meu plano';
    salvar.addEventListener('click',()=>{
+    if(opcoes.acaoSalva){opcoes.aoVerPlano?.();return;}
     if(!opcoes.aoSalvarAcao)return;
     const resultado=opcoes.aoSalvarAcao(sugestao,p);
-    if(resultado!==false)salvar.textContent='Ver no meu plano';
+    if(resultado!==false){opcoes.acaoSalva=true;salvar.textContent='Ver no meu plano';}
    });
    item.append(salvar);
   }

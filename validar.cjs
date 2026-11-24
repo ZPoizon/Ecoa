@@ -540,7 +540,7 @@ function validarMarcaEcoa() {
   const elementos=new Map();const el=id=>{if(!elementos.has(id))elementos.set(id,{addEventListener(){},replaceChildren(){},append(){},setAttribute(){}});return elementos.get(id);};
   let leu,escreveu=false;
   const contexto={atualizarProgressoPlano(){},document:{querySelector:el,querySelectorAll:()=>[],addEventListener(){},createElement:()=>el(Symbol())},
-    localStorage:{getItem:k=>{leu=k;return JSON.stringify(Object.fromEntries(legado));},setItem:()=>{escreveu=true;}},acoes,encontradas:[],indice:0};
+    localStorage:{getItem:k=>{leu=leu||k;return k==='ecoa:acoes-pontos-v1'?'{}':JSON.stringify(Object.fromEntries(legado));},setItem:()=>{escreveu=true;}},acoes,encontradas:[],indice:0};
   runInNewContext(readFileSync('public/plano.js','utf8'),contexto);
   assert.equal(leu,'oqdpf-plano-v1');assert.equal(escreveu,false);
   assert.equal(runInNewContext('plano.size',contexto),1);
@@ -880,7 +880,7 @@ async function validarCep() {
   await assert.rejects(()=>a.reverterEndereco(0,0,{fetcher:async()=>({ok:false,status:503})}));
   const requests=[];
   const fallback=await a.consultarProvedorEndereco('TESTE',{fetcher:async u=>{
-    requests.push(new URL(u));return requests.length===1?{ok:false,status:400,json:async()=>({lang:[{}]})}:{ok:true,json:async()=>({features:[]})};
+    requests.push(new URL(u));return requests.length===1?{ok:false,status:400,json:async()=>{throw Error('corpo vazio');}}:{ok:true,json:async()=>({features:[]})};
   }});
   assert.equal(requests[0].searchParams.get('lang'),'pt');assert.equal(requests[1].searchParams.get('lang'),'default');assert.deepEqual(fallback,[]);
   const cep=await a.consultarProvedorEndereco('18300-000',{fetcher:async u=>u.includes('viacep')?{ok:true,json:async()=>({logradouro:'',bairro:'',localidade:'Capão Bonito',uf:'SP'})}:{ok:false,status:503}});
@@ -1050,7 +1050,7 @@ function validarRotasFase1() {
   assert.equal((html.match(/data-tela="/g)||[]).length,5);
   assert.equal((html.match(/data-nav="/g)||[]).length,5);
   assert.match(html,/data-nav-badge hidden/);
-  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v49'/);
+  assert.match(fs.readFileSync('public/sw.js','utf8'),/prefixo \+ 'v52'/);
   assert.match(fs.readFileSync('public/app.js','utf8'),/EcoaRouter\?\.abrirBusca/);
   assert.match(fs.readFileSync('public/cidade-ui.js','utf8'),/invalidateSize/);
   console.log('OK Rotas: cinco telas, abas/teclado, foco, títulos, Voltar/Avançar, desconhecidas, 17 guias, ações compartilhadas antigas/novas, badge e conservação dos nós');
@@ -1245,9 +1245,13 @@ async function validarPontosAutomaticos() {
   const mapaCartao={getBounds:()=>({getSouth:()=>-24.02,getWest:()=>-48.36,getNorth:()=>-24,getEast:()=>-48.34}),
    getZoom:()=>15,on(){},setView(){return this;},getCenter:()=>({lat:-24.01,lng:-48.35})};
   let receberCartao;
+  let salvouPonto=null,navegouPlano=null;
   const ambienteCartao={fetch:async()=>({ok:true,json:async()=>({versao:1,categorias:{}})}),
    sessionStorage:storage,localStorage:{setItem(){throw Error('Nao pode alterar Meus lugares');}},navigator:{onLine:false},
-   addEventListener(){},L:{layerGroup:()=>camadaFake,divIcon:()=>({}),marker:()=>marcador}};
+   addEventListener(){},L:{layerGroup:()=>camadaFake,divIcon:()=>({}),marker:()=>marcador},
+   EcoaAcoesPontos:require('./public/acoes-pontos'),
+   EcoaPlanoPontos:{contemAcaoPlano:()=>false,salvarAcaoDoPonto:(acao,ponto)=>{salvouPonto={titulo:acao.titulo,id:ponto.id};return {salva:true};}},
+    EcoaRouter:{navegar:destino=>{navegouPlano=destino;}}};
   const docCartao={getElementById:elCartao,createElement:criarCartao,querySelectorAll:()=>[],activeElement:null,
    addEventListener:(k,f)=>{eventosCartao[k]=f;}};
   const uiCartao=iniciarPontosOSM(docCartao,ambienteCartao,{...api,
@@ -1270,6 +1274,13 @@ async function validarPontosAutomaticos() {
   assert.ok(nosCartaoPlano(conteudo.children).some(n=>n.tagName==='a'&&n.href==='#/aprender/ods-15'));
   const etapas=nosCartaoPlano(conteudo.children).find(n=>n.className==='ponto-etapas');
   assert.ok(etapas&&etapas.children.length>0&&etapas.children.length<=3);
+  const botaoSalvar=nosCartaoPlano(conteudo.children).find(n=>n.tagName==='button'&&n.textContent==='Salvar ação no meu plano');
+  assert.ok(botaoSalvar,'botão de salvar ação existe');
+  botaoSalvar.eventos.click();
+  assert.deepEqual(salvouPonto,{titulo:'Observe a vegetação do seu bairro',id:'osm-carregado'});
+  assert.equal(botaoSalvar.textContent,'Ver no meu plano');
+  botaoSalvar.eventos.click();
+  assert.equal(navegouPlano,'#/meu-espaco','botão Ver no meu plano abre o plano');
   assert.equal(elCartao('ponto-cartao').children.length,0,'cartao e um unico painel de conteudo');
   eventosCartao.keydown({key:'Escape',preventDefault(){}});
   assert.equal(elCartao('ponto-cartao').hidden,true);assert.equal(focoMarcador,true);
@@ -1597,7 +1608,7 @@ async function validarIntegracaoBancoMapa(){
   assert.equal(queries.at(-1).cidade,'Itapetininga');assert.equal(queries.at(-1).uf,'SP');
   assert.equal(queries.at(-1).categoria,'agua');assert.equal(queries.at(-1).bbox,undefined);
   assert.match(JSON.stringify(el('osm-lista').children),/em Itapetininga/);
-  bboxAtual=bboxA.slice();handlers.moveend();
+  bboxAtual=bboxA.slice();handlers.dragstart();handlers.dragend();handlers.moveend();
   assert.doesNotMatch(el('osm-filtro-ajuda').textContent,/Itapetininga/);
   await esperar();assert.equal(queries.at(-1).cidade,undefined);assert.deepEqual(queries.at(-1).bbox,bboxA);
  // A RPC acrescenta cidades com cadastros aprovados; sem coordenadas, aoCidade não move o mapa.
@@ -1981,7 +1992,9 @@ async function validarBasesRegionais(){
  callbacks.aoCidade({cidade:'Capão Bonito',uf:'SP'});await esperar();
  assert.match(texto(),/Parque das Águas/);
  handlers.moveend();await esperar();
- assert.doesNotMatch(el('osm-filtro-ajuda').textContent,/Base importada/);
+ assert.match(el('osm-filtro-ajuda').textContent,/Base importada/);
+  handlers.dragstart();handlers.dragend();handlers.moveend();await esperar();
+  assert.doesNotMatch(el('osm-filtro-ajuda').textContent,/Base importada/);
  const build=fs.readFileSync('build.cjs','utf8');
  assert.doesNotMatch(build,/overpass|importar-osm/);
  console.log('OK Bases regionais: índice, seis cidades, carregamento sob demanda, cache válido, falha preservada e cartões no mapa');
@@ -2012,7 +2025,51 @@ function validarAcoesNosPontos(){
  const sw=fs.readFileSync('public/sw.js','utf8');
  assert.ok(html.includes('acoes-pontos.js'));
  assert.match(sw,/acoes-pontos\.js/);
- assert.match(sw,/prefixo \+ 'v49'/);
+ assert.match(sw,/prefixo \+ 'v52'/);
  console.log('OK Ações por ponto: regras por categoria, ODS existentes, passos curtos e texto educativo');
 }
 validarAcoesNosPontos();
+
+function validarPlanoDoPonto(){
+ const fs=require('node:fs'),vm=require('node:vm');
+ const chave=acoes[0].ods+':'+acoes[0].titulo,registro=new Map(),documentos=new Map();
+ const criar=()=>({children:[],eventos:{},hidden:false,disabled:false,textContent:'',
+  append(...x){this.children.push(...x);},replaceChildren(...x){this.children=x;},setAttribute(){},
+  addEventListener(k,f){this.eventos[k]=f;},focus(){},click(){this.eventos.click?.();}});
+ const documento={querySelector:seletor=>{if(!documentos.has(seletor))documentos.set(seletor,criar());return documentos.get(seletor);},
+  querySelectorAll:()=>[],addEventListener(){},createElement:criar};
+ const contexto={acoes,encontradas:acoes,indice:0,document:documento,atualizarProgressoPlano(){},
+  window:{addEventListener(){}},
+  localStorage:{getItem:k=>registro.has(k)?registro.get(k):null,setItem:(k,v)=>registro.set(k,String(v)),removeItem:k=>registro.delete(k)},
+  exportarPlanoJson:()=>'{}',importarPlanoJson:()=>({plano:new Map(),quantidade:0,novas:0}),
+  lerArquivoPlanoJson:async()=>'{}',gerarPdfPlano:async()=>new Uint8Array(),
+  URL:{createObjectURL:()=>'blob:teste',revokeObjectURL(){}},Blob:class{},setTimeout(){}};
+ vm.runInNewContext(fs.readFileSync('public/plano.js','utf8'),contexto,{filename:'public/plano.js'});
+ const api=contexto.window.EcoaPlanoPontos;
+ assert.ok(api&&typeof api.salvarAcaoDoPonto==='function');
+ const ponto={id:'osm-horta-1',nome:'Horta',cidade:'Buri',UF:'sp'};
+ const salvo=api.salvarAcaoDoPonto(acoes[0],ponto);
+ assert.equal(salvo.salva,true);assert.equal(salvo.jaSalva,false);assert.equal(salvo.vinculada,true);
+ assert.equal(api.contemAcaoPlano(acoes[0]),true);
+ assert.equal(JSON.parse(registro.get('oqdpf-plano-v1'))[chave],false);
+ const vinculos=()=>JSON.parse(registro.get('ecoa:acoes-pontos-v1'));
+ assert.equal(vinculos()[chave+'|osm-horta-1'].uf,'SP');
+ assert.equal(vinculos()[chave+'|osm-horta-1'].cidade,'Buri');
+ assert.equal(api.salvarAcaoDoPonto(acoes[0],ponto).jaSalva,true);
+ assert.equal(Object.keys(vinculos()).length,1,'mesma ação no mesmo ponto não duplica');
+ assert.equal(api.salvarAcaoDoPonto(acoes[0],{id:'osm-horta-2',nome:'Outra horta'}).jaSalva,true);
+ assert.equal(Object.keys(vinculos()).length,2,'mesma ação em outro ponto mantém os dois vínculos');
+ assert.equal(api.vinculoDoPonto(acoes[0],ponto).nome,'Horta');
+ assert.equal(api.salvarAcaoDoPonto({ods:99,titulo:'Fora do catálogo'},ponto).salva,false);
+ const remover=documento.querySelector('#plano-lista').children.flatMap(li=>li.children).find(b=>b.textContent==='Remover');
+ assert.ok(remover,'botão Remover existe');remover.eventos.click();
+ assert.equal(JSON.parse(registro.get('oqdpf-plano-v1'))[chave],undefined);
+ assert.equal(Object.keys(vinculos()).length,0,'remover a ação limpa os vínculos');
+ const json=require('./public/plano-json');
+ assert.deepEqual(json.validarPlanoJson('{"projeto":"oqdpf","versao":1,"acoes":[]}',acoes),new Map());
+ const html=fs.readFileSync('public/index.html','utf8');
+ assert.ok(html.indexOf('acoes-pontos.js')<html.indexOf('plano.js'));
+ assert.ok(html.indexOf('plano.js')<html.indexOf('pontos-osm-ui.js'));
+ console.log('OK Meu plano pelo ponto: ação salva sem duplicar, vínculo separado do backup e limpeza ao remover');
+}
+validarPlanoDoPonto();
